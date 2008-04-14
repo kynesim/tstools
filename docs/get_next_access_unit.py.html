@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>get_next_access_unit.py.html</title>
+<meta name="Generator" content="Vim/7.1">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#e5e5e5" text="#000000"><font face="monospace">
+<font color="#0000ff"># Pseudo-Python rendition of the code for ``get_next_access_unit()``.</font><br>
+<br>
+<font color="#0000ff"># ***** BEGIN LICENSE BLOCK *****</font><br>
+<font color="#0000ff"># Version: MPL 1.1</font><br>
+<font color="#0000ff"># </font><br>
+<font color="#0000ff"># The contents of this file are subject to the Mozilla Public License Version</font><br>
+<font color="#0000ff"># 1.1 (the &quot;License&quot;); you may not use this file except in compliance with</font><br>
+<font color="#0000ff"># the License. You may obtain a copy of the License at</font><br>
+<font color="#0000ff"># <a href="http://www.mozilla.org/MPL/">http://www.mozilla.org/MPL/</a></font><br>
+<font color="#0000ff"># </font><br>
+<font color="#0000ff"># Software distributed under the License is distributed on an &quot;AS IS&quot; basis,</font><br>
+<font color="#0000ff"># WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License</font><br>
+<font color="#0000ff"># for the specific language governing rights and limitations under the</font><br>
+<font color="#0000ff"># License.</font><br>
+<font color="#0000ff"># </font><br>
+<font color="#0000ff"># The Original Code is the MPEG TS, PS and ES tools.</font><br>
+<font color="#0000ff"># </font><br>
+<font color="#0000ff"># The Initial Developer of the Original Code is Amino Communications Ltd.</font><br>
+<font color="#0000ff"># Portions created by the Initial Developer are Copyright (C) 2008</font><br>
+<font color="#0000ff"># the Initial Developer. All Rights Reserved.</font><br>
+<font color="#0000ff"># </font><br>
+<font color="#0000ff"># Contributor(s):</font><br>
+<font color="#0000ff">#&nbsp;&nbsp; Amino Communications Ltd, Swavesey, Cambridge UK</font><br>
+<font color="#0000ff"># </font><br>
+<font color="#0000ff"># ***** END LICENSE BLOCK *****</font><br>
+<br>
+<font color="#a52a2a"><b>def</b></font>&nbsp;<font color="#008b8b">get_next_access_unit</font>(context):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;&quot;&quot;Retrieve the next access unit from the file described by `context`.</font></span><br>
+<span style="background-color: #f2f2f2"><font color="#ff00ff">&nbsp;&nbsp;&nbsp;&nbsp;&quot;&quot;&quot;</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;access_unit = build_access_unit()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;context.pending_nal: <font color="#0000ff"># i.e., we already had a NAL to start this unit</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.append(context.pending_nal,TRUE,context.pending_list)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_nal = NULL<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.reset(FALSE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>while</b></font>&nbsp;<span style="background-color: #f2f2f2"><font color="#ff00ff">1</font></span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>try</b></font>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nal = context.find_next_NAL_unit()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>except</b></font>&nbsp;EOF:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.no_more_data = TRUE; <font color="#0000ff"># prevent future reads on this stream</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>break</b></font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>except</b></font>&nbsp;BrokenNALUnit:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WARNING(<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;!!! Ignoring broken NAL unit</font></span><span style="background-color: #f2f2f2"><font color="#6a5acd">\n</font></span><span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;</font></span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.ignored_broken_NAL_units += <span style="background-color: #f2f2f2"><font color="#ff00ff">1</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>continue</b></font><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;nal.is_slice():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;<font color="#a52a2a"><b>not</b></font>&nbsp;access_unit.started_primary_picture:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># We're in a new access unit, but we haven't had a slice</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># yet, so we can be lazy and assume that this must be the</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># first slice</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nal.start_reason = <span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;First slice of new access unit&quot;</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.append(nal,TRUE,context.pending_list)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.reset(FALSE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.remember_earlier_primary_start(nal)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal.is_first_VCL_NAL(context.earlier_primary_start):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Regardless of what we determine next, we need to remember</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># that the NAL started (what may later be the previous) access</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># unit</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.remember_earlier_primary_start(nal)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;access_unit.started_primary_picture:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># We were already in an access unit with a primary</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># picture, so this NAL unit must start a new access unit.</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Remember it for next time, and return the access unit so</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># far.</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_nal = nal<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>break</b></font>;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Ready to return the access unit</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>else</b></font>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># This access unit was waiting for its primary picture</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.append(nal,TRUE,context.pending_list)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.reset(FALSE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;<font color="#a52a2a"><b>not</b></font>&nbsp;access_unit.started_primary_picture:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># But this is not a NAL unit that may start a new</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># access unit. So what should we do? Ignore it?</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;<font color="#a52a2a"><b>not</b></font>&nbsp;quiet:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WARNING(<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;!!! Ignoring VCL NAL that cannot start a new&quot;</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot; primary picture: &quot;</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nal.report(stderr)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal_is_redundant(nal):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># printf(&quot;&nbsp;&nbsp;&nbsp;&nbsp; ignoring redundant NAL unit\n&quot;)</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>pass</b></font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>else</b></font>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># We're part of the same access unit, but not special</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.append(nal,FALSE,context.pending_list)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.reset(FALSE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal.nal_unit_type == NAL_ACCESS_UNIT_DELIM:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># An access unit delimiter always starts a new access unit</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;access_unit.started_primary_picture:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.append(nal)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>break</b></font>&nbsp;<font color="#0000ff"># Ready to return the &quot;previous&quot; access unit</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>else</b></font>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># The current access unit doesn't yet have any VCL NALs</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;context.pending_list.length &gt; <span style="background-color: #f2f2f2"><font color="#ff00ff">0</font></span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WARNING(<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;!!! Ignoring items after last VCL NAL and&quot;</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot; before Access Unit Delimiter</font></span><span style="background-color: #f2f2f2"><font color="#6a5acd">\n</font></span><span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;</font></span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.report(stderr,<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</font></span>,NULL,)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.reset(TRUE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;access_unit.nal_units.length &gt; <span style="background-color: #f2f2f2"><font color="#ff00ff">0</font></span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WARNING(<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;!!! Ignoring incomplete access unit</font></span><span style="background-color: #f2f2f2"><font color="#6a5acd">\n</font></span><span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;</font></span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.nal_units.report(stderr,<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</font></span>,NULL,)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.nal_units.reset(TRUE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;access_unit.append(nal,FALSE,NULL)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal.nal_unit_type == NAL_SEI:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># SEI units always precede the primary coded picture</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># - so they also implicitly end any access unit that has already</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># started its primary picture</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;access_unit.started_primary_picture:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.append(nal)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>break</b></font>&nbsp;<font color="#0000ff"># Ready to return the &quot;previous&quot; access unit</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>else</b></font>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.append(nal)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal.nal_unit_type <font color="#a52a2a"><b>in</b></font>&nbsp;[NAL_SEQ_PARAM_SET, NAL_PIC_PARAM_SET,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="background-color: #f2f2f2"><font color="#ff00ff">13</font></span>, <span style="background-color: #f2f2f2"><font color="#ff00ff">14</font></span>, <span style="background-color: #f2f2f2"><font color="#ff00ff">15</font></span>, <span style="background-color: #f2f2f2"><font color="#ff00ff">16</font></span>, <span style="background-color: #f2f2f2"><font color="#ff00ff">17</font></span>, <span style="background-color: #f2f2f2"><font color="#ff00ff">18</font></span>]:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># These start a new access unit *if* they come after the last VCL</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># NAL of an access unit. But we can only *tell* that they are</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># after the last VCL NAL of an access unit when we start the next</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># access unit - so we need to hold them in hand until we know that</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># we need them.&nbsp;&nbsp;(i.e., they'll get added to an access unit just</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># before the next &quot;more determined&quot; NAL unit we add to an access</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># unit)</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.append(nal)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal.nal_unit_type == NAL_END_OF_SEQ:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;context.pending_list.length &gt; <span style="background-color: #f2f2f2"><font color="#ff00ff">0</font></span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WARNING(<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;!!! Ignoring items after last VCL NAL and&quot;</font></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot; before End of Sequence</font></span><span style="background-color: #f2f2f2"><font color="#6a5acd">\n</font></span><span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;</font></span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.report(stderr,<span style="background-color: #f2f2f2"><font color="#ff00ff">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</font></span>,NULL,)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.pending_list.reset(TRUE)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># And remember this as the End of Sequence marker</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.end_of_sequence = nal<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>break</b></font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>elif</b></font>&nbsp;nal.nal_unit_type == NAL_END_OF_STREAM:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># And remember this as the End of Stream marker</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.end_of_stream = nal<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Which means there's no point in reading more from this stream</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># (setting no_more_data like this means that *next* time this</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># function is called, it will return EOF)</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.no_more_data = TRUE<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># And we're done</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>break</b></font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>else</b></font>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># It's not a slice, or an access unit delimiter, or an</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># end of sequence or stream, or a sequence or picture</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># parameter set, or various other odds and ends, so it</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># looks like we can ignore it.</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>pass</b></font><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Check for an immediate &quot;end of file with no data&quot;</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># - i.e., we read EOF or end of stream, and there was nothing</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># between the last access unit and such reading</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>if</b></font>&nbsp;context.no_more_data <font color="#a52a2a"><b>and</b></font>&nbsp;access_unit.nal_units.length == <span style="background-color: #f2f2f2"><font color="#ff00ff">0</font></span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>raise</b></font>&nbsp;EOF<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Otherwise, finish off and return the access unit we have in hand</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;access_unit.end(context,show_details)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0000ff"># Remember to count it</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;context.access_unit_index += <span style="background-color: #f2f2f2"><font color="#ff00ff">1</font></span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<font color="#a52a2a"><b>return</b></font>&nbsp;access_unit<br>
+</font></body>
+</html>

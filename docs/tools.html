@@ -1,0 +1,1252 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.4.1: http://docutils.sourceforge.net/" />
+<title>TS Tools</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger
+:Contact: goodger@users.sourceforge.net
+:Date: $Date: 2005-12-18 01:56:14 +0100 (Sun, 18 Dec 2005) $
+:Revision: $Revision: 4224 $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin-left: 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left {
+  clear: left }
+
+img.align-right {
+  clear: right }
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font-family: serif ;
+  font-size: 100% }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em ;
+  background-color: #eeeeee }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+tt.docutils {
+  background-color: #eeeeee }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="ts-tools">
+<h1 class="title">TS Tools</h1>
+<div class="contents topic">
+<p class="topic-title first"><a id="contents" name="contents">Contents</a></p>
+<ul class="simple">
+<li><a class="reference" href="#overview" id="id3" name="id3">Overview</a></li>
+<li><a class="reference" href="#common-syntax-and-assumptions" id="id4" name="id4">Common syntax and assumptions</a></li>
+<li><a class="reference" href="#error-and-warning-messages" id="id5" name="id5">Error and warning messages</a></li>
+<li><a class="reference" href="#common-considerations" id="id6" name="id6">Common considerations</a><ul>
+<li><a class="reference" href="#support-for-mpeg-1" id="id7" name="id7">Support for MPEG-1</a></li>
+<li><a class="reference" href="#determining-the-file-type" id="id8" name="id8">Determining the file type</a></li>
+<li><a class="reference" href="#h-264-profiles" id="id9" name="id9">H.264 profiles</a></li>
+<li><a class="reference" href="#frames-and-fields" id="id10" name="id10">Frames and fields</a></li>
+<li><a class="reference" href="#broken-program-stream-files" id="id11" name="id11">Broken Program Stream files</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#es2ts" id="id12" name="id12">es2ts</a></li>
+<li><a class="reference" href="#esdots" id="id13" name="id13">esdots</a></li>
+<li><a class="reference" href="#esfilter" id="id14" name="id14">esfilter</a><ul>
+<li><a class="reference" href="#fast-forward-algorithms" id="id15" name="id15">Fast forward algorithms</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#esmerge" id="id16" name="id16">esmerge</a></li>
+<li><a class="reference" href="#esreport" id="id17" name="id17">esreport</a></li>
+<li><a class="reference" href="#esreverse" id="id18" name="id18">esreverse</a><ul>
+<li><a class="reference" href="#reverse-algorithms" id="id19" name="id19">Reverse algorithms</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#ps2ts" id="id20" name="id20">ps2ts</a></li>
+<li><a class="reference" href="#psdots" id="id21" name="id21">psdots</a></li>
+<li><a class="reference" href="#psreport" id="id22" name="id22">psreport</a></li>
+<li><a class="reference" href="#stream-type" id="id23" name="id23">stream_type</a></li>
+<li><a class="reference" href="#ts2es" id="id24" name="id24">ts2es</a></li>
+<li><a class="reference" href="#tsinfo" id="id25" name="id25">tsinfo</a></li>
+<li><a class="reference" href="#tsplay" id="id26" name="id26">tsplay</a><ul>
+<li><a class="reference" href="#circular-buffer-algorithm" id="id27" name="id27">Circular buffer algorithm</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#tsreport" id="id28" name="id28">tsreport</a></li>
+<li><a class="reference" href="#tsserve" id="id29" name="id29">tsserve</a><ul>
+<li><a class="reference" href="#notes" id="id30" name="id30">Notes</a></li>
+<li><a class="reference" href="#alternate-modes" id="id31" name="id31">Alternate modes</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#license" id="id32" name="id32">License</a></li>
+</ul>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id3" id="overview" name="overview">Overview</a></h1>
+<p>The following tools are provided:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name"><a class="reference" href="#es2ts">es2ts</a>:</th><td class="field-body">Read ES (video), output TS</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#esdots">esdots</a>:</th><td class="field-body">Print one character per ES unit</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#esfilter">esfilter</a>:</th><td class="field-body">&quot;Fast forward&quot; ES video data to a file (outputs ES or TS)</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#esmerge">esmerge</a>:</th><td class="field-body">Merge H.264 video and AAC ADTS audio ES to TS (very specific)</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#esreport">esreport</a>:</th><td class="field-body">Report on the contents of an ES file</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#esreverse">esreverse</a>:</th><td class="field-body">&quot;Reverse&quot; ES video data to a file (outputs ES or TS)</td>
+</tr>
+<tr class="field"><th class="field-name">ps2es:</th><td class="field-body">Use <a class="reference" href="#ts2es">ts2es</a> (<tt class="docutils literal"><span class="pre">ts2es</span> <span class="pre">-pes</span></tt>) to obtain the effect of this.</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#ps2ts">ps2ts</a>:</th><td class="field-body">Read PS data, output TS</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#psdots">psdots</a>:</th><td class="field-body">Print one character per PS packet</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#psreport">psreport</a>:</th><td class="field-body">Report on the contents of a PS file</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#stream-type">stream_type</a>:</th><td class="field-body">Make a (barely) educated guess what a file contains</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#ts2es">ts2es</a>:</th><td class="field-body">Extract an ES stream from a TS file</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#tsinfo">tsinfo</a>:</th><td class="field-body">Report program info for a TS file (summarise PAT/PMT info)</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#tsplay">tsplay</a>:</th><td class="field-body">Play (and possibly loop) a PS/TS file over UDP (using timing
+info) or TCP</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#tsreport">tsreport</a>:</th><td class="field-body">Report on the contents of a TS file</td>
+</tr>
+<tr class="field"><th class="field-name"><a class="reference" href="#tsserve">tsserve</a>:</th><td class="field-body">Serve PS/TS files to clients (multicast) over TCP</td>
+</tr>
+</tbody>
+</table>
+<p>There are also some test programs, which are not otherwise discussed:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name" colspan="2">test_es_unit_list:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Test the working of ES unit lists</td>
+</tr>
+<tr class="field"><th class="field-name" colspan="2">test_nal_unit_list:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Test the working of NAL unit lists (built on the above)</td>
+</tr>
+<tr class="field"><th class="field-name">test_pes:</th><td class="field-body">Test the working of PES reading</td>
+</tr>
+</tbody>
+</table>
+<p>It is the intention that all the tools should work on Linux, Windows, Mac OS/X
+and BSD, although not all variants will always be tested at all times.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id4" id="common-syntax-and-assumptions" name="common-syntax-and-assumptions">Common syntax and assumptions</a></h1>
+<p>In all of the tools, the switches and filenames (when used) may be mixed at
+will - specifically, switches are allowed after filenames. This makes it more
+convenient to run a particular program more than once by repeating the
+previous command but appending new switches.</p>
+<p>All switches are indicated by a single introductory <tt class="docutils literal"><span class="pre">-</span></tt>. No provision is
+made for coping with filenames that start with <tt class="docutils literal"><span class="pre">-</span></tt>.</p>
+<p>All tools have the following command line options in common:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name" colspan="2"><tt class="docutils literal"><span class="pre">-h</span></tt>, <tt class="docutils literal"><span class="pre">-help</span></tt>, <tt class="docutils literal"><span class="pre">--help</span></tt>:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body"><p class="first">Provide help text about the program. There may also
+be more detailed help texts for some programs, available
+via different commands, which this help text will explain.</p>
+<p>Note that all of the tools will provide this help text
+if they are run with no arguments.</p>
+</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-q</span></tt>, <tt class="docutils literal"><span class="pre">-quiet</span></tt>:</th><td class="field-body"><p class="first">Output no text except error messages.</p>
+</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-v</span></tt>, <tt class="docutils literal"><span class="pre">-verbose</span></tt>:</th><td class="field-body"><p class="first last">Output extra text. What this is depends on the type of
+application; it might be extra information (for a report
+tool), or debugging information (for a processing tool).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Note that verbose and quiet are <a class="footnote-reference" href="#id2" id="id1" name="id1">[1]</a> mutually incompatible. That is, there are
+only three states:</p>
+<blockquote>
+<ol class="arabic simple">
+<li>&quot;normal&quot; (not verbose, not quiet)</li>
+<li>verbose (and not quiet)</li>
+<li>quiet (and not verbose)</li>
+</ol>
+</blockquote>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1" name="id2">[1]</a></td><td>or should be - some programs might not yet enforce this.</td></tr>
+</tbody>
+</table>
+<p>Several tools share the following switches:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-tsout</span></tt>:</th><td class="field-body">Output TS instead of ES (common amongst ES processing
+tools).</td>
+</tr>
+<tr class="field"><th class="field-name" colspan="2"><tt class="docutils literal"><span class="pre">-host</span> <span class="pre">&lt;name&gt;</span></tt>, <tt class="docutils literal"><span class="pre">-host</span> <span class="pre">&lt;name&gt;:&lt;port&gt;</span></tt>:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Specify a host to output to, and optionally a port
+number. The default port number is 88.</td>
+</tr>
+</tbody>
+</table>
+<!-- We can't put a colon in a field lists :field name:, so use an indirection... -->
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name" colspan="2"><tt class="docutils literal"><span class="pre">-output</span> <span class="pre">&lt;name&gt;</span></tt>, <tt class="docutils literal"><span class="pre">-o</span> <span class="pre">&lt;name&gt;</span></tt>:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Specify output to the named file.</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-pid</span> <span class="pre">&lt;pid&gt;</span></tt>:</th><td class="field-body">Specify a PID. This is read as decimal by default, but
+a hexadecimal value can be specifed as (for instance)
+<tt class="docutils literal"><span class="pre">-pid</span> <span class="pre">0x68</span></tt>. The specific switch <tt class="docutils literal"><span class="pre">-pid</span></tt> is not common,
+but variants are.</td>
+</tr>
+<tr class="field"><th class="field-name" colspan="2"><tt class="docutils literal"><span class="pre">-stdin</span></tt>, <tt class="docutils literal"><span class="pre">-stdout</span></tt>:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Take input from the standard input, write output to the
+standard output. If -stdout is used, -quiet is always
+enforced. If input is from standard input, the tool will
+not be able to &quot;guess&quot; the input type -- tools will
+generally default to H.262 (MPEG-2) in this case.</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-h262</span></tt>:</th><td class="field-body">Indicates that the input (video) data is H.262 data
+(actually, either MPEG-1 or MPEG-2). Stops the tool trying
+to determine this for itself.</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-h264</span></tt>, <tt class="docutils literal"><span class="pre">-avc</span></tt>:</th><td class="field-body">Indicates that the input (video) data is H.264 (i.e.,
+MPEG-4/AVC). Stops the tools trying to determine this for
+itself.</td>
+</tr>
+<tr class="field"><th class="field-name" colspan="2"><tt class="docutils literal"><span class="pre">-dvd</span></tt>, <tt class="docutils literal"><span class="pre">-notdvd</span></tt>, <tt class="docutils literal"><span class="pre">-nodvd</span></tt>:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Indicates that the PS data being read conforms (or doesn't)
+to DVD conventions. This matters for audio data in
+private_stream_1, which is packaged as &quot;substreams&quot; in DVD
+data. The programs ps2ts and psreport assume DVD data
+(since program stream is normally obtained from DVDs).</td>
+</tr>
+<tr class="field"><th class="field-name" colspan="2"><tt class="docutils literal"><span class="pre">-dolby</span> <span class="pre">dvb</span></tt>, <tt class="docutils literal"><span class="pre">-dolby</span> <span class="pre">atsc</span></tt>:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Dolby (AC-3) audio data may be written out using either of
+two TS stream types, 0x06 for DVB data, and 0x81 for ATSC
+data. When reading TS data, the stream type read is used
+for output, but when reading PS data and outputting TS
+data, a decision must be made. The default is to use the
+DVB convention. This switch is provided for ps2ts, tsplay
+and tsserve.</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-max</span> <span class="pre">&lt;n&gt;</span></tt>:</th><td class="field-body">Some of the tools can stop after reading/processing &lt;n&gt;
+of the appropriate data items. This can (for instance)
+be used to truncate data files, or to inspect only part
+of a data stream.</td>
+</tr>
+<tr class="field"><th class="field-name"><tt class="docutils literal"><span class="pre">-pes</span></tt>:</th><td class="field-body">Some of the ES reading tools will instead read from TS or
+PS data if given the <tt class="docutils literal"><span class="pre">-pes</span></tt> switch. This saves piping
+data through ts2es or (for PS) ps2ts and ts2es.</td>
+</tr>
+</tbody>
+</table>
+<p>For all of the tools, the documentation provided by <tt class="docutils literal"><span class="pre">-help</span></tt> should be used
+to find current command line definitions - these are not necessarily repeated
+below.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id5" id="error-and-warning-messages" name="error-and-warning-messages">Error and warning messages</a></h1>
+<p>Conventionally, error and warning messages are all output to <tt class="docutils literal"><span class="pre">stderr</span></tt>.</p>
+<p>Error messages are prefixed by <tt class="docutils literal"><span class="pre">###</span></tt>, and warning messages by <tt class="docutils literal"><span class="pre">!!!</span></tt>.</p>
+<p>Errors may be expected to cause a tool to exit with &quot;failure&quot; status.
+The final (outermost) message in a sequence of error messages for a particular
+tool will indicate the tool name (this can be useful when piping several tools
+together).</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id6" id="common-considerations" name="common-considerations">Common considerations</a></h1>
+<div class="section">
+<h2><a class="toc-backref" href="#id7" id="support-for-mpeg-1" name="support-for-mpeg-1">Support for MPEG-1</a></h2>
+<p>MPEG-1 is essentially a subset of MPEG-2. The tools provided do not explicitly
+support MPEG-1, but should be lax enough in their requirements for MPEG-2 to
+allow MPEG-1 data as well (for instance, not <em>requiring</em> the presence of
+Sequence Extensions). In general, if this document talks about MPEG-2 (or
+H.262), MPEG-1 may be assumed as well.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id8" id="determining-the-file-type" name="determining-the-file-type">Determining the file type</a></h2>
+<p>Several of the tools attempt to determine what type of data is contained in
+the input file. The mechanism used opts for simplicity over rigour, and can
+thus conceivably make a mistake. In this case, the user should use the
+appropriate switch (e.g., <tt class="docutils literal"><span class="pre">-h262</span></tt> or <tt class="docutils literal"><span class="pre">-h264</span></tt>) to override it.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id9" id="h-264-profiles" name="h-264-profiles">H.264 profiles</a></h2>
+<p>The underlying H.264 (MPEG-4/AVC) library checks the flags in the first
+sequence parameter set to determine what H.264 profile the data claims to be
+following. This library supports the &quot;main&quot; profile (profile indicator 77),
+or other profiles if they declare that they only contain data from the &quot;main&quot;
+profile.</p>
+<p>If the first sequence parameter set indicates that the bistream contains a
+different protocol, and does not indicate that it is conforming to the &quot;main&quot;
+profile, then the library will output a warning message - for instance:</p>
+<pre class="literal-block">
+Warning: This bitstream declares itself as extended profile (88).
+         This software does not support extended profile,
+         and may give incorrect results or fail.
+</pre>
+<p>It will continue regardless, however, as experience shows that this
+information is not always presented correctly.</p>
+<blockquote>
+(Note that although this is a warning message it is not prefixed
+by <tt class="docutils literal"><span class="pre">!!!</span></tt>. It is, however, still output to standard error.)</blockquote>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id10" id="frames-and-fields" name="frames-and-fields">Frames and fields</a></h2>
+<p>If the input data is being treated in terms of frames, the tools will all
+aggregate individual fields into &quot;frames&quot; (by appending the NAL units or ES
+units of the second field to the first).</p>
+<p>In MPEG-2 processing tools, sequence headers are (broadly) treated as pictures
+(and thus as frames), and are thus included in the frame count.</p>
+<p>In MPEG-4/AVC data, the way that access units are aggregated can (when an end
+of stream unit is found) lead to an apparent &quot;extra&quot; access unit at the end of
+the data.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id11" id="broken-program-stream-files" name="broken-program-stream-files">Broken Program Stream files</a></h2>
+<p><a class="reference" href="#determining-the-file-type">Determining the file type</a> above explained how the tools are tolerant of
+PS files that do not start with a pack header.</p>
+<p>When reading PS data, if the start of a packet is being read (i.e., bytes 0x00
+0x00 0x01 0x*XX*, where <em>XX</em> is the packet's stream type) and some other
+sequence of bytes is found, then the software will scan forwards for the next
+pack header. If no next pack header is found, then it will exit with an error.</p>
+<p>This should cope with files that have &quot;dropped&quot; data, where some bytes have
+been lost. It is unlikely to help directly with files that have corrupted
+data, which will cause errors at higher levels (for instance, in the H.262
+&quot;picture&quot; building routines).</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id12" id="es2ts" name="es2ts">es2ts</a></h1>
+<p>Converts an elementary video stream to transport stream.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ es2ts  hp-trail.264  hp-trail.ts
+$ es2ts  hp-trail.264  -host norton
+</pre>
+<p>or, taking the newly created TS file from above, extracting its video stream
+using <a class="reference" href="#ts2es">ts2es</a> and outputting it anew with video in PID 0x99:</p>
+<pre class="literal-block">
+$ ts2es  -video -stdout hp-trail.ts | es2ts -stdin -pid 0x99 hp-trail99.ts
+</pre>
+<p>The input stream may be MPEG-1 (as a subset of MPEG-2), MPEG-2 or
+MPEG-4/AVC. By default the tool looks at the start of the input file to
+determine whether it is MPEG-2 or MPEG-4/AVC.</p>
+<p>Input may be a file or standard input.</p>
+<p>Output may be a file, standard output or a host via TCP.</p>
+<p>The maximum number of ES units to process may be specified with the <tt class="docutils literal"><span class="pre">-max</span></tt>
+switch.</p>
+<p>No decoding of the contents of ES units is made, so the only reason that the
+tool needs to know whether the data is MPEG-2 or MPEG-4/AVC is so that it can
+write appropriate TS.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id13" id="esdots" name="esdots">esdots</a></h1>
+<p>This is a diagnostic tool used to gain a &quot;view&quot; of the contents of a data
+file.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ esdots -v hp-trail.264
+Reading from hp-trail.264
+Input appears to be MPEG-4/AVC (H.264)
+
+Warning: This bitstream declares itself as extended profile (88).
+         This software does not support extended profile,
+         and may give incorrect results or fail.
+
+Ipppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp
+pppppppppppppppppppppppppppppippppppppppppppppppppppppppppppppppppppppp
+... lines omitted ...
+pppppppppppppppippppppppppppppppppppppppppppppppppppppppppppppp
+Found 2550 NAL units in 2548 access units
+
+$ esdots /data/CharliesAngels.es -max 1000
+Reading from /data/CharliesAngels.es
+Input appears to be MPEG-2 (H.262)
+[E&gt;iEUUbEUbEUpEUbEUbEUpEUbEUbEUpEUbEUbEU[E&gt;iEUUbEUbEUpEUbEUbEUpEUbEUbEU
+pEUbEUbEU[E&gt;iEUUbEU
+Found 1000 MPEG2 items
+</pre>
+<p>If the <tt class="docutils literal"><span class="pre">-v</span></tt> switch is used, then an explanation of the meaning of the
+characters output will be prepended (it is slightly different depending on
+whether the input is MPEG-2 or MPEG-4/AVC).</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id14" id="esfilter" name="esfilter">esfilter</a></h1>
+<p>Reads an input video stream and outputs it to another file, possibly filtering
+the data.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ esfilter  -copy  some-file.es  shorter-copy.es  -max 2000
+</pre>
+<p>just copies the first 2,000 ES units from one file to the other,</p>
+<pre class="literal-block">
+$ esfilter  -strip  some-file.es  stripped-file.es
+</pre>
+<p>outputs just the I (and for H.264, IDR) frames, whilst:</p>
+<pre class="literal-block">
+$ esfilter  -filter  some-file.es  filtered-file.es  -max 2000
+</pre>
+<p>attempts to &quot;fast forward&quot; the input file, outputting the result, but stopping
+after 2,000 frames. The default &quot;speed-up&quot; is 8x, which may be altered with
+the <tt class="docutils literal"><span class="pre">-freq</span></tt> switch.</p>
+<p>Input is from an elementary stream, either an explicit file or standard input.</p>
+<p>Output can be to elementary stream (the default), or to transport
+stream (with the <tt class="docutils literal"><span class="pre">-tsout</span></tt> switch). For either, standard output can be chosen
+instead of an explicit file. If TS output is specified, writing to a host
+over TCP/IP can also be requested.</p>
+<p>Note that for <tt class="docutils literal"><span class="pre">-strip</span></tt> and <tt class="docutils literal"><span class="pre">-filter</span></tt>, the <tt class="docutils literal"><span class="pre">-max</span></tt> switch acts on the
+number of frames, but since <tt class="docutils literal"><span class="pre">-copy</span></tt> works at the ES item/NAL unit level, its
+<tt class="docutils literal"><span class="pre">-max</span></tt> works on these lower level entities.</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id15" id="fast-forward-algorithms" name="fast-forward-algorithms">Fast forward algorithms</a></h2>
+<p>The simpler &quot;strip&quot; algorithm, acts by simply discarding all frames that are
+not I (or, for MPEG-4/AVC, IDR) frames. This is quick, and produces a result
+guaranteed to display without artefacts (since I and IDR frames do not refer
+outside themselves), but will produce a variable speed-up depending on the
+distribution of the different sorts of frame within the data.</p>
+<p>If the <tt class="docutils literal"><span class="pre">-allref</span></tt> switch is supplied as well, then the &quot;strip&quot; algorithm is
+modified to keep all reference frames in MPEG-4/AVC, and all I and P frames
+in MPEG-2. This will produce a lesser speed-up, which should still display
+safely.</p>
+<p>The more complex &quot;filter&quot; algorithm attempts to emulate a specific speed-up,
+defaulting to 8x (and alterable with the <tt class="docutils literal"><span class="pre">-freq</span></tt> switch). It may repeat
+frames to produce the requested speed.</p>
+<p>In either case, the output frames are not altered in any way, which means that
+the resultant data stream is unlikely to be technically valid. For instance,
+in the MPEG-4/AVC case, no attempt is made to amend frame numbers. Also,
+metadata may not be correct, since (in MPEG-4/AVC) only the first sequence and
+picture parameter sets found are output.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id16" id="esmerge" name="esmerge">esmerge</a></h1>
+<p>This utility was written specifically to merge an MPEG-4/AVC video stream with
+an AAC ADTS audio stream.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ esmerge video.264 audio.aac result.ts
+</pre>
+<p>It is also possible to specify the audio rate (which defaults to 44.1KHz).</p>
+<p>Timing information is output (based on 25 video frames/second and the given
+audio rate, assuming 1024 samples per frame) as follows:</p>
+<ol class="arabic simple">
+<li>In the PES PTS and TS PCR for the first NAL unit of every I or IDR video
+frame. The PCR is generated by using the PTS as its base and 0 as its
+extension.</li>
+<li>In the TS PCR for the first NAL unit of every other video frame.</li>
+<li>In the PES PTS and TS PCR for the first NAL unit of every audio frame.</li>
+</ol>
+<p>Whilst very specific at the moment, this tool could obviously be expanded to
+be more versatile if future needs require.</p>
+<blockquote>
+Since original writing, some support for AVS (video) and MPEG layer 2
+(audio) has been added.</blockquote>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id17" id="esreport" name="esreport">esreport</a></h1>
+<p>Reads an input elementary stream (or, with <tt class="docutils literal"><span class="pre">-pes</span></tt>, PS or TS) and reports on
+it.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ esreport  -max 5 CharliesAngels.es
+Reading from CharliesAngels.es
+Input appears to be MPEG-2 (H.262)
+00000000/0000: MPEG2 item b3 (SEQUENCE HEADER) size 140
+00000140/0000: MPEG2 item b5 (Extension start) size 10
+00000150/0000: MPEG2 item b8 (Group start) size 8
+00000158/0000: MPEG2 item 00 (Picture) 1 (I) size 8
+00000166/0000: MPEG2 item b5 (Extension start) size 9
+Found 5 MPEG-2 items
+</pre>
+<p>or:</p>
+<pre class="literal-block">
+$ esreport -max 5 hp-trail.264
+Reading from hp-trail.264
+Input appears to be MPEG-4/AVC (H.264)
+00000001/0000: NAL unit 3/7 (seq param set)          11: 67 58 00 15 96 53 01 68 24 88...
+
+Warning: This bitstream declares itself as extended profile (88).
+         This software does not support extended profile,
+         and may give incorrect results or fail.
+
+00000015/0000: NAL unit 3/8 (pic param set)           5: 68 ce 38 80 00
+00000023/0000: NAL unit 3/5 (IDR)                  3191: 65 88 80 40 02 13 14 00 04 2f...
+00003217/0000: NAL unit 2/1 (non-IDR)              5453: 41 9a 02 05 84 01 c5 d4 7d 88...
+00008673/0000: NAL unit 2/1 (non-IDR)              7558: 41 9a 04 09 41 00 71 1a f8 ff...
+
+Stopping because 5 NAL units have been read
+Found 5 NAL units
+nal_ref_idc:
+         2 of  2
+         3 of  3
+nal_unit_type:
+         2 of  1 (non-IDR)
+         1 of  5 (IDR)
+         1 of  7 (seq param set)
+         1 of  8 (pic param set)
+slice_type:
+         2 of  5 (P &amp;c)
+         1 of  7 (I &amp;c)
+</pre>
+<p>or:</p>
+<pre class="literal-block">
+$ esreport  -frames -max 5 CharliesAngels.es
+Reading from CharliesAngels.es
+Input appears to be MPEG-2 (H.262)
+Sequence header: frames and fields
+I Frame          #2
+B Frame          #0
+B Frame          #1
+P Frame          #5
+Found 5 MPEG-2 pictures
+</pre>
+<p>The number after the <tt class="docutils literal"><span class="pre">#</span></tt> is the frames temporal reference, and the &quot;picture&quot;
+count includes the sequence header.</p>
+<p>If <tt class="docutils literal"><span class="pre">-q</span></tt> is specified, only the final counts are output.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id18" id="esreverse" name="esreverse">esreverse</a></h1>
+<p>Reads an input video stream and outputs it to another file, in &quot;fast reverse&quot;.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ esreverse  hp-trail.264  hp-reverse.264
+</pre>
+<p>Output may optionally be to Transport Stream, instead of ES:</p>
+<pre class="literal-block">
+$ esreverse  hp-trail.264  -tsout  hp-reverse.ts
+</pre>
+<p>TS or PS data may be read (instead of ES) using the <tt class="docutils literal"><span class="pre">-pes</span></tt> switch:</p>
+<pre class="literal-block">
+$ esreverse  -pes  CVBt_hp_trail.ts  -tsout  CVBt_reversed.ts
+</pre>
+<p>Note that this will only read (and reverse) the video stream.</p>
+<p>The &quot;frequency&quot; of frames to try to keep when reversing the data (thus the
+&quot;speedup&quot; in reversing) may be specified with the <tt class="docutils literal"><span class="pre">-freq</span></tt> switch. It
+defaults to 8.</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id19" id="reverse-algorithms" name="reverse-algorithms">Reverse algorithms</a></h2>
+<p>The input data is scanned forwards. For MPEG-2, the location and index of I
+frames and sequence headers is remembered. For MPEG-4/AVC, the location and
+index of I and IDR frames is remembered.</p>
+<p>Reversing is then done by starting at the end of the array of remembered data,
+and moving backwards, attempting to reproduce the requsted frequency. This may
+entail repeating particular frames.</p>
+<p>In MPEG-2 data, each I frame &quot;remembers&quot; the sequence header that precedes
+it, and also the AFD that is applicable to itself. When outputting the reverse
+data, a section header is output if appropriate (i.e., if it not the same as
+for the &quot;previous&quot; I frame), but AFDs are output for each frame.</p>
+<p>In MPEG-4/AVC data, sequence parameter set and picture parameter set NAL units
+must be output at the start of the output. <tt class="docutils literal"><span class="pre">esreverse</span></tt> writes out the data
+for the last sequence and picture parameters sets found with each id
+(typically, this means sequence parameter set 0 and picture parameter set 0)
+at the start of the reversed output.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id20" id="ps2ts" name="ps2ts">ps2ts</a></h1>
+<p>Reads an input Program Stream and outputs equivalent Transport Stream.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ ps2ts  CharliesAngels.mpg  CharliesAngels.ts
+</pre>
+<p>One video stream is supported. If multiple audio streams are found in the PS,
+then the first will be output (unless <tt class="docutils literal"><span class="pre">-noaudio</span></tt> is used to suppress it).</p>
+<p>The video, audio and PMT PIDs may be specified.</p>
+<p>The video data will be output to TS with stream type 0x02 for MPEG-2 video,
+and 0x1b for MPEG-4/AVC video.</p>
+<p>An attempt is made to work out an appropriate stream type for the audio,
+depending upon what it is. Note that AC3 on DVD is stored in substreams,
+which must be &quot;unpacked&quot; when outputting the data as TS.</p>
+<p>PS program stream map and program stream directory are ignored, mainly because
+I have not yet seen data with these present.</p>
+<p>When writing the video data, the SCR base and extension from the PS pack
+header are used as the PCR base and extension.</p>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">Reading PS data may be slower than reading ES or TS data.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id21" id="psdots" name="psdots">psdots</a></h1>
+<p>This is a diagnostic tool used to gain a &quot;view&quot; of the contents of a data
+file.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ psdots -v CharliesAngels.mpg -max 100
+Reading from CharliesAngels.mpg
+Stopping after 100 PS packets
+[Hv[v[v[v[a[a[v[v[v[v[v[v[a[v[v[v[v[v[v[v[v[v[v[a[a[v[v[v[v[v[v[v[v[v[v
+[v[v[a[a[v[v[v[v[v[v[v[v[v[v[v[a[v[v[v[v[v[v[v[v[v[v[v[v[a[a[v[v[v[v[v[
+v[v[v[v[v[v[v[v[v[v[v[a[a[v[v[v[v[v[v[v[v[v[v[v[v[a[v[v[v[v
+Stopping after 100 packs
+</pre>
+<p>If the <tt class="docutils literal"><span class="pre">-v</span></tt> switch is used, then an explanation of the meaning of the
+characters output will be prepended.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id22" id="psreport" name="psreport">psreport</a></h1>
+<p>Reports on the content of a Program Stream.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ psreport CharliesAngels.mpg
+Reading from CharliesAngels.mpg
+Packets (total):            984111
+Packs:                      492055
+Video packets (stream  0):  426945  min size  3748, max size  7178, mean size  7042.7
+Audio packets (stream  0):   65110  min size   602, max size  5888, mean size  3556.2
+Program stream maps:             0
+Program stream directories:      0
+</pre>
+<p>Information about the packets can be obtained with the <tt class="docutils literal"><span class="pre">-v</span></tt> switch:</p>
+<pre class="literal-block">
+$ psreport CharliesAngels.mpg -v -max 3
+Reading from CharliesAngels.mpg
+Stopping after 3 PS packets
+
+00000000: Pack header: SCR 0 (0/0) mux rate 18020
+00000014: System header 1
+            Read 1 system header
+00000032: PS Packet  3 stream E0 (Video stream 0x0)
+               Packet (7168 bytes): 00 00 01 e0 1b fa 8f c0 0a 21 00 07 6d c5 11 00 07 19 65 00...
+
+00007200: Pack header: SCR 214800 (716/0) mux rate 18020
+            Read 0 system headers
+00007214: PS Packet  5 stream E0 (Video stream 0x0)
+               Packet (7168 bytes): 00 00 01 e0 1b fa 8b 00 01 ff eb 12 6b 21 0a f5 86 04 a4 eb...
+
+a00014382: Pack header: SCR 429600 (1432/0) mux rate 18020
+                  Read 0 system headers
+00014396: PS Packet  7 stream E0 (Video stream 0x0)
+               Packet (7168 bytes): 00 00 01 e0 1b fa 8b 00 01 ff 25 7f b2 10 8d 75 bb 00 6b c9...
+Stopping after 3 packs
+Packets (total):                 8
+Packs:                           3
+Video packets (stream  0):       3  min size  7168, max size  7168, mean size  7168.0
+Program stream maps:             0
+Program stream directories:      0
+</pre>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id23" id="stream-type" name="stream-type">stream_type</a></h1>
+<p>Looks at the start of a file to attempt to determine if it is:</p>
+<blockquote>
+<ul class="simple">
+<li>Transport Stream</li>
+<li>Program Stream</li>
+<li>Elementary Stream containing MPEG-2</li>
+<li>Elementary Stream containing MPEG-4/AVC</li>
+<li>PES</li>
+</ul>
+</blockquote>
+<p>The mechanisms used to decide are not very sophisticated, but appear to work
+in practice.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ stream_type  CharliesAngels.mpg
+Reading from CharliesAngels.mpg
+It appears to be Program Stream
+</pre>
+<p>or, with &quot;explanations&quot; enabled:</p>
+<pre class="literal-block">
+$ stream_type  CharliesAngels.mpg  -v
+Reading from CharliesAngels.mpg
+Trying to read pack header
+File starts 00 00 01 BA - could be PS, reading pack header body
+OK, trying to read start of next packet
+Start of second packet found at right place - looks like PS
+It appears to be Program Stream
+</pre>
+<p><tt class="docutils literal"><span class="pre">stream_type</span></tt> returns an exit value which may be used in shell scripts to
+take action according to its decision.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id24" id="ts2es" name="ts2es">ts2es</a></h1>
+<p>Extract a single Elementary Stream from Transport Stream.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ ts2es  -video  CharliesAngels.ts  CharliesAngels.es
+</pre>
+<p>The ES to be extracted may be the video stream (taken to be the first video
+stream found), the first audio stream found, or the stream with a specific
+PID.</p>
+<p>The <tt class="docutils literal"><span class="pre">-pes</span></tt> switch may be used to read data via the PES reading mechanisms,
+which allows <tt class="docutils literal"><span class="pre">ts2es</span></tt> to read PS data as well:</p>
+<pre class="literal-block">
+$ ts2es -pes  CharliesAngels.mpg  CharliesAngels.es
+</pre>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id25" id="tsinfo" name="tsinfo">tsinfo</a></h1>
+<p>Present information on the program streams within a TS file.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ tsinfo  CVBt_hp_trail.ts
+Reading from CVBt_hp_trail.ts
+Scanning 1000 TS packets
+
+Packet 9 is PAT
+Program list:
+    Program 1 -&gt; PID 0066 (102)
+
+Packet 10 is PMT with PID 0066 (102)
+Program streams:
+    PID 0068 (104) -&gt; Stream type  27 (H.264/14496-10 video (MPEG-4/AVC))
+    PID 0067 (103) -&gt; Stream type  15 (13818-7 Audio with ADTS transport syntax)
+PCR PID 0068 (104)
+
+Found 1 PAT packet and 1 PMT packet in 1000 TS packets
+</pre>
+<p>The tool looks through the first 1000 TS packets for PAT and PMT entries, and
+reports on their content. If multiple PAT/PMT entries are found, with
+differing content, then this will be reported:</p>
+<pre class="literal-block">
+$ tsinfo  CharliesAngels.ts
+Reading from CharliesAngels.ts
+Scanning 1000 TS packets
+
+Packet 9 is PAT
+Program list:
+    Program 1 -&gt; PID 0066 (102)
+
+Packet 10 is PMT with PID 0066 (102)
+Program streams:
+    PID 0068 (104) -&gt; Stream type   2 (H.262/13818-2 video (MPEG-2) or 11172-2 constrained video)
+PCR PID 0068 (104)
+
+Packet 168 is PMT with PID 0066 (102) - content changed
+Program streams:
+    PID 0068 (104) -&gt; Stream type   2 (H.262/13818-2 video (MPEG-2) or 11172-2 constrained video)
+PID 0067 (103) -&gt; Stream type   4 (13818-3 audio (MPEG-2))
+PCR PID 0068 (104)
+
+Found 2 PAT packets and 2 PMT packets in 1000 TS packets
+</pre>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id26" id="tsplay" name="tsplay">tsplay</a></h1>
+<p>Plays TS data over UDP or TCP/IP.</p>
+<p>Multicasting is supported over UDP:</p>
+<pre class="literal-block">
+$ tsplay  hp-trail.ts  255.1.1.1
+</pre>
+<p>Playing can be looped (i.e., to repeat indefinitely):</p>
+<pre class="literal-block">
+$ tsplay  hp-trail.ts  255.1.1.1  -loop
+</pre>
+<p>TCP/IP may also be used:</p>
+<pre class="literal-block">
+tsplay  hp-trail.ts  -tcp  norton
+</pre>
+<p>When playing over UDP, the tool manages a circular buffer of TS packets, which
+are output to the target host at appropriate times, based on the TS packet
+PCR.</p>
+<p>Best response will be obtained with a fast machine and locally stored data.</p>
+<p>Note that if output is over UDP, and output is to a multicast IP address,
+then the network interface to use for the multicast broadcast can be chosen
+with the <tt class="docutils literal"><span class="pre">-mcastif</span></tt> switch. For example:</p>
+<pre class="literal-block">
+tsplay hp-trail.ts 235.1.1.1:1234 -mcastif 192.168.172.12
+</pre>
+<p>This option may not be supported on some versions of Windows.</p>
+<p>There are many tuning options - see <tt class="docutils literal"><span class="pre">-help</span> <span class="pre">tuning</span></tt> for details. The most
+useful are probably:</p>
+<ul>
+<li><p class="first"><tt class="docutils literal"><span class="pre">-maxnowait</span></tt> -- This specifies how many packets (each of 7 TS packets) may
+be sent to the client without a gap. The default is 3, which is relatively
+conservative. If the output is choppy, and tsplay reports that it is having
+to restart its timing:</p>
+<pre class="literal-block">
+!!! Packet 701 (item 101): Outputting 0.5s late - restarting time sequence
+    Maybe consider running with -maxnowait greater than 3
+</pre>
+<p>then increasing the <tt class="docutils literal"><span class="pre">-maxnowait</span></tt> value may help (a value of 10 is
+reasonable if the client process is happy with this).</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">-hd</span></tt> -- This is provided for playing HD video, and is a &quot;short hand&quot;
+instead of specifying a variety of other switches (including <tt class="docutils literal"><span class="pre">-maxnowait</span></tt>)
+with suitable values.</p>
+</li>
+</ul>
+<div class="section">
+<h2><a class="toc-backref" href="#id27" id="circular-buffer-algorithm" name="circular-buffer-algorithm">Circular buffer algorithm</a></h2>
+<p>This is only used for output over UDP - it is not applicable to TCP/IP.</p>
+<p>Transport Stream packets are read in batches of 7 (chosen to give a sensible
+number of bytes for sending over the network - seven TS packets is 1316 bytes,
+which will fit within an ethernet packet of size 1500). These &quot;batches&quot; are
+written to a circular buffer. Each &quot;batch&quot; has a timestamp, derived from the
+PCRs in the Transport Stream.</p>
+<p>A child process is forked, which reads the &quot;batch&quot; entries from the circular
+buffer, and attempts to output over UDP at an appropriate time. If it believes
+that it is sending too fast, it will wait. If it believes that it is sending
+too slow, it will output multiple &quot;batches&quot; with no intervening gap, up to a
+maximum number (as mentioned above).</p>
+<p>A slow machine will find that it is always trying to catch up, and will not
+&quot;feed&quot; the UDP client adequately.</p>
+<p>Almost all aspects of the algorithm can be changed. Details are available via
+the <tt class="docutils literal"><span class="pre">-tuning</span></tt> switch.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id28" id="tsreport" name="tsreport">tsreport</a></h1>
+<p>Reports on the TS packets in a file.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ tsreport CharliesAngels.ts
+Reading from CharliesAngels.ts
+!!! 156 bytes ignored at end of file - not enough to make a TS packet
+Read 382583 TS packets
+</pre>
+<p>More information can be obtained with the <tt class="docutils literal"><span class="pre">-v</span></tt> switch:</p>
+<pre class="literal-block">
+$ tsreport CharliesAngels.ts -v -max 20
+Reading from CharliesAngels.ts
+Stopping after 20 TS packets
+00000000: TS Packet  1 PID 1fff PADDING - ignored
+00000188: TS Packet  2 PID 1fff PADDING - ignored
+00000376: TS Packet  3 PID 1fff PADDING - ignored
+00000564: TS Packet  4 PID 1fff PADDING - ignored
+00000752: TS Packet  5 PID 1fff PADDING - ignored
+00000940: TS Packet  6 PID 1fff PADDING - ignored
+00001128: TS Packet  7 PID 1fff PADDING - ignored
+00001316: TS Packet  8 PID 1fff PADDING - ignored
+00001504: TS Packet  9 PID 0000 [pusi] PAT
+  section length:        00d (13)
+  transport stream id: 0001
+  version number 00, current next 1, section number 0, last section number 0
+    Program 001 (  1) -&gt; PID 0066 (102)
+00001692: TS Packet 10 PID 0066 [pusi] PMT
+  section length:   012 (18)
+  program number: 0001
+  version number 00, current next 1, section number 0, last section number 0
+  PCR PID: 0068
+  program info length: 0
+    Stream 02 (H.262/13818-2 video (MPEG-2) or 11172-  -&gt; PID 0068 Info (0 bytes)
+00001880: TS Packet 11 PID 0068 [pusi]
+  Adaptation field len   7 [flags 10]: PCR
+ .. PCR            0
+  PES header
+    Start code:        00 00 01
+    Stream ID:         e0   (224)
+    PES packet length: 1bfa (7162)
+    Flags:             8f c0 PES-priority  data-aligned  copyright  original/copy : PTS  DTS
+    PES header len 10
+!!! Guard bits at start of PTS data are 2, not 3
+    PTS 112354
+    DTS 101554
+00002068: TS Packet 12 PID 0068
+00002256: TS Packet 13 PID 0068
+00002444: TS Packet 14 PID 0068
+00002632: TS Packet 15 PID 0068
+00002820: TS Packet 16 PID 0068
+00003008: TS Packet 17 PID 0068
+00003196: TS Packet 18 PID 0068
+00003384: TS Packet 19 PID 0068
+00003572: TS Packet 20 PID 0068
+Stopping after 20 packets
+Read 20 TS packets
+</pre>
+<p>The <tt class="docutils literal"><span class="pre">-timing</span></tt> switch may be used to obtain PCR timing information:</p>
+<pre class="literal-block">
+$ tsreport CharliesAngels.ts -timing -max 500
+Reading from CharliesAngels.ts
+Stopping after 500 TS packets
+ .. PCR            0
+ .. PCR       214800 Mean byterate  921620 byterate  921620
+ .. PCR       429600 Mean byterate  921620 byterate  921620
+ .. PCR       644400 Mean byterate  921620 byterate  921620
+ .. PCR      5298300 Mean byterate  182986 byterate   80711
+ .. PCR      5513100 Mean byterate  211764 byterate  921620
+ .. PCR      5727900 Mean byterate  238384 byterate  921620
+ .. PCR      5942700 Mean byterate  263080 byterate  921620
+ .. PCR      6157500 Mean byterate  286053 byterate  921620
+ .. PCR      6372300 Mean byterate  307477 byterate  921620
+ .. PCR     10430700 Mean byterate  222394 byterate   88802
+Stopping after 500 packets
+Read 500 TS packets
+</pre>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id29" id="tsserve" name="tsserve">tsserve</a></h1>
+<p>Acts as a server, playing PS or TS files to clients.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ tsserve CharliesAngels.mpg
+</pre>
+<p>will listen for a client on the default port 88, and &quot;serve&quot; the file to it
+when a connection is made.</p>
+<p>Up to 10 files may be specified on the command line - for instance:</p>
+<pre class="literal-block">
+$ tsserve  -0 CharliesAngels.mpg  -1 hp-trail.ts  -2 news24.ts
+</pre>
+<p>specifies files 0, 1 and 2. The first example, where no file number is
+explicitly given, is equivalent to <tt class="docutils literal"><span class="pre">-0</span> <span class="pre">CharliesAngels.mpg</span></tt>.</p>
+<p>If port 88 is not suitable, an alternative may be chosen:</p>
+<pre class="literal-block">
+$ tsserve  -port 8889  -0 CharliesAngels.mpg  -1 hp-trail.ts  -2 news24.ts
+</pre>
+<p>The file being served starts in &quot;p&quot;ause mode. On reaching either end of the
+file (the end by playing forwards at normal or accelerated speed, or the start
+by rewinding), it returns to &quot;p&quot;ause mode.</p>
+<p>A client may send single character commands to the server:</p>
+<blockquote>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">p</span></tt> - pause (the initial state)</li>
+<li><tt class="docutils literal"><span class="pre">n</span></tt> - normal play</li>
+<li><tt class="docutils literal"><span class="pre">f</span></tt> - fast forward (using &quot;strip&quot; as described in
+<a class="reference" href="#fast-forward-algorithms">Fast forward algorithms</a>). The speed of this is dependent on the
+distribution of reference frames in the data.</li>
+<li><tt class="docutils literal"><span class="pre">F</span></tt> - fast fast forward (using &quot;filter&quot; as described in
+<a class="reference" href="#fast-forward-algorithms">Fast forward algorithms</a>). The speed of this is nominally 8x.</li>
+<li><tt class="docutils literal"><span class="pre">r</span></tt> - reverse (as described in <a class="reference" href="#reverse-algorithms">Reverse algorithms</a>). The nominal
+speed for this is 8x.</li>
+<li><tt class="docutils literal"><span class="pre">R</span></tt> - reverse at double speed, i.e., 16x.</li>
+<li><tt class="docutils literal"><span class="pre">&gt;</span></tt> - skip forwards 10 seconds.</li>
+<li><tt class="docutils literal"><span class="pre">]</span></tt> - skip forwards 3 minutes.</li>
+<li><tt class="docutils literal"><span class="pre">&lt;</span></tt> - skip backwards 10 seconds.</li>
+<li><tt class="docutils literal"><span class="pre">[</span></tt> - skip backwards 3 minutes.</li>
+<li><tt class="docutils literal"><span class="pre">0</span></tt> .. <tt class="docutils literal"><span class="pre">9</span></tt> - select the file with that number, and start playing
+it again from the start. If there is no file with that number, then
+ignore the command.</li>
+<li><tt class="docutils literal"><span class="pre">q</span></tt> - quit this client.</li>
+</ul>
+</blockquote>
+<p>(typically by use of a handset).</p>
+<p>For each client, tsserver spawns a new server (on Unix with <tt class="docutils literal"><span class="pre">fork</span></tt>, on
+Windows using a thread) which serves the nominated files to that client.
+No particular limit is specified for the number of clients allowed.</p>
+<p>When a client sends the <tt class="docutils literal"><span class="pre">q</span></tt> command, or if an error occurs, then the
+particular process for that client will be terminated.</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id30" id="notes" name="notes">Notes</a></h2>
+<p>Each file is output as a different TS program, file 0 as program 1, file 1 as
+program 2, etc.</p>
+<p>Different PIDs will be used for the data in each program. For program <em>i</em>,</p>
+<ul class="simple">
+<li>the video PID will be 0x68 + <em>i</em>,</li>
+<li>the audio PID will be 0x68 + <em>i</em> + 10, and</li>
+<li>the PMT PID will be 0x68 + <em>i</em> + 20.</li>
+</ul>
+<p>The PCR PID will be assumed to be the video PID.</p>
+<p>When reversing or fast forwarding MPEG-2 data, sequence headers will not, by
+default be output (see <a class="reference" href="#reverse-algorithms">Reverse algorithms</a> for some background on this). The
+<tt class="docutils literal"><span class="pre">-seqhdr</span></tt> switch may be used to override this.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id31" id="alternate-modes" name="alternate-modes">Alternate modes</a></h2>
+<p>If only a specific host is to be used as a &quot;client&quot;, then that host may be
+named explicitly:</p>
+<pre class="literal-block">
+$ tsserve -cmd -host norton  -0 CharliesAngels.mpg -1 hp-trail.ts
+</pre>
+<p>The <tt class="docutils literal"><span class="pre">-cmd</span></tt> indicates that the host may send single character commands (as
+above).</p>
+<p>It is also possible (on Unix, but not on Windows) to give commands to the
+program directly, instead of via the client socket.</p>
+<p>For instance:</p>
+<pre class="literal-block">
+$ tsserve  -cmdstin  -host norton  -0 CharliesAngels.mpg -1 hp-trail.ts
+</pre>
+<p>The program will then read commands from standard input. Note, however, that
+such commands will not be &quot;seen&quot; until a newline is typed (at which point any
+commands typed will occur in the order given).</p>
+<p>Some canned test modes are also supplied, which perform a reproducable
+sequence of actions. These are described in the <tt class="docutils literal"><span class="pre">-details</span></tt> help text.</p>
+<!-- ***** BEGIN LICENSE BLOCK ***** -->
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id32" id="license" name="license">License</a></h1>
+<p>Version: MPL 1.1</p>
+<p>The contents of this file are subject to the Mozilla Public License Version
+1.1 (the &quot;License&quot;); you may not use this file except in compliance with
+the License. You may obtain a copy of the License at
+<a class="reference" href="http://www.mozilla.org/MPL/">http://www.mozilla.org/MPL/</a></p>
+<p>Software distributed under the License is distributed on an &quot;AS IS&quot; basis,
+WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+for the specific language governing rights and limitations under the
+License.</p>
+<p>The Original Code is the MPEG TS, PS and ES tools.</p>
+<p>The Initial Developer of the Original Code is Amino Communications Ltd.
+Portions created by the Initial Developer are Copyright © 2008
+the Initial Developer. All Rights Reserved.</p>
+<p>Contributor(s):</p>
+<blockquote>
+Amino Communications Ltd, Swavesey, Cambridge UK</blockquote>
+<!-- ***** END LICENSE BLOCK ***** -->
+</div>
+</div>
+</body>
+</html>

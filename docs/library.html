@@ -1,0 +1,833 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.4.1: http://docutils.sourceforge.net/" />
+<title>TS tools library</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger
+:Contact: goodger@users.sourceforge.net
+:Date: $Date: 2005-12-18 01:56:14 +0100 (Sun, 18 Dec 2005) $
+:Revision: $Revision: 4224 $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin-left: 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left {
+  clear: left }
+
+img.align-right {
+  clear: right }
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font-family: serif ;
+  font-size: 100% }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em ;
+  background-color: #eeeeee }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+tt.docutils {
+  background-color: #eeeeee }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="ts-tools-library">
+<h1 class="title">TS tools library</h1>
+<div class="contents topic">
+<p class="topic-title first"><a id="contents" name="contents">Contents</a></p>
+<ul class="simple">
+<li><a class="reference" href="#relevant-international-standards" id="id2" name="id2">Relevant International Standards</a></li>
+<li><a class="reference" href="#overview-of-modules" id="id3" name="id3">Overview of modules</a></li>
+<li><a class="reference" href="#reading-data" id="id4" name="id4">Reading data</a><ul>
+<li><a class="reference" href="#access-units-h-264-mpeg-4-avc" id="id5" name="id5">Access units, H.264, MPEG-4/AVC</a></li>
+<li><a class="reference" href="#h-262-pictures-mpeg-2-and-mpeg-1" id="id6" name="id6">H.262 pictures, MPEG-2 and MPEG-1</a></li>
+<li><a class="reference" href="#below-the-picture-level" id="id7" name="id7">Below the picture level</a></li>
+<li><a class="reference" href="#elementary-stream-data" id="id8" name="id8">Elementary Stream data</a></li>
+<li><a class="reference" href="#pes-reading-ts-and-ps-data" id="id9" name="id9">PES reading - TS and PS data</a><ul>
+<li><a class="reference" href="#server-mode" id="id10" name="id10">Server mode</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference" href="#read-ahead-buffers" id="id11" name="id11">Read-ahead buffers</a></li>
+<li><a class="reference" href="#rewinding" id="id12" name="id12">Rewinding</a></li>
+<li><a class="reference" href="#reversing" id="id13" name="id13">Reversing</a></li>
+<li><a class="reference" href="#filtering" id="id14" name="id14">Filtering</a></li>
+<li><a class="reference" href="#license" id="id15" name="id15">License</a></li>
+</ul>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id2" id="relevant-international-standards" name="relevant-international-standards">Relevant International Standards</a></h1>
+<ul>
+<li><p class="first">ISO/IEC 13818-1 (H.222.0) <em>Information technology - Generic coding of moving
+pictures and associated audio information: Systems</em></p>
+<p>This describes:</p>
+<ul class="simple">
+<li>TS (Transport Stream)</li>
+<li>PS (Program Stream)</li>
+<li>ES (Elementary Stream) and</li>
+<li>PES (Packetised Elementary Stream)</li>
+</ul>
+<p>which form the transport layers for the following standards.</p>
+</li>
+<li><p class="first">ISO/IEC 13818-2 (H.262) <em>Information technology - Generic coding of moving
+pictures and associated audio information: Video</em></p>
+<blockquote>
+<p>This defines MPEG-2.</p>
+</blockquote>
+</li>
+<li><p class="first">ISO/IEC 14496-10 (H.264)</p>
+<blockquote>
+<p>This defines MPEG-4/AVC.</p>
+</blockquote>
+</li>
+</ul>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id3" id="overview-of-modules" name="overview-of-modules">Overview of modules</a></h1>
+<p>Standalone header files:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">compat.h:</th><td class="field-body">Defines useful types for portability between Unices and Windows (for
+instance, the basic integer types and <tt class="docutils literal"><span class="pre">offset_t</span></tt>, which is a 64 or
+32 bit file offset as appropriate).</td>
+</tr>
+<tr class="field"><th class="field-name">h222_defns.h:</th><td class="field-body">Defines various values useful when using H.222.</td>
+</tr>
+</tbody>
+</table>
+<p>Source files:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">accessunit.c:</th><td class="field-body">Handling H.264 access units, including reading them in as NAL units.</td>
+</tr>
+<tr class="field"><th class="field-name">adts.c:</th><td class="field-body">Some minimal support for ISO/IEC 14496-3:2001(E) AAC ADTS audio streams -
+basically what is needed by the <cite>esmerge</cite> tool.</td>
+</tr>
+<tr class="field"><th class="field-name">bitdata.c:</th><td class="field-body">Handling bit level data, including reading Exp-Golomb encoded values. Used
+by the NAL unit reading functions in nalunit.c.</td>
+</tr>
+<tr class="field"><th class="field-name">es.c:</th><td class="field-body">Reading and writing at an Elementary Stream level.</td>
+</tr>
+<tr class="field"><th class="field-name">filter.c:</th><td class="field-body">Fast forward algorithms.</td>
+</tr>
+<tr class="field"><th class="field-name">h262.c:</th><td class="field-body">Handling H.262 pictures.</td>
+</tr>
+<tr class="field"><th class="field-name">misc.c:</th><td class="field-body">As it says, various things that provide miscellaneous support.</td>
+</tr>
+<tr class="field"><th class="field-name">nalunit.c:</th><td class="field-body">Handling H.264 NAL units, mainly as a base for access units.</td>
+</tr>
+<tr class="field"><th class="field-name">pes.c:</th><td class="field-body">Reading PS or TS data, and extracting PES therefrom. Used as a level
+under es.c to allow reading of ES data from PS and TS files.</td>
+</tr>
+<tr class="field"><th class="field-name">pidint.c:</th><td class="field-body">Handling &quot;dictionaries&quot; of PIDs versus integers (for instance, PID and
+program stream).</td>
+</tr>
+<tr class="field"><th class="field-name">ps.c:</th><td class="field-body">Provides the <tt class="docutils literal"><span class="pre">ps_to_ts</span></tt> function, which forms the basis of the ps2ts tool.</td>
+</tr>
+<tr class="field"><th class="field-name">reverse.c:</th><td class="field-body">Reversing algorithms and support.</td>
+</tr>
+<tr class="field"><th class="field-name">ts.c:</th><td class="field-body">Reading and writing Transport Stream.</td>
+</tr>
+<tr class="field"><th class="field-name">tswrite.c:</th><td class="field-body">Support for writing Transport Stream packets, either to a file, over TCP/IP
+or (via a circular buffer) over UDP. This thus provides support for all
+tools that have a <tt class="docutils literal"><span class="pre">-host</span></tt> switch, and also the bulk of the functionality
+of tsplay. Also provides the code that allows tsserve to read command
+characters from a socket.</td>
+</tr>
+</tbody>
+</table>
+<p>Each source file <em>xxx</em> also has associated with it a header file defining
+datastructures, constants and macros, called <em>xxx</em>_defns.h, and a header file
+detailing <tt class="docutils literal"><span class="pre">extern</span></tt> functions therefrom, called <em>xxx</em>_fns.h. The latter will
+always include the former.</p>
+<p>The documentation for each <tt class="docutils literal"><span class="pre">extern</span></tt> function is reproduced in the header
+file, directly copied from the source. This is done for the convenience of the
+user, but if any discrepancy occurs, the version of the functionc header
+comment in the source file should be taken as correct.</p>
+<p>Not all <tt class="docutils literal"><span class="pre">extern</span></tt> functions are intended for use by end-users. Some are
+really only used within the library itself. Unfortunately, these functions are
+not flagged as such at the moment.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id4" id="reading-data" name="reading-data">Reading data</a></h1>
+<p>In general, the various MPEG entities are not read directly from a file, but
+through a context datastructure.</p>
+<p>For instance, reading an access unit may stop before a particular NAL unit,
+which thus forms the start of the next access unit, and NAL units themselves
+need to be interpreted in the context of sequence and picture parameter sets.</p>
+<p>These are arranged roughly as follows:</p>
+<pre class="literal-block">
++-------------------+  (r)  +---------------+
+| H.264 access unit |       | H.262 context |
+|       context     |       +---------------+
++-------------------+             :
+           :                      :
+           :                      :
+ +------------------+ (*)         :
+ | NAL unit context |             :
+ +------------------+             :
+           :                      :
+           :                      :
+         +---------------------------+
+         |         ES context        |
+         +---------------------------+
+           :                      :
+           :                      :
+  +------------------+            :
+  |    PES reader    |            :
+  +------------------+            :
+       :          :               :
++-----------+   +-----------+     :
+| TS reader |   | PS reader |     :
++-----------+   +-----------+     :
+           :      :               :
+           :      :               :
+         +---------------------------+
+         |           File            |
+         +---------------------------+
+</pre>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">(r):</th><td class="field-body">Both H.264 and H.262 contexts can be associated with a &quot;reversing&quot;
+context, to accumulate data for outputting the stream in (fast) reverse.</td>
+</tr>
+<tr class="field"><th class="field-name">(*):</th><td class="field-body">A NAL unit context is created implicitly when building an access unit
+context &quot;over&quot; an ES context.</td>
+</tr>
+</tbody>
+</table>
+<div class="section">
+<h2><a class="toc-backref" href="#id5" id="access-units-h-264-mpeg-4-avc" name="access-units-h-264-mpeg-4-avc">Access units, H.264, MPEG-4/AVC</a></h2>
+<p>An access unit context is explicitly built on top of an ES context:</p>
+<pre class="literal-block">
+err = build_access_unit_context(es,&amp;acontext);
+free_access_unit_context(&amp;acontext);
+</pre>
+<p>Freeing the access unit context does not free the ES context.</p>
+<p>As well as maintaining the information to allow reading access units, the
+context also remembers any trailing (end of sequence or end of stream) NAL
+units. This is mostly transparent to the user, but is explained in the
+appropriate function header comments.</p>
+<p>An individual access unit can be retrieved:</p>
+<pre class="literal-block">
+err = get_next_access_unit(acontext,quiet,show_details,&amp;access_unit);
+</pre>
+<p>but it is more normal to retrieve a frame:</p>
+<pre class="literal-block">
+err = get_next_h264_frame(acontext,quiet,show_details,&amp;frame);
+</pre>
+<p>If the frame was composed of two access units (i.e., two fields), then the NAL
+units for the second will have been appended to the first, which is returned,
+and its field/frame indicator will have been set to &quot;frame&quot;.</p>
+<p>Regardless, the same function is used to free the resultant datastructure:</p>
+<pre class="literal-block">
+free_access_unit(&amp;frame);
+</pre>
+<p>Access units may be written to ES or TS:</p>
+<pre class="literal-block">
+err = write_access_unit_as_ES(access_unit,context,filedesc);
+err = write_access_unit_as_TS(access_unit,context,tswriter,video_pid);
+</pre>
+<p>Note that the latter assumes that the video stream id is 0xE0. Variants are
+alsp provided to output PTS and/or PCR values for the first PES packet written
+out.</p>
+<p>A report on the content of an access unit can be obtained with:</p>
+<pre class="literal-block">
+report_access_unit(filedesc,access_unit);
+</pre>
+<p>Various utility functions are provided to investigate the properties of a
+particular access unit:</p>
+<pre class="literal-block">
+all_I = all_slices_I(access_unit);
+all_P = all_slices_P(access_unit);
+all_IP = all_slices_I_or_P(access_unit);
+all_B = all_slices_B(access_unit);
+</pre>
+<p>Lastly, an access unit context can be rewound with:</p>
+<pre class="literal-block">
+err = rewind_access_unit_context(acontext);
+</pre>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id6" id="h-262-pictures-mpeg-2-and-mpeg-1" name="h-262-pictures-mpeg-2-and-mpeg-1">H.262 pictures, MPEG-2 and MPEG-1</a></h2>
+<p>For most purposes, MPEG-1 data is supported as a subset of MPEG-2.</p>
+<p>An H.262 context is explicitly built on top of an ES context:</p>
+<pre class="literal-block">
+err = build_h262_context(es,&amp;context);
+free_h262_context(&amp;context);
+</pre>
+<p>Freeing the H.262 context does not free the ES context.</p>
+<p>An individual H.262 picture can be retrieved:</p>
+<pre class="literal-block">
+err = get_next_h262_single_picture(context,verbose,&amp;picture);
+</pre>
+<p>but it is more normal to retrieve a frame:</p>
+<pre class="literal-block">
+err = get_next_h262_frame(context,verbose,quiet,&amp;frame);
+</pre>
+<p>If the frame was composed of two field pictures, then the H.262 items
+for the second will have been appended to the first, which is returned,
+and its field/frame indicator will have been set to &quot;frame&quot;.</p>
+<p>Regardless, the same function is used to free the resultant datastructure:</p>
+<pre class="literal-block">
+free_h262_picture(&amp;frame);
+</pre>
+<p>Pictures may be written to ES or TS:</p>
+<pre class="literal-block">
+err = write_h262_picture_as_ES(filedesc,picture);
+err = write_h262_picture_as_TS(tswriter,picture,video_pid);
+</pre>
+<p>Note that the latter assumes that the video stream id is 0xE0.</p>
+<p>A report on the content of a picture can be obtained with:</p>
+<pre class="literal-block">
+report_h262_picture(filedesc,picture,report_data);
+</pre>
+<p>Lastly, an H.262 context can be rewound with:</p>
+<pre class="literal-block">
+err = rewind_h262_context(context);
+</pre>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id7" id="below-the-picture-level" name="below-the-picture-level">Below the picture level</a></h2>
+<p>H.264 access units are composed from NAL units, read with an underlying NAL
+unit context (which is created automatically within an access unit context).
+The NAL unit context is then retrievable as <tt class="docutils literal"><span class="pre">acontext-&gt;nac</span></tt>.</p>
+<p>A NAL unit context may also be created (and then freed) directly:</p>
+<pre class="literal-block">
+err = build_nal_unit_context(es,&amp;context);
+free_nal_unit_context(context);
+</pre>
+<p>The NAL unit context remembers the picture and sequence parameter sets for the
+H.264 data stream.</p>
+<p>From whatever source, the NAL unit context can be used to read NAL units
+directly (although doing this with the <tt class="docutils literal"><span class="pre">nac</span></tt> from an access unit context
+will disrupt access unit reading):</p>
+<pre class="literal-block">
+err = find_next_NAL_unit(context,verbose,&amp;nal);
+free_nal_unit(&amp;nal);
+</pre>
+<p>Functions also exist to report on an individual NAL unit, and to write it out
+as ES or TS data.</p>
+<p>H.262 pictures are composed of individual units as well, although there does
+not appear to be a standard name for these. The H.262 context manages their
+reading directly, and they may also be read individually (although doing so
+will disrupt H.262 picture reading):</p>
+<pre class="literal-block">
+err = find_next_h262_item(es,&amp;item);
+</pre>
+<p>Again, functions are provided to report on such an item, or write it out as ES
+or TS.</p>
+<p>Each NAL unit or MPEG-2 item contains a single ES unit (which is why the
+contexts used to read them and their higher level data constructs require an
+ES context).</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id8" id="elementary-stream-data" name="elementary-stream-data">Elementary Stream data</a></h2>
+<p>Various ways are provided to open an Elementary Stream. The simplest opens a
+file containing &quot;bare&quot; ES data:</p>
+<pre class="literal-block">
+err = open_elementary_stream(filename,&amp;es);
+</pre>
+<p>If a PES reader is available (for reading TS or PS data), then an elementary
+stream can be constructed atop that:</p>
+<pre class="literal-block">
+err = build_elementary_stream_PES(pes_reader,&amp;es);
+</pre>
+<p>Once the elementary stream is available, however, its underlying form does not
+matter, and it can normally be closed with:</p>
+<pre class="literal-block">
+close_elementary_stream(&amp;es);
+</pre>
+<p>(this will not &quot;close&quot; a PES reader if one is involved).</p>
+<p>Functions are then provided to read in individual ES units, although in
+practice the higher level (H.264 access unit and H.262 picture) functions will
+be used to read data.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id9" id="pes-reading-ts-and-ps-data" name="pes-reading-ts-and-ps-data">PES reading - TS and PS data</a></h2>
+<p>PES data may be encapsulated as either PS or TS. The normal way to open a PES
+reader is with:</p>
+<pre class="literal-block">
+err = open_PES_reader(filename,give_info,give_warnings,&amp;reader);
+</pre>
+<p>which will inspect the start of the file to work out if it is PS or
+TS. Alternatively, if it is known which the file is, then one can directly
+call:</p>
+<pre class="literal-block">
+err = open_PES_reader_for_PS(filename,give_info,give_warnings,&amp;reader);
+err = open_PES_reader_for_TS(filename,program_number,
+                             give_info,give_warnings,&amp;reader);
+</pre>
+<p>(the latter must also be used if one wants a different program number than the
+&quot;first found&quot; in TS data). The function:</p>
+<pre class="literal-block">
+err = determine_if_TS_file(filedesc,&amp;is_TS);
+</pre>
+<p>may also be used to figure out if an already opened file is TS, and that
+may then be wrapped in a reader:</p>
+<pre class="literal-block">
+err = build_PES_reader(filedesc,is_TS,give_info,give_warnings,
+                       program_number,&amp;reader);
+</pre>
+<p>If a PS or TS reader context is already built, then they may be wrapped within
+a PES reader:</p>
+<pre class="literal-block">
+err = build_TS_PES_reader(tsreader,give_info,give_warnings,program_number,
+                          &amp;reader);
+err = build_PS_PES_reader(psreader,give_info,give_warnings,&amp;reader);
+</pre>
+<p>When finished with, the PES reader may be freed or closed (the latter also
+closes the PS/TS reader and underlying file):</p>
+<pre class="literal-block">
+err = free_PES_reader(&amp;reader);
+err = close_PES_reader(&amp;reader);
+</pre>
+<p>It is possible to request that only video be read from the reader:</p>
+<pre class="literal-block">
+set_PES_reader_video_only(reader);
+</pre>
+<p>or that audio be taken from Private Stream 1 (normally used for Dolby), as
+opposed to the &quot;normal&quot; audio streams:</p>
+<pre class="literal-block">
+set_PES_reader_audio_private1(reader);
+</pre>
+<p>For PS data, which does not have PAT/PMT packets to describe the program being
+read, it is possible to set various key pieces of information:</p>
+<pre class="literal-block">
+set_PES_reader_program_data(reader,program_number,pmt_pid,
+                            video_pid,audio_pid,pcr_pid);
+</pre>
+<p>In situations where the software has &quot;guessed&quot; wrongly whether the data is
+H.262 or H.264, or where data is being read from standard input and it did not
+have an opportunity to decide, it is possible to insist:</p>
+<pre class="literal-block">
+set_PES_reader_h264(reader);
+</pre>
+<p>(the default is H.262).</p>
+<p>PES packets may be read individually, but this is normally mediated by one of
+the higher levels.</p>
+<div class="section">
+<h3><a class="toc-backref" href="#id10" id="server-mode" name="server-mode">Server mode</a></h3>
+<p>It is possible to associate a Transport Stream writer with the PES input
+stream. This is then used to &quot;mirror&quot; each PES packet, so that the input
+stream is automatically written out as TS (specifically, each time a new PES
+packet is read in, the previous packet is written out).</p>
+<p>Where to write the data is specified with:</p>
+<pre class="literal-block">
+set_server_output(reader,tswriter,program_freq);
+</pre>
+<p>This also starts the mirroring. <tt class="docutils literal"><span class="pre">program_freq</span></tt> is how often (in PES packets)
+the PAT/PMT program information should be written out.</p>
+<p>Mirroring may be switched on and off using:</p>
+<pre class="literal-block">
+start_server_output(reader);
+stop_server_output(reader);
+</pre>
+<p><tt class="docutils literal"><span class="pre">tsserve</span></tt> is the main program that takes advantage of this capability -
+using it whilst moving linearly forwards in the data is simple enough, but if
+one needs to fast forwards or move backwards, things rapidly become more
+complex.</p>
+</div>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id11" id="read-ahead-buffers" name="read-ahead-buffers">Read-ahead buffers</a></h1>
+<p>Since the bottom-most file access is done via file descriptors, there is no
+system-provided buffering.</p>
+<p>Currently, read-ahead buffers are provided by:</p>
+<ul class="simple">
+<li>The TS reader</li>
+<li>The &quot;bare&quot; ES reader (i.e., reading bytes directly from a file)</li>
+</ul>
+<p>In both of these contexts, <tt class="docutils literal"><span class="pre">ftell</span></tt> cannot usefully be used to determine
+where in the file the application is/will be reading - instead, the TS reader
+context and ES context maintain their own notions of current position, which
+should be used instead.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id12" id="rewinding" name="rewinding">Rewinding</a></h1>
+<p>As a rule, when rewinding a data stream, use the rewind function for
+the &quot;highest level&quot; context available.</p>
+<p>Thus if reading access units, use <tt class="docutils literal"><span class="pre">rewind_access_unit_context</span></tt>, rather than
+(for instance) <tt class="docutils literal"><span class="pre">seek_ES</span></tt>.</p>
+<p>General seeking within files above the ES level has not been implemented, as
+none of the existing tools require it.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id13" id="reversing" name="reversing">Reversing</a></h1>
+<p>For issues when reversing H.262 data, see the documentation for <tt class="docutils literal"><span class="pre">esreverse</span></tt>
+in the <a class="reference" href="tools.html">Tools</a> document.</p>
+<p>Reversing of H.264 currently uses non-IDR frames more than it should. This is
+primarily because the Harry Potter clip only has a single IDR, and thus it has
+been difficult to be sure what to do. Unfortunately, in H.264, B and P frames
+can refer back before the last I frame, so just outputting a couple of
+reference frames does not guarantee a coherent picture when the next
+non-reference frame is encountered. The solution is to enfore output of IDR
+frames at such transitions, and this will be investigated later on.</p>
+<p>Reversing in the library is handed in a relatively &quot;black box&quot; manner. A
+reverse data context must be built:</p>
+<pre class="literal-block">
+err = build_reverse_data(&amp;reverse_data,is_h264);
+</pre>
+<p>and then added to the appropriate H.262 picture or H.264 access unit context:</p>
+<pre class="literal-block">
+err = add_h262_reverse_context(context,reverse_data);
+err = add_access_unit_reverse_context(acontext,reverse_data);
+</pre>
+<p>(this could obviously use some streamlining). After this, normal reading of
+frames in the forwards direction remembers appropriate reversing information.</p>
+<p>Alternatively, the reversing data for a whole file can be accumulated with one
+call (it just processes through the file):</p>
+<pre class="literal-block">
+err = collect_reverse_h262(context,max,verbose,quiet);
+err = collect_reverse_access_units(acontext,max,verbose,quiet,
+                                   seq_param_data,pic_param_data);
+</pre>
+<p>Data may be output in reverse using the appropriate call - these are the same
+for H.262 and H.264 data:</p>
+<pre class="literal-block">
+err = output_in_reverse_as_ES(es,filedesc,freqency,verbose,quiet,
+                              start_with,max,reverse_data);
+err = output_in_reverse_as_TS(es,tswriter,verbose,quiet,offset,
+                              start_with,max,reverse_data);
+</pre>
+<p><tt class="docutils literal"><span class="pre">start_with</span></tt> indicates which frame to start reversing from - <tt class="docutils literal"><span class="pre">-1</span></tt> means
+the &quot;current&quot; picture. <tt class="docutils literal"><span class="pre">frequency</span></tt> indicates the speed of reversing required
+- thus a value of <tt class="docutils literal"><span class="pre">8</span></tt> means reversing at (about) 8 times.</p>
+<p>The reversing datastructures can be freed when no longer needed:</p>
+<pre class="literal-block">
+free_reverse_data(reverse_data);
+</pre>
+<p>but this does not detach them from the H.262 or H.264 context, so should only
+be used when tidying up those datastructures.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id14" id="filtering" name="filtering">Filtering</a></h1>
+<p>For issues when filtering data, see the documentation for <tt class="docutils literal"><span class="pre">esfilter</span></tt>
+in the <a class="reference" href="tools.html">Tools</a> document.</p>
+<p>An appropriate filter context is built:</p>
+<pre class="literal-block">
+err = build_h262_filter_context_strip(&amp;fcontext,context,all_IP);
+err = build_h262_filter_context(&amp;fcontext,context,frequency);
+err = build_h264_filter_context_strip(&amp;fcontext,acontext,all_ref);
+err = build_h264_filter_context(&amp;fcontext,acontext,frequency);
+</pre>
+<p>and later freed:</p>
+<pre class="literal-block">
+free_h262_filter_context(fcontext);
+free_h264_filter_context(fcontext);
+</pre>
+<p>For the stripping contexts, the <tt class="docutils literal"><span class="pre">all_IP</span></tt> flag means keep all I <em>and</em> P
+frames (rather than just I), and the <tt class="docutils literal"><span class="pre">all_ref</span></tt> flag means keep all reference
+pictures.</p>
+<p>For the filtering contexts, the <tt class="docutils literal"><span class="pre">frequency</span></tt> is the speedup that is required
+- for instance, a value of <tt class="docutils literal"><span class="pre">8</span></tt> means that 8x fast forward is desired.</p>
+<p>These may then be used to retrieve the next appropriate frame from the input
+stream:</p>
+<pre class="literal-block">
+err = get_next_stripped_h262_frame(fcontext,verbose,quiet,
+                                   &amp;seq_hdr,&amp;frame,&amp;frames_seen);
+err = get_next_filtered_h262_frame(fcontext,verbose,quiet,
+                                   &amp;seq_hdr,&amp;frame,&amp;frames_seen);
+
+err = get_next_stripped_h264_frame(fcontext,verbose,quiet,
+                                   &amp;frame,&amp;frames_seen);
+err = get_next_filtered_h264_frame(fcontext,verbose,quiet,
+                                   &amp;frame,&amp;frames_seen);
+</pre>
+<p>In all cases, the caller must free <tt class="docutils literal"><span class="pre">frame</span></tt> when they have finished with
+it. However, for H.262 data, <tt class="docutils literal"><span class="pre">seq_hdr</span></tt> must not be freed.</p>
+<p>When filtering, <tt class="docutils literal"><span class="pre">frame</span></tt> is returned as NULL to indicate that the previous
+frame should be repeated, to produce (an approximation to) the desired
+frequency.</p>
+<!-- ***** BEGIN LICENSE BLOCK ***** -->
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id15" id="license" name="license">License</a></h1>
+<p>Version: MPL 1.1</p>
+<p>The contents of this file are subject to the Mozilla Public License Version
+1.1 (the &quot;License&quot;); you may not use this file except in compliance with
+the License. You may obtain a copy of the License at
+<a class="reference" href="http://www.mozilla.org/MPL/">http://www.mozilla.org/MPL/</a></p>
+<p>Software distributed under the License is distributed on an &quot;AS IS&quot; basis,
+WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+for the specific language governing rights and limitations under the
+License.</p>
+<p>The Original Code is the MPEG TS, PS and ES tools.</p>
+<p>The Initial Developer of the Original Code is Amino Communications Ltd.
+Portions created by the Initial Developer are Copyright © 2008
+the Initial Developer. All Rights Reserved.</p>
+<p>Contributor(s):</p>
+<blockquote>
+Amino Communications Ltd, Swavesey, Cambridge UK</blockquote>
+<!-- ***** END LICENSE BLOCK ***** -->
+</div>
+</div>
+</body>
+</html>

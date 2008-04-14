@@ -1,0 +1,74 @@
+ADTS
+====
+
+:: 
+
+ frame:
+
+    byte alignment
+    fixed header
+    variable header
+    error check
+    for (ii = 0; ii < no raw blocks in frame + 1; ii++)
+        raw data block
+
+
+ fixed header:  (the same for all frames)
+
+    syncword			12   ('1111 1111 1111')             12
+
+    id				 1   (1=MPEG-2 AAC, 0=MPEG-4)
+    layer			 2   ('00')
+    protection absent		 1   (see below)
+    profile objecttype		 2
+    sampling freq index		 4
+    private bit			 1   (not used)
+    channel config		 3
+    original/copy		 1
+    home			 1                                  16
+
+    emphasis			 2   (maybe only if id=1?)
+
+ variable header:
+
+    copyright id bit		 1
+    copyright id start		 1
+    aac frame length		13   (length of whole frame, inc. headers)
+    adts buffer fullness	11
+    no raw data blocks in frame	 2   (0=>1 raw data block)
+
+ error check:
+
+    if protection absent == 0:
+        crc check               16
+
+.. ***** BEGIN LICENSE BLOCK *****
+
+License
+-------
+Version: MPL 1.1
+
+The contents of this file are subject to the Mozilla Public License Version
+1.1 (the "License"); you may not use this file except in compliance with
+the License. You may obtain a copy of the License at
+http://www.mozilla.org/MPL/
+
+Software distributed under the License is distributed on an "AS IS" basis,
+WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+for the specific language governing rights and limitations under the
+License.
+
+The Original Code is the MPEG TS, PS and ES tools.
+
+The Initial Developer of the Original Code is Amino Communications Ltd.
+Portions created by the Initial Developer are Copyright |copy| 2008
+the Initial Developer. All Rights Reserved.
+
+.. |copy| unicode:: 0xA9 .. copyright sign
+
+Contributor(s):
+
+  Amino Communications Ltd, Swavesey, Cambridge UK
+
+.. ***** END LICENSE BLOCK *****
+

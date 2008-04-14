@@ -1,0 +1,219 @@
+# Makefile for use on Windows
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1
+# 
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# 
+# The Original Code is the MPEG TS, PS and ES tools.
+# 
+# The Initial Developer of the Original Code is Amino Communications Ltd.
+# Portions created by the Initial Developer are Copyright (C) 2008
+# the Initial Developer. All Rights Reserved.
+# 
+# Contributor(s):
+#   Amino Communications Ltd, Swavesey, Cambridge UK
+# 
+# ***** END LICENSE BLOCK *****
+
+.SUFFIXES:
+
+!if "$(DEBUG)"==""
+DEBUG=0
+!endif
+
+DEBUG_OBJDIR=w32\debug
+PLAIN_OBJDIR=w32\obj
+
+!if $(DEBUG)
+OBJDIR=$(DEBUG_OBJDIR)
+COPT=/Od /Zi /MTd
+LOPT=/DEBUG /INCREMENTAL:NO /NOLOGO
+# /NODEFAULTLIB:CMT
+!else
+OBJDIR=$(PLAIN_OBJDIR)
+COPT=/O2b2 /MT /DNDEBUG
+LOPT=/INCREMENTAL:NO /NOLOGO
+# /NODEFAULTLIB:CMT
+!endif
+EXEDIR=w32\bin
+LIBDIR=$(OBJDIR)
+LIBFILE=$(LIBDIR)\libtstools.lib
+
+CC = cl /c /W3 /WX /GF /Fd$(OBJDIR)\ $(COPT)
+#CC=cl /nologo /c /WX /GF /Fd$(OBJDIR)\ $(COPT)
+
+
+.SUFFIXES: .c .cpp .obj .exe {$(OBJDIR)}.obj
+
+# ------------------------------------------------------------
+# Rules
+
+.c{$(OBJDIR)}.obj::
+	$(CC) /Fo$(OBJDIR)\ $<
+
+{$(OBJDIR)}.obj{$(EXEDIR)}.exe:
+	link /out:$@ $(LOPT) $<
+
+# ------------------------------------------------------------
+# Things to build
+
+PROGS = \
+    $(EXEDIR)\esfilter.exe    \
+    $(EXEDIR)\esdots.exe      \
+    $(EXEDIR)\esmerge.exe    \
+    $(EXEDIR)\esreport.exe    \
+    $(EXEDIR)\ts2es.exe       \
+    $(EXEDIR)\es2ts.exe       \
+    $(EXEDIR)\esreverse.exe   \
+    $(EXEDIR)\ps2ts.exe       \
+    $(EXEDIR)\psreport.exe    \
+    $(EXEDIR)\stream_type.exe \
+    $(EXEDIR)\tsinfo.exe      \
+    $(EXEDIR)\tsreport.exe    \
+    $(EXEDIR)\tsplay.exe      \
+    $(EXEDIR)\tsserve.exe
+
+# Object files for the library
+LIB_OBJS = \
+ $(OBJDIR)\accessunit.obj \
+ $(OBJDIR)\adts.obj \
+ $(OBJDIR)\avs.obj \
+ $(OBJDIR)\audio.obj \
+ $(OBJDIR)\bitdata.obj \
+ $(OBJDIR)\es.obj \
+ $(OBJDIR)\filter.obj \
+ $(OBJDIR)\fmtx.obj \
+ $(OBJDIR)\h262.obj \
+ $(OBJDIR)\l2audio.obj \
+ $(OBJDIR)\misc.obj \
+ $(OBJDIR)\nalunit.obj \
+ $(OBJDIR)\ps.obj \
+ $(OBJDIR)\pes.obj \
+ $(OBJDIR)\pidint.obj \
+ $(OBJDIR)\reverse.obj \
+ $(OBJDIR)\ts.obj \
+ $(OBJDIR)\tswrite.obj
+
+# Object files for the programs
+PROG_OBJS = \
+  $(OBJDIR)/es2ts.obj \
+  $(OBJDIR)/esdots.obj \
+  $(OBJDIR)/esfilter.obj \
+  $(OBJDIR)/esmerge.obj \
+  $(OBJDIR)/esreport.obj \
+  $(OBJDIR)/esreverse.obj \
+  $(OBJDIR)/ps2ts.obj \
+  $(OBJDIR)/psreport.obj \
+  $(OBJDIR)/stream_type.obj \
+  $(OBJDIR)/ts2es.obj \
+  $(OBJDIR)/tsinfo.obj \
+  $(OBJDIR)/tsplay.obj \
+  $(OBJDIR)/tsreport.obj \
+  $(OBJDIR)/tsserve.obj
+
+# ------------------------------------------------------------
+# Targets
+
+all: $(OBJDIR) $(EXEDIR) $(LIBDIR) $(PROGS)
+
+$(OBJDIR)\fmtx.obj: fmtx.h
+
+$(OBJDIR)\tsreport.obj: fmtx.h
+
+$(LIBFILE): $(LIBDIR) $(LIB_OBJS)
+	lib /nologo /out:$@ $(LIB_OBJS)
+
+$(EXEDIR)\esfilter.exe: $(OBJDIR)\esfilter.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\esmerge.exe: $(OBJDIR)\esmerge.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\ts2es.exe:    $(OBJDIR)\ts2es.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\es2ts.exe:    $(OBJDIR)\es2ts.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\esdots.exe:   $(OBJDIR)\esdots.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\esreport.exe: $(OBJDIR)\esreport.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\esreverse.exe: $(OBJDIR)\esreverse.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\stream_type.exe: $(OBJDIR)\stream_type.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\psreport.exe: $(OBJDIR)\psreport.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\ps2ts.exe:    $(OBJDIR)\ps2ts.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\tsinfo.exe:   $(OBJDIR)\tsinfo.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\tsreport.exe: $(OBJDIR)\tsreport.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\tsplay.exe:   $(OBJDIR)\tsplay.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\tsserve.exe:   $(OBJDIR)\tsserve.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+# For the moment, ts2ps is not an official program, so must
+# be built separately
+ts2ps:	$(EXEDIR)\ts2ps.exe
+
+$(EXEDIR)\ts2ps.exe:    $(OBJDIR)\ts2ps.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+# Only build test_pes if explicitly asked to do so
+test_pes: $(EXEDIR)\test_pes.exe
+
+$(EXEDIR)\test_pes.exe:   $(OBJDIR)\test_pes.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+
+# ------------------------------------------------------------
+# Directories
+
+$(OBJDIR):
+	$(COMSPEC) /x /c md $(OBJDIR)
+
+!if "$(LIBDIR)" != "$(OBJDIR)"
+$(LIBDIR):
+	$(COMSPEC) /x /c md $(LIBDIR)
+!endif
+
+!if "$(EXEDIR)" != "$(OBJDIR)"
+$(EXEDIR):
+	$(COMSPEC) /x /c md $(EXEDIR)
+!endif
+
+# ------------------------------------------------------------
+# Tidying up
+clean:
+	-del /q $(OBJDIR)\*.obj
+	-del /q $(OBJDIR)\*.lib
+
+distclean: clean
+	-del /q $(DEBUG_OBJDIR)\*.obj
+	-del /q $(DEBUG_OBJDIR)\*.lib
+	-del /q $(PLAIN_OBJDIR)\*.obj
+	-del /q $(PLAIN_OBJDIR)\*.lib
+	-del /q $(EXEDIR)\*.exe
+	-del /q $(EXEDIR)\*.pdb
