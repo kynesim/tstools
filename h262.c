@@ -38,7 +38,7 @@
 #include "reverse_fns.h"
 #include "misc_fns.h"
 
-#define DEBUG_GET_NEXT_PICTURE 1
+#define DEBUG_GET_NEXT_PICTURE 0
 #define DEBUG_AFD 0
 
 

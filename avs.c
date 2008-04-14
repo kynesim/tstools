@@ -45,7 +45,7 @@
 #include "misc_fns.h"
 
 #define DEBUG                  0
-#define DEBUG_GET_NEXT_PICTURE 1
+#define DEBUG_GET_NEXT_PICTURE 0
 
 
 /*
