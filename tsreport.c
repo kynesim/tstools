@@ -226,7 +226,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     int     got_pcr = FALSE;
     u_int64 acc_pcr = 0;        // The accurate PCR per TS packet
 
-    if (max > 0 && count >= max)
+    if (max > 0 && count >= (u_int32)max)
     {
       printf("Stopping after %d packets (PMT was at %d)\n",max,pmt_at);
       break;
