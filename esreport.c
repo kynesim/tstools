@@ -686,28 +686,28 @@ static void report_by_nal_unit(ES_p   es,
     printf("nal_ref_idc:\n");
     for (ii=0; ii<4; ii++)
       if (ref_idcs[ii] > 0)
-        printf("  %8d of %2d\n",ref_idcs[ii],ii);
+        printf("  %8d of %2d%s\n",ref_idcs[ii],ii,ii?"":" (non-reference)");
 
     printf("nal_unit_type:\n");
     for (ii=0; ii<13; ii++)
       if (unit_types[ii] > 0)
-        printf("  %8d of %2d (%s)\n",unit_types[ii],ii,NAL_UNIT_TYPE_STR(ii));
+        printf("  %8d of type %2d (%s)\n",unit_types[ii],ii,NAL_UNIT_TYPE_STR(ii));
     if (unit_types[13] > 0)
-      printf("  %8d of 13..23 (Reserved)\n",unit_types[13]);
+      printf("  %8d of type 13..23 (Reserved)\n",unit_types[13]);
     if (unit_types[14] > 0)
-      printf("  %8d of 24..31 (Unspecified)\n",unit_types[14]);
+      printf("  %8d of typ 24..31 (Unspecified)\n",unit_types[14]);
 
     printf("slice_type:\n");
     for (ii=0; ii<10; ii++)
       if (slice_types[ii] > 0)
-        printf("  %8d of %2d (%s)\n",slice_types[ii],ii,
+        printf("  %8d of type %2d (%s)\n",slice_types[ii],ii,
                NAL_SLICE_TYPE_STR(ii));
   }
   else
     fprintf(stderr,"### Abandoning reporting due to error\n");
   free_nal_unit_context(&context);
 }
-
+
 /*
  * Report on the content of an MPEG2 file
  *
@@ -1031,7 +1031,7 @@ static void print_usage()
     "  -avs              Force the program to treat the input as AVS.\n"
     );
 }
-
+
 int main(int argc, char **argv)
 {
   char  *input_name = NULL;
@@ -1236,3 +1236,4 @@ int main(int argc, char **argv)
   }
   return 0;
 }
+

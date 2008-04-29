@@ -80,12 +80,12 @@ enum NAL_UNIT_TYPE
 #define ALL_SLICES_SP  8
 #define ALL_SLICES_SI  9
 
-#define NAL_SLICE_TYPE_STR(a)  \
-  ((a)==SLICE_P?"P": (a)==SLICE_B?"B": (a)==SLICE_I?"I":          \
-   (a)==SLICE_SP?"SP": (a)==SLICE_SI?"SI":                        \
-   (a)==ALL_SLICES_P?"P &c": (a)==ALL_SLICES_B?"B &c":            \
-   (a)==ALL_SLICES_I?"I &c": (a)==ALL_SLICES_SP?"SP &c":          \
-   (a)==ALL_SLICES_SI?"SI &c":"??")
+#define NAL_SLICE_TYPE_STR(a)	\
+  ((a)==SLICE_P?"First P": (a)==SLICE_B?"First B": (a)==SLICE_I?"First I":     	\
+   (a)==SLICE_SP?"First SP": (a)==SLICE_SI?"First SI":                         	\
+   (a)==ALL_SLICES_P?"All P": (a)==ALL_SLICES_B?"All B":           		\
+   (a)==ALL_SLICES_I?"All I": (a)==ALL_SLICES_SP?"All SP":         		\
+   (a)==ALL_SLICES_SI?"All SI":"??")
 
 
 // ------------------------------------------------------------
