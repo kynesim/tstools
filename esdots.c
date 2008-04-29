@@ -283,19 +283,19 @@ static int dots_by_access_unit(ES_p  es,
   if (verbose)
     printf("\n"
            "Each character represents a single access unit\n"
-           "    . means a non-reference frame\n"
-           "    _ means an access unit without a primary picture\n"
-           "      (presumably the last 'access unit' of the bitstream)\n"
            "\n"
-           "For reference frames, an uppercase letter means an IDR frame\n"
-           "and a lowercase letter means a non-IDR frame:\n"
-           "    I means a frame with only I slices\n"
-           "    P means a frame with only P slices\n"
-           "    B means a frame with only B slices\n"
-           "    X means any other type of frame\n"
+           "    D       means an IDR.\n"
+           "    d       means an IDR that is not all I slices.\n"
+           "    I, P, B means all slices of the primary picture are I, P or B,\n"
+           "            and this is a reference picture.\n"
+           "    i, p, b means all slices of the primary picture are I, P or B,\n"
+           "            and this is NOT a reference picture.\n"
+           "    X or x  means that not all slices are of the same type.\n"
+           "    ?       means some other type of access unit.\n"
+           "    _       means that the access unit doesn't contain a primary picture.\n"
            "\n"
            "If -hasheos was specified:\n"
-           "    # means an EOS (end-of-stream) NAL unit\n"
+           "    # means an EOS (end-of-stream) NAL unit.\n"
            "\n");
   
   err = build_access_unit_context(es,&context);
@@ -330,9 +330,9 @@ static int dots_by_access_unit(ES_p  es,
     else if (access_unit->primary_start->nal_unit_type == NAL_IDR)
     {
       if (all_slices_I(access_unit))
-        printf("R");
+        printf("D");
       else
-        printf("?");
+        printf("d");
     }
     else if (access_unit->primary_start->nal_unit_type == NAL_NON_IDR)
     {
