@@ -374,7 +374,7 @@ esreport
 Reads an input elementary stream (or, with ``-pes``, PS or TS) and reports on
 it.
 
-For instance::
+For instance, for MPEG-2::
 
     $ esreport  -max 5 CharliesAngels.es
     Reading from CharliesAngels.es
@@ -386,7 +386,11 @@ For instance::
     00000166/0000: MPEG2 item b5 (Extension start) size 9
     Found 5 MPEG-2 items
 
-or::
+Where the format is:
+
+    start_pos_in_file/start_pos_in_packet: MPEG2 item unit_start_code (explanation of unit_start_code and additional info if it is a picture) data_length
+
+Or, for AVC::
 
     $ esreport -max 5 hp-trail.264
     Reading from hp-trail.264
@@ -413,10 +417,14 @@ or::
              1 of  7 (seq param set)
              1 of  8 (pic param set)
     slice_type:
-             2 of  5 (P &c)
-             1 of  7 (I &c)
+             2 of  5 (All P)
+             1 of  7 (All I)
 
-or::
+Where the format is:
+
+    start_pos_in_file/start_pos_in_packet: NAL unit nal_ref_idc/nal_unit_type (explanation of nal_unit_type) data_length(in bytes):first_data_bytes
+
+Or, at frame level::
 
     $ esreport  -frames -max 5 CharliesAngels.es
     Reading from CharliesAngels.es
