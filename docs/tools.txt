@@ -279,13 +279,22 @@ For instance::
     [E>iEUUbEUbEUpEUbEUbEUpEUbEUbEUpEUbEUbEU[E>iEUUbEUbEUpEUbEUbEUpEUbEUbEU
     pEUbEUbEU[E>iEUUbEU
     Found 1000 MPEG2 items
+    GOP times (s): max=0.4800, min=0.1200, mean=0.448125
 
 
-If the ``-v`` switch is used, then an explanation of the meaning of the
+If the ``-v'' switch is used, then an explanation of the meaning of the
 characters output will be prepended (it is slightly different depending on
 whether the input is MPEG-2 or MPEG-4/AVC).
 
-
+If the ``-gop'' switch is used, then each GOP duration is displayed. For H.264, where the GOP is not defined, we retrive this data by measuring the time between to I or IDR frames.
+It looks like this::
+
+    [E>iEbEbEpEbEbEpEbEbEpEbEbE: 0.4800s
+    [E>iEbEbE: 0.1200s
+    [E>iEbEbEpEbEbEpEbEbEpEbEbE: 0.4800s
+    ...
+
+
 esfilter
 ========
 Reads an input video stream and outputs it to another file, possibly filtering

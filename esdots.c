@@ -50,20 +50,40 @@
 #include "misc_fns.h"
 #include "version.h"
 
+static inline
+int umod(unsigned int a, unsigned int b)
+{
+	int r = a % b;
+	return r < 0 ? r + b : r;
+}
+
 
 /*
  * Print out a single character representative of our item.
  */
-static void h262_item_dot(h262_item_p  item)
+static void h262_item_dot(h262_item_p  item, 
+                          double      *delta_gop, 
+                          int          show_gop_time)
 {
   char *str = NULL;
 
   static int frames = 0;
+  static int temp_frames = 0;
+
+  // print the time for each I-picture (timing between two GOPs) 
+  if (item->unit.start_code == 0xB3)
+  {
+    *delta_gop = (frames - temp_frames)/25.; // time between two GOPs [in seconds]
+    temp_frames = frames;
+    if (show_gop_time && temp_frames)
+      printf(": %2.4fs\n", *delta_gop);
+  }
+
   if (item->unit.start_code == 0x00)
   {
     if (frames % (25*60) == 0)
-      printf("\n%d minute%s\n",frames/(25*60),(frames/(25*60)==1?"":"s"));
-    frames ++;
+      printf("\n %d minute%s\n",frames/(25*60),(frames/(25*60)==1?"":"s")); 
+    frames++;
   }
 
   switch (item->unit.start_code)
@@ -109,10 +129,16 @@ static void h262_item_dot(h262_item_p  item)
  */
 static int report_h262_file_as_dots(ES_p    es,
                                     int     max,
-                                    int     verbose)
+                                    int     verbose,
+				    int	    show_gop_time)
 {
   int  err;
   int  count = 0;
+  double time_gop = 0.0;
+  int gops = 0;
+  double time_gop_max = 0.0;
+  double time_gop_min = 1000.0;
+  double time_gop_tot = 0.0;
 
   if (verbose)
     printf("\n"
@@ -139,8 +165,7 @@ static int report_h262_file_as_dots(ES_p    es,
   
   for (;;)
   {
-    h262_item_p  item;
-
+    h262_item_p  item; 
     err = find_next_h262_item(es,&item);
     if (err == EOF)
       break;
@@ -150,16 +175,26 @@ static int report_h262_file_as_dots(ES_p    es,
       return err;
     }
     count++;
-    h262_item_dot(item);
+    h262_item_dot(item, &time_gop, show_gop_time);
+    if(item->unit.start_code == 0xB3)
+    {
+      time_gop_max = max(time_gop_max, time_gop);
+      if (gops) 
+	  time_gop_min = min(time_gop_min, time_gop);
+      gops++;
+      time_gop_tot += time_gop;
+    }
+
     free_h262_item(&item);
     
     if (max > 0 && count >= max)
       break;
   }
   printf("\nFound %d MPEG2 item%s\n",count,(count==1?"":"s"));
+  printf("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f\n",time_gop_max, time_gop_min,time_gop_tot/(gops-1));
   return 0;
 }
-
+
 /*
  * Simply report on the content of an AVS file as single characters
  *
@@ -265,38 +300,96 @@ static int report_avs_file_as_dots(ES_p    es,
   free_avs_context(&context);
   return 0;
 }
-
+
+/*
+ * Returns a single character which specifies the type of the access unit
+ */
+static char choose_nal_type(access_unit_p access_unit, int verbose)
+{
+  char character_nal_type = '?';
+
+  if (verbose)
+  printf("\n"
+         "Each character represents a single access unit\n"
+         "\n"
+         "    D       means an IDR.\n"
+         "    d       means an IDR that is not all I slices.\n"
+         "    I, P, B means all slices of the primary picture are I, P or B,\n"
+         "            and this is a reference picture.\n"
+         "    i, p, b means all slices of the primary picture are I, P or B,\n"
+         "            and this is NOT a reference picture.\n"
+         "    X or x  means that not all slices are of the same type.\n"
+         "    ?       means some other type of access unit.\n"
+         "    _       means that the access unit doesn't contain a primary picture.\n"
+         "\n"
+         "If -hasheos was specified:\n"
+         "    # means an EOS (end-of-stream) NAL unit.\n"
+         "\n");
+
+    if (access_unit->primary_start == NULL)
+      printf("_");
+    else if (access_unit->primary_start->nal_ref_idc == 0)
+    {
+      if (all_slices_I(access_unit))
+        character_nal_type = 'i';
+      else if (all_slices_P(access_unit))
+        character_nal_type = 'p';
+      else if (all_slices_B(access_unit))
+        character_nal_type = 'b';
+      else
+        character_nal_type = 'x';
+    }
+    else if (access_unit->primary_start->nal_unit_type == NAL_IDR)
+    {
+      //gop_start_found = TRUE;
+      if (all_slices_I(access_unit))
+        character_nal_type = 'D';
+      else
+        character_nal_type = 'd'; // Shall this happen?
+    }
+    else if (access_unit->primary_start->nal_unit_type == NAL_NON_IDR)
+    {
+      if (all_slices_I(access_unit))
+      {
+       // gop_start_found = TRUE;
+        character_nal_type = 'I';
+      }
+      else if (all_slices_P(access_unit))
+        character_nal_type = 'P';
+      else if (all_slices_B(access_unit))
+        character_nal_type = 'B';
+      else
+        character_nal_type = 'X';
+    }
+
+    return character_nal_type;
+}
+
 /*
  * Report on data by access unit, as single characters
- *
+ * (access unit here means frame or coupled fields). 
+ * Also compute the duration of each pseudo-GOP (time between two I or IDR frames).
  * Returns 0 if all went well, 1 if something went wrong.
  */
 static int dots_by_access_unit(ES_p  es,
                                int   max,
                                int   verbose,
-                               int   hash_eos)
+                               int   hash_eos,
+                               int   show_gop_time)
 {
   int err = 0;
   int access_unit_count = 0;
   access_unit_context_p  context;
 
-  if (verbose)
-    printf("\n"
-           "Each character represents a single access unit\n"
-           "\n"
-           "    D       means an IDR.\n"
-           "    d       means an IDR that is not all I slices.\n"
-           "    I, P, B means all slices of the primary picture are I, P or B,\n"
-           "            and this is a reference picture.\n"
-           "    i, p, b means all slices of the primary picture are I, P or B,\n"
-           "            and this is NOT a reference picture.\n"
-           "    X or x  means that not all slices are of the same type.\n"
-           "    ?       means some other type of access unit.\n"
-           "    _       means that the access unit doesn't contain a primary picture.\n"
-           "\n"
-           "If -hasheos was specified:\n"
-           "    # means an EOS (end-of-stream) NAL unit.\n"
-           "\n");
+  int gop_start_found = FALSE;
+  int k_frame = 0;
+  int size_gop;
+  int size_gop_max = 0;
+  int size_gop_min = 100000;
+  int gops = 0;
+  int size_gop_tot = 0;
+  int is_first_k_frame = TRUE;
+  char char_nal_type = 'a';
   
   err = build_access_unit_context(es,&context);
   if (err) return err;
@@ -304,8 +397,10 @@ static int dots_by_access_unit(ES_p  es,
   for (;;)
   {
     access_unit_p      access_unit;
+    gop_start_found = FALSE;
 
     err = get_next_h264_frame(context,TRUE,FALSE,&access_unit);
+      
     if (err == EOF)
       break;
     else if (err)
@@ -313,43 +408,34 @@ static int dots_by_access_unit(ES_p  es,
       free_access_unit_context(&context);
       return 1;
     }
+    
+    char_nal_type = choose_nal_type(access_unit, verbose);
 
-    if (access_unit->primary_start == NULL)
-      printf("_");
-    else if (access_unit->primary_start->nal_ref_idc == 0)
+    if (char_nal_type=='I' || char_nal_type=='D' || char_nal_type=='d')
+      gop_start_found = TRUE;
+
+    // no real group of picture (GOP) is formally defined in h.264 
+    // but we measure the distance between intra or IDR frames, whichever comes first.
+    // NOTE that we suppose video @ 25fps
+    if (gop_start_found)
     {
-      if (all_slices_I(access_unit))
-        printf("i");
-      else if (all_slices_P(access_unit))
-        printf("p");
-      else if (all_slices_B(access_unit))
-        printf("b");
-      else
-        printf("x");
+	  if (!is_first_k_frame)
+	  {
+	    size_gop = access_unit_count - k_frame;
+            size_gop_max = max(size_gop_max, size_gop);
+            size_gop_min = min(size_gop_min, size_gop);
+	    size_gop_tot += size_gop;
+            gops++;
+            if (show_gop_time)
+              printf(": %2.4f\n", (double)size_gop/25 ); // that's the time duration of a "GOP" (if the frame rate is 25fps)
+	  }
+          is_first_k_frame = FALSE;
+          k_frame = access_unit_count;
     }
-    else if (access_unit->primary_start->nal_unit_type == NAL_IDR)
-    {
-      if (all_slices_I(access_unit))
-        printf("D");
-      else
-        printf("d");
-    }
-    else if (access_unit->primary_start->nal_unit_type == NAL_NON_IDR)
-    {
-      if (all_slices_I(access_unit))
-        printf("I");
-      else if (all_slices_P(access_unit))
-        printf("P");
-      else if (all_slices_B(access_unit))
-        printf("B");
-      else
-        printf("X");
-    }
-    else
-      printf("?");
+    printf("%c", char_nal_type);
+    access_unit_count++;
 
     fflush(stdout);
-    access_unit_count ++;
     free_access_unit(&access_unit);
 
     // Did the logical stream end after the last access unit?
@@ -380,10 +466,11 @@ static int dots_by_access_unit(ES_p  es,
   printf("\nFound %d NAL unit%s in %d access unit%s\n",
          context->nac->count,(context->nac->count==1?"":"s"),
          access_unit_count,(access_unit_count==1?"":"s"));
+  printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.6f\n",(double)size_gop_max/25, (double)size_gop_min/25, (double)size_gop_tot/(25*gops));
   free_access_unit_context(&context);
   return 0;
 }
-
+
 /*
  * Simply report on the content of an ES file as single characters for each ES
  * unit
@@ -574,6 +661,8 @@ static void print_usage()
     "                    rather than stopping (only applies to H.264)\n"
     "  -es               Report ES units, rather than any 'higher' unit\n"
     "                    (not necessarily suppported for all file types)\n"
+    "  -gop              Show the duration of each GOP (for MPEG-2 steams) OR\n"
+    "                    the number of non-reference frames between 2 intra frames (AVC)" 
     "\n"
     "Stream type:\n"
     "  If input is from a file, then the program will look at the start of\n"
@@ -598,22 +687,23 @@ static void print_usage()
 int main(int argc, char **argv)
 {
   char  *input_name = NULL;
-  int    had_input_name = FALSE;
-  int    use_stdin = FALSE;
-  int    err = 0;
-  ES_p   es = NULL;
-  int    max = 0;
-  int    verbose = FALSE;
-  int    ii = 1;
+  int   had_input_name = FALSE;
+  int   use_stdin = FALSE;
+  int   err = 0;
+  ES_p  es = NULL;
+  int   max = 0;
+  int   verbose = FALSE;
+  int   ii = 1;
 
-  int    use_pes = FALSE;
-  int    hash_eos = FALSE;
+  int	use_pes = FALSE;
+  int	hash_eos = FALSE;
 
-  int     want_data = VIDEO_H262;
-  int     is_data = want_data;
-  int     force_stream_type = FALSE;
+  int	want_data = VIDEO_H262;
+  int	is_data = want_data;
+  int	force_stream_type = FALSE;
 
-  int     want_ES = FALSE;
+  int	want_ES = FALSE;
+  int	show_gop_time = FALSE;
 
   if (argc < 2)
   {
@@ -652,13 +742,9 @@ int main(int argc, char **argv)
         want_data = VIDEO_AVS;
       }
       else if (!strcmp("-es",argv[ii]))
-      {
         want_ES = TRUE;
-      }
       else if (!strcmp("-verbose",argv[ii]) || !strcmp("-v",argv[ii]))
-      {
         verbose = TRUE;
-      }
       else if (!strcmp("-max",argv[ii]) || !strcmp("-m",argv[ii]))
       {
         CHECKARG("es2dots",ii);
@@ -670,6 +756,8 @@ int main(int argc, char **argv)
         hash_eos = TRUE;
       else if (!strcmp("-pes",argv[ii]) || !strcmp("-ts",argv[ii]))
         use_pes = TRUE;
+      else if (!strcmp("-gop",argv[ii]))
+        show_gop_time = TRUE;
       else
       {
         fprintf(stderr,"### esdots: "
@@ -710,9 +798,9 @@ int main(int argc, char **argv)
   if (want_ES)
     err = report_file_as_ES_dots(es,is_data,max,verbose);
   else if (is_data == VIDEO_H262)
-    err = report_h262_file_as_dots(es,max,verbose);
+    err = report_h262_file_as_dots(es,max,verbose,show_gop_time);
   else if (is_data == VIDEO_H264)
-    err = dots_by_access_unit(es,max,verbose,hash_eos);
+    err = dots_by_access_unit(es,max,verbose,hash_eos,show_gop_time);
   else if (is_data == VIDEO_AVS)
     err = report_avs_file_as_dots(es,max,verbose);
   else
