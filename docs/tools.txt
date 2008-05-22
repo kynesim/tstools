@@ -272,6 +272,7 @@ For instance::
     ... lines omitted ...
     pppppppppppppppippppppppppppppppppppppppppppppppppppppppppppppp
     Found 2550 NAL units in 2548 access units
+    GOP size (s): max=1.1200, min=0.0400, mean=0.67682
 
     $ esdots /data/CharliesAngels.es -max 1000
     Reading from /data/CharliesAngels.es
@@ -286,7 +287,7 @@ If the ``-v'' switch is used, then an explanation of the meaning of the
 characters output will be prepended (it is slightly different depending on
 whether the input is MPEG-2 or MPEG-4/AVC).
 
-If the ``-gop'' switch is used, then each GOP duration is displayed. For H.264, where the GOP is not defined, we retrive this data by measuring the time between to I or IDR frames.
+If the ``-gop'' switch is used, then each GOP duration is displayed. For H.264, where the GOP is not defined, we retrive this data by measuring the time between two random access points.
 It looks like this::
 
     [E>iEbEbEpEbEbEpEbEbEpEbEbE: 0.4800s

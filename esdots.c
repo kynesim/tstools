@@ -62,8 +62,8 @@ int umod(unsigned int a, unsigned int b)
  * Print out a single character representative of our item.
  */
 static void h262_item_dot(h262_item_p  item, 
-                          double      *delta_gop, 
-                          int          show_gop_time)
+				          double *delta_gop, 
+				          int    show_gop_time)
 {
   char *str = NULL;
 
@@ -303,10 +303,84 @@ static int report_avs_file_as_dots(ES_p    es,
 
 /*
  * Returns a single character which specifies the type of the access unit
+ * The value of gop_start_found says whether that unit is a recovery point 
  */
-static char choose_nal_type(access_unit_p access_unit, int verbose)
+static char choose_nal_type(access_unit_p access_unit, int *gop_start_found)
 {
   char character_nal_type = '?';
+  int ii;
+  int gop_start = FALSE;
+  nal_unit_p temp_nal_unit;
+  int rec_point_required = TRUE; // FALSE: a random access point is identified as an I frame,
+                                 // TRUE: a random access point is identified as an I frame + recovery_point SEI.
+								 // The value recovery_frame_cnt is never considered (as if it was 0).
+
+  if (access_unit->primary_start == NULL)
+    printf("_");
+  else if (access_unit->primary_start->nal_ref_idc == 0)
+  {
+    if (all_slices_I(access_unit))
+      character_nal_type = 'i';
+    else if (all_slices_P(access_unit))
+      character_nal_type = 'p';
+    else if (all_slices_B(access_unit))
+      character_nal_type = 'b';
+    else
+      character_nal_type = 'x';
+  }
+  else if (access_unit->primary_start->nal_unit_type == NAL_IDR)
+  {
+    gop_start = TRUE;
+    if (all_slices_I(access_unit))
+      character_nal_type = 'D';
+    else
+      character_nal_type = 'd';
+  }
+  else if (access_unit->primary_start->nal_unit_type == NAL_NON_IDR)
+  {
+    if (all_slices_I(access_unit))
+    {
+      character_nal_type = 'I';
+      if (!rec_point_required) 
+        gop_start = TRUE;
+	  else
+        for (ii=0; ii<access_unit->nal_units->length; ii++)
+        {
+          temp_nal_unit = access_unit->nal_units->array[ii];
+          if (temp_nal_unit->nal_unit_type == NAL_SEI)
+            if (temp_nal_unit->u.sei_recovery.payloadType == 6)
+            {
+              gop_start = TRUE;
+              if (temp_nal_unit->u.sei_recovery.recovery_frame_cnt != 0)  
+                printf("!!! recovery_frame_cnt = %d\n", temp_nal_unit->u.sei_recovery.recovery_frame_cnt); 
+                                         // print a warning if more than one frame are needed for a 
+			                             // recovery point. this is however legal but not supported
+		    }                           // in our research of random access point 
+       }
+    }
+    else if (all_slices_P(access_unit))
+      character_nal_type = 'P';
+    else if (all_slices_B(access_unit))
+      character_nal_type = 'B';
+    else
+      character_nal_type = 'X';
+  }
+
+  *gop_start_found = gop_start;
+  return character_nal_type;
+}
+
+/*
+ * Report on data by access unit, as single characters
+ * (access unit here means frame or coupled fields)
+ * Returns 0 if all went well, 1 if something went wrong.
+ */
+static int dots_by_access_unit(ES_p  es,
+                               int   max,
+                               int   verbose,
+                               int   hash_eos,
+                               int   show_gop_time)
+{
 
   if (verbose)
   printf("\n"
@@ -326,57 +400,6 @@ static char choose_nal_type(access_unit_p access_unit, int verbose)
          "    # means an EOS (end-of-stream) NAL unit.\n"
          "\n");
 
-    if (access_unit->primary_start == NULL)
-      printf("_");
-    else if (access_unit->primary_start->nal_ref_idc == 0)
-    {
-      if (all_slices_I(access_unit))
-        character_nal_type = 'i';
-      else if (all_slices_P(access_unit))
-        character_nal_type = 'p';
-      else if (all_slices_B(access_unit))
-        character_nal_type = 'b';
-      else
-        character_nal_type = 'x';
-    }
-    else if (access_unit->primary_start->nal_unit_type == NAL_IDR)
-    {
-      //gop_start_found = TRUE;
-      if (all_slices_I(access_unit))
-        character_nal_type = 'D';
-      else
-        character_nal_type = 'd'; // Shall this happen?
-    }
-    else if (access_unit->primary_start->nal_unit_type == NAL_NON_IDR)
-    {
-      if (all_slices_I(access_unit))
-      {
-       // gop_start_found = TRUE;
-        character_nal_type = 'I';
-      }
-      else if (all_slices_P(access_unit))
-        character_nal_type = 'P';
-      else if (all_slices_B(access_unit))
-        character_nal_type = 'B';
-      else
-        character_nal_type = 'X';
-    }
-
-    return character_nal_type;
-}
-
-/*
- * Report on data by access unit, as single characters
- * (access unit here means frame or coupled fields). 
- * Also compute the duration of each pseudo-GOP (time between two I or IDR frames).
- * Returns 0 if all went well, 1 if something went wrong.
- */
-static int dots_by_access_unit(ES_p  es,
-                               int   max,
-                               int   verbose,
-                               int   hash_eos,
-                               int   show_gop_time)
-{
   int err = 0;
   int access_unit_count = 0;
   access_unit_context_p  context;
@@ -390,14 +413,13 @@ static int dots_by_access_unit(ES_p  es,
   int size_gop_tot = 0;
   int is_first_k_frame = TRUE;
   char char_nal_type = 'a';
-  
+
   err = build_access_unit_context(es,&context);
   if (err) return err;
     
   for (;;)
   {
     access_unit_p      access_unit;
-    gop_start_found = FALSE;
 
     err = get_next_h264_frame(context,TRUE,FALSE,&access_unit);
       
@@ -408,32 +430,29 @@ static int dots_by_access_unit(ES_p  es,
       free_access_unit_context(&context);
       return 1;
     }
-    
-    char_nal_type = choose_nal_type(access_unit, verbose);
 
-    if (char_nal_type=='I' || char_nal_type=='D' || char_nal_type=='d')
-      gop_start_found = TRUE;
+    char_nal_type = choose_nal_type(access_unit, &gop_start_found);
 
-    // no real group of picture (GOP) is formally defined in h.264 
-    // but we measure the distance between intra or IDR frames, whichever comes first.
-    // NOTE that we suppose video @ 25fps
+    // no real gop exists in h.264 but we try to find the distance between two random access points
+	// these can be: IDR frame or I frame with a recovery_point in the SEI 
     if (gop_start_found)
     {
 	  if (!is_first_k_frame)
 	  {
 	    size_gop = access_unit_count - k_frame;
-            size_gop_max = max(size_gop_max, size_gop);
-            size_gop_min = min(size_gop_min, size_gop);
-	    size_gop_tot += size_gop;
-            gops++;
-            if (show_gop_time)
-              printf(": %2.4f\n", (double)size_gop/25 ); // that's the time duration of a "GOP" (if the frame rate is 25fps)
+		size_gop_max = max(size_gop_max, size_gop);
+		size_gop_min = min(size_gop_min, size_gop);
+		size_gop_tot += size_gop;
+		gops++;
+		if (show_gop_time)
+		  printf(": %2.4f\n", (double)size_gop/25 ); // that's the time duration of a "GOP" (if the frame rate is 25fps)
 	  }
-          is_first_k_frame = FALSE;
-          k_frame = access_unit_count;
+	  is_first_k_frame = FALSE;
+	  k_frame = access_unit_count;
     }
+
     printf("%c", char_nal_type);
-    access_unit_count++;
+	access_unit_count++;
 
     fflush(stdout);
     free_access_unit(&access_unit);
@@ -466,7 +485,8 @@ static int dots_by_access_unit(ES_p  es,
   printf("\nFound %d NAL unit%s in %d access unit%s\n",
          context->nac->count,(context->nac->count==1?"":"s"),
          access_unit_count,(access_unit_count==1?"":"s"));
-  printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.6f\n",(double)size_gop_max/25, (double)size_gop_min/25, (double)size_gop_tot/(25*gops));
+  if (gops)
+    printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f\n",(double)size_gop_max/25, (double)size_gop_min/25, (double)size_gop_tot/(25*gops));
   free_access_unit_context(&context);
   return 0;
 }
@@ -661,8 +681,8 @@ static void print_usage()
     "                    rather than stopping (only applies to H.264)\n"
     "  -es               Report ES units, rather than any 'higher' unit\n"
     "                    (not necessarily suppported for all file types)\n"
-    "  -gop              Show the duration of each GOP (for MPEG-2 steams) OR\n"
-    "                    the number of non-reference frames between 2 intra frames (AVC)" 
+    "  -gop              Show the duration of each GOP (for MPEG-2 steams)\n"
+    "                    OR the distance between random access points (H.264)\n" 
     "\n"
     "Stream type:\n"
     "  If input is from a file, then the program will look at the start of\n"

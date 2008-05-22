@@ -149,12 +149,28 @@ typedef struct nal_pic_param_data *nal_pic_param_data_p;
 #define SIZEOF_NAL_PIC_PARAM_DATA sizeof(struct nal_pic_param_data)
 
 // ------------------------------------------------------------
+// Data for a Supplemental enhancement information (SEI) nal unit
+struct nal_SEI_recovery_data
+{
+  int      payloadType;               // type of SEI unit
+  int      payloadSize;               // in byte    
+
+  int      recovery_frame_cnt;
+  byte     exact_match_flag;
+  byte     broken_link_flag;
+  u_int32  changing_slice_group_idc;
+};
+typedef struct nal_SEI_recovery_data *nal_SEI_recovery_data_p;
+#define SIZEOF_NAL_SEI_RECOVERY_DATA sizeof(struct nal_SEI_recovery_data)
+
+// ------------------------------------------------------------
 // An individual NAL unit might hold any one of those...
 union nal_innards
 {
-  struct nal_slice_data      slice;
-  struct nal_seq_param_data  seq;
-  struct nal_pic_param_data  pic;
+  struct nal_slice_data         slice;
+  struct nal_seq_param_data     seq;
+  struct nal_pic_param_data     pic;
+  struct nal_SEI_recovery_data  sei_recovery;
 };
 typedef union nal_innards *nal_innards_p;
 #define SIZEOF_NAL_INNARDS sizeof(union nal_innards)
@@ -168,7 +184,7 @@ struct param_dict
 {
   int      last_id;    // The id of the last parameter set we wanted
   int      last_index; // and its index in the arrays
-  int               *ids;       // The ids for...
+  int      *ids;       // The ids for...
   union nal_innards *params;    // ...the data
   ES_offset         *posns;     // Where each was read from...
   u_int32           *data_lens; // ...and its size
@@ -210,7 +226,7 @@ struct nal_unit
   char               *start_reason;  // If it starts a picture, why
 
   int       decoded;      // Have we "read" the innards of the NAL unit?
-  union nal_innards u;    // Admittedly an unimaginative name, but short
+  union     nal_innards u;    // Admittedly an unimaginative name, but short
 };
 typedef struct nal_unit *nal_unit_p;
 #define SIZEOF_NAL_UNIT sizeof(struct nal_unit)
