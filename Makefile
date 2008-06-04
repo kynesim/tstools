@@ -332,8 +332,8 @@ $(BINDIR):
 	mkdir $(BINDIR)
 
 # ------------------------------------------------------------
-.PHONY: clean
-clean:
+.PHONY: objclean
+objclean:
 	-rm -f $(OBJS)
 	-rm -f $(TEST_OBJS)
 	-rm -f $(TEST_PROGS)
@@ -345,11 +345,14 @@ clean:
 	-rm -f es_test_b.ts es_test_b.264
 	-rm -f *.core
 
-.PHONY: distclean
-distclean: clean
+.PHONY: clean
+clean: objclean
 	-rm -f $(PROGS)
 	-rm -f $(LIB)
 	-rm -f $(PROG_OBJS)
+
+.PHONY: distclean
+distclean: clean
 	-rmdir $(OBJDIR)
 	-rmdir $(LIBDIR)
 	-rmdir $(BINDIR)

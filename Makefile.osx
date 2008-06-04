@@ -69,8 +69,15 @@ endif
 # the flags will have any effect either.
 LFS_FLAGS = -D_FILE_OFFSET_BITS=64
 
-# Experimentally, for Mac OS/X
-ARCH_FLAGS = -arch ppc -arch i386
+# Try for a best guess whether this is a Mac running OS/X, or some other
+# sort of thing (presumably Linux or BSD)
+ifeq ($(shell uname -s), Darwin)
+	SYSTEM = "macosx"
+	ARCH_FLAGS = -arch ppc -arch i386
+else
+	SYSTEM = "other"
+	ARCH_FLAGS =
+endif
 
 CFLAGS = $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS) $(ARCH_FLAGS)
 LDFLAGS = -g -lm $(PROFILE_FLAGS) $(ARCH_FLAGS)
@@ -87,6 +94,7 @@ SRCS = \
  avs.c \
  bitdata.c \
  es.c \
+ fmtx.c \
  h262.c \
  audio.c \
  l2audio.c \
@@ -106,6 +114,7 @@ OBJS = \
  bitdata.o \
  es.o \
  filter.o \
+ fmtx.o \
  h262.o \
  audio.o \
  l2audio.o \
@@ -187,10 +196,13 @@ all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS)
 .PHONY: ts2ps
 ts2ps:	$(TS2PS_PROG)
 
-#$(LIB): $(LIB)($(OBJS))
+ifeq ($(shell uname -s), Darwin)
 # Try getting a library containing universal objects on Mac
 $(LIB): $(OBJS)
 	libtool -static $(OBJS) -o $(LIB)
+else
+$(LIB): $(LIB)($(OBJS))
+endif
 
 $(BINDIR)/esfilter:	$(OBJDIR)/esfilter.o $(LIB)
 		$(CC) $< -o $(BINDIR)/esfilter $(LDFLAGS) $(LIBOPTS)
@@ -290,6 +302,8 @@ $(OBJDIR)/esmerge.o:     esmerge.c misc_fns.h $(ACCESSUNIT_H) $(AUDIO_H) $(TSWRI
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/esreverse.o:    esreverse.c $(TS_H) $(REVERSE_H) misc_fns.h $(ACCESSUNIT_H) $(H262_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
+$(OBJDIR)/fmtx.o:         fmtx.c fmtx.h
+	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/psreport.o:     psreport.c $(ES_H) $(PS_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/psdots.o:     psdots.c $(ES_H) $(PS_H) version.h
@@ -304,7 +318,7 @@ $(OBJDIR)/ts2ps.o:        ts2ps.c $(TS_H) $(PS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tsinfo.o:       tsinfo.c $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
-$(OBJDIR)/tsreport.o:     tsreport.c $(TS_H) misc_fns.h version.h
+$(OBJDIR)/tsreport.o:     tsreport.c $(TS_H) fmtx.h misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tsserve.o:     tsserve.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
@@ -335,8 +349,8 @@ $(BINDIR):
 	mkdir $(BINDIR)
 
 # ------------------------------------------------------------
-.PHONY: clean
-clean:
+.PHONY: objclean
+objclean:
 	-rm -f $(OBJS)
 	-rm -f $(TEST_OBJS)
 	-rm -f $(TEST_PROGS)
@@ -348,11 +362,14 @@ clean:
 	-rm -f es_test_b.ts es_test_b.264
 	-rm -f *.core
 
-.PHONY: distclean
-distclean: clean
+.PHONY: clean
+clean: objclean
 	-rm -f $(PROGS)
 	-rm -f $(LIB)
 	-rm -f $(PROG_OBJS)
+
+.PHONY: distclean
+distclean: clean
 	-rmdir $(OBJDIR)
 	-rmdir $(LIBDIR)
 	-rmdir $(BINDIR)
