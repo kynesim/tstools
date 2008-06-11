@@ -1,4 +1,5 @@
 # Makefile for the H.264 Elementary Stream software
+# - temporarily hacked to work on Mac OS/X 10.5 (Leopard)
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
@@ -68,8 +69,18 @@ endif
 # the flags will have any effect either.
 LFS_FLAGS = -D_FILE_OFFSET_BITS=64
 
-CFLAGS = $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS)
-LDFLAGS = -g -lm $(PROFILE_FLAGS)
+# Try for a best guess whether this is a Mac running OS/X, or some other
+# sort of thing (presumably Linux or BSD)
+ifeq ($(shell uname -s), Darwin)
+	SYSTEM = "macosx"
+	ARCH_FLAGS = -arch ppc -arch i386
+else
+	SYSTEM = "other"
+	ARCH_FLAGS =
+endif
+
+CFLAGS = $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS) $(ARCH_FLAGS)
+LDFLAGS = -g -lm $(PROFILE_FLAGS) $(ARCH_FLAGS)
 
 # Target directories
 OBJDIR = obj
@@ -146,7 +157,7 @@ TEST_OBJS = \
 
 # Our library
 LIB = $(LIBDIR)/libtstools.a
-LIBOPTS = -L$(LIBDIR) -ltstools
+LIBOPTS = -L$(LIBDIR) -ltstools $(ARCH_FLAGS)
 
 # All of our programs (except the testing ones)
 PROGS = \
@@ -185,7 +196,13 @@ all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS)
 .PHONY: ts2ps
 ts2ps:	$(TS2PS_PROG)
 
+ifeq ($(shell uname -s), Darwin)
+# Try getting a library containing universal objects on Mac
+$(LIB): $(OBJS)
+	libtool -static $(OBJS) -o $(LIB)
+else
 $(LIB): $(LIB)($(OBJS))
+endif
 
 $(BINDIR)/esfilter:	$(OBJDIR)/esfilter.o $(LIB)
 		$(CC) $< -o $(BINDIR)/esfilter $(LDFLAGS) $(LIBOPTS)
