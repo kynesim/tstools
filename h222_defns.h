@@ -82,7 +82,7 @@
    (s)==0x03?"11172-3 audio (MPEG-1)":				\
    (s)==0x04?"13818-3 audio (MPEG-2)":				\
    (s)==0x05?"H.222.0/13818-1  private sections":		\
-   (s)==0x06?"H.222.0/13818-1 PES private data":                \
+   (s)==0x06?"H.222.0/13818-1 PES private data (maybe Dolby/AC-3 in DVB)": \
    (s)==0x07?"13522 MHEG":					\
    (s)==0x08?"H.222.0/13818-1 Annex A - DSM CC":		\
    (s)==0x09?"H.222.1":						\
@@ -107,7 +107,7 @@
    (s)==0x42?"AVS Video":                                       \
    (0x1C < (s)) && ((s) < 0x7E)?"H.220.0/13818-1 reserved":     \
    (s)==0x7F?"IPMP stream":					\
-   (s)==0x81?"User private":	                        	\
+   (s)==0x81?"User private (commonly Dolby/AC-3 in ATSC)":     	\
    (0x80 <= (s)) && ((s) <= 0xFF)?"User private":		\
    "Unrecognised")
 

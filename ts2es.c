@@ -267,7 +267,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
         if (written != 1)
         {
           fprintf(stderr,"### Error writing TS packet - units written = %d\n",
-                  written);
+                  (int)written);
           return 1;
         }
       }
