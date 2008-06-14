@@ -349,3 +349,10 @@ extern int ps_to_ts(PS_reader_p  ps,
                     int          quiet);
 
 #endif // _ps_fns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

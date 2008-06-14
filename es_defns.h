@@ -142,3 +142,10 @@ typedef struct ES_unit_list *ES_unit_list_p;
 #define ES_UNIT_LIST_INCREMENT   20
 
 #endif // _es_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

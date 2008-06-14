@@ -262,3 +262,10 @@ typedef struct nal_unit_context *nal_unit_context_p;
 #define SIZEOF_NAL_UNIT_CONTEXT sizeof(struct nal_unit_context)
 
 #endif // _nalunit_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

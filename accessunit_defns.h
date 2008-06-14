@@ -129,3 +129,10 @@ struct access_unit_context
 #define SIZEOF_ACCESS_UNIT_CONTEXT sizeof(struct access_unit_context)
 
 #endif // _accessunit_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

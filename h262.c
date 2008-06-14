@@ -1196,3 +1196,9 @@ extern void report_h262_picture(FILE           *stream,
     report_ES_unit_list(stream,"ES units",picture->list);
 }
 
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

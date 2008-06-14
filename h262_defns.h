@@ -246,3 +246,10 @@ struct h262_context
 #define SIZEOF_H262_CONTEXT sizeof(struct h262_context)
 
 #endif // _h262_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

@@ -215,3 +215,10 @@ typedef struct PES_reader *PES_reader_p;
 #define IS_H222_PES(data)  ((data[6] & 0xC0) == 0x80)
 
 #endif // _pes_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

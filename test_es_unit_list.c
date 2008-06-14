@@ -149,3 +149,10 @@ int main(int argc, char **argv)
   printf("Test 2 succeeded\n");
   return 0;
 }
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

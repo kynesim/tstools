@@ -413,3 +413,10 @@ extern int decide_ES_file_video_type(int   input,
                                      int   show_reasoning,
                                      int  *video_type);
 #endif // _es_fns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

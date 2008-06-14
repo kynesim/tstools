@@ -63,3 +63,10 @@ extern void free_audio_frame(audio_frame_p  *frame);
 extern int read_next_l2audio_frame(int             file,
                                    audio_frame_p  *frame);
 #endif // _l2audio_fns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

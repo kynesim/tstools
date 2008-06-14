@@ -61,3 +61,10 @@ typedef struct _ts_reader *TS_reader_p;
 #define SIZEOF_TS_READER sizeof(struct _ts_reader)
 
 #endif // _ts_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

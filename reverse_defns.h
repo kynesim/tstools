@@ -125,3 +125,10 @@ struct reverse_data
 #define REVERSE_ARRAY_INCREMENT_SIZE  500
 
 #endif // _reverse_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

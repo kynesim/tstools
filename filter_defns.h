@@ -104,3 +104,10 @@ typedef struct h264_filter_context *h264_filter_context_p;
 #define SIZEOF_H264_FILTER_CONTEXT sizeof(struct h264_filter_context)
 
 #endif // _filter_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

@@ -1591,3 +1591,9 @@ extern int output_in_reverse_as_ES(ES_p            es,
                            start_with,max,reverse_data);
 }
 
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

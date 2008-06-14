@@ -873,3 +873,9 @@ extern int get_next_filtered_h264_frame(h264_filter_context_p  fcontext,
   }
 }
 
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

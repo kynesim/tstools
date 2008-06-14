@@ -1962,3 +1962,9 @@ extern void report_nal_unit_list(FILE  *stream,
   }
 }
 
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

@@ -296,3 +296,10 @@ extern int get_next_h264_frame(access_unit_context_p context,
 extern int access_unit_has_PTS(access_unit_p access_unit);
 
 #endif // _accessunit_fns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

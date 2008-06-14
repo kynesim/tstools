@@ -56,3 +56,10 @@ typedef char TCHAR;
 
 const TCHAR * fmtx_timestamp(int64 n, unsigned int flags);
 int fmtx_str_to_timestamp_flags(const TCHAR * arg_str);
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:

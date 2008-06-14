@@ -85,3 +85,10 @@ typedef struct _pmt *pmt_p;
 #define PMT_MAX_INFO_LENGTH     0x3FF   // i.e., 12 bits with the top two zero
 
 #endif // _pidint_defns
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:
