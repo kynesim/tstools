@@ -72,3 +72,5 @@ Contributor(s):
 
 .. ***** END LICENSE BLOCK *****
 
+.. -------------------------------------------------------------------------------
+.. vim: set filetype=rst expandtab shiftwidth=2:

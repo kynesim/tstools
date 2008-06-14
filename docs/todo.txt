@@ -245,3 +245,5 @@ Contributor(s):
   Amino Communications Ltd, Swavesey, Cambridge UK
 
 .. ***** END LICENSE BLOCK *****
+.. -------------------------------------------------------------------------------
+.. vim: set filetype=rst expandtab shiftwidth=2:
