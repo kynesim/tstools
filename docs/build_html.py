@@ -6,8 +6,8 @@ required. It's not in the Makefile because I'm not yet sure it belongs there...
 
 Requires Python and docutils.
 
-For the moment, assumes that docutils' tools are installed in the
-user's home directory...
+Uses rst2html.py on individual files because that seems to be available
+more often than the buildhtml.py script.
 """
 
 # ***** BEGIN LICENSE BLOCK *****
@@ -36,11 +36,14 @@ user's home directory...
 
 import os
 
-TOOLSDIR = os.path.expanduser("~/docutils/tools")
-BUILDHTML = os.path.join(TOOLSDIR,"buildhtml.py")
-
 def main():
-    os.system("%s --stylesheet-path=default.css --embed-stylesheet"%BUILDHTML)
+    filenames = os.listdir('.')
+    for name in filenames:
+        base,ext = os.path.splitext(name)
+        if ext == '.txt':
+            print 'Processing',name
+            os.system('rst2html.py --stylesheet-path=default.css'
+                      ' --embed-stylesheet %s > %s'%(name,base+'.html'))
 
 
 if __name__ == "__main__":

@@ -283,11 +283,13 @@ For instance::
     GOP times (s): max=0.4800, min=0.1200, mean=0.448125
 
 
-If the ``-v'' switch is used, then an explanation of the meaning of the
+If the ``-v`` switch is used, then an explanation of the meaning of the
 characters output will be prepended (it is slightly different depending on
 whether the input is MPEG-2 or MPEG-4/AVC).
 
-If the ``-gop'' switch is used, then each GOP duration is displayed. For H.264, where the GOP is not defined, we retrive this data by measuring the time between two random access points.
+If the ``-gop`` switch is used, then each GOP duration is displayed. For
+H.264, where the GOP is not defined, we retrieve this data by measuring the
+time between two random access points.
 It looks like this::
 
     [E>iEbEbEpEbEbEpEbEbEpEbEbE: 0.4800s
@@ -324,9 +326,9 @@ stream (with the ``-tsout`` switch). For either, standard output can be chosen
 instead of an explicit file. If TS output is specified, writing to a host
 over TCP/IP can also be requested.
 
-Note that for ``-strip`` and ``-filter``, the ``-max`` switch acts on the
-number of frames, but since ``-copy`` works at the ES item/NAL unit level, its
-``-max`` works on these lower level entities.
+Note that for ``-strip`` and ``-filter``, the ``-max`` switch acts on the number
+of frames, but since ``-copy`` works at the ES item/NAL unit level, its ``-max``
+works on these lower level entities.
 
 Fast forward algorithms
 -----------------------
@@ -908,9 +910,9 @@ Different PIDs will be used for the data in each program. For program *i*,
 
 The PCR PID will be assumed to be the video PID.
 
-When reversing or fast forwarding MPEG-2 data, sequence headers will not, by
-default be output (see `Reverse algorithms`_ for some background on this). The
-``-seqhdr`` switch may be used to override this.
+When reversing or fast forwarding MPEG-2 data, sequence headers will not,
+by default be output (see `Reverse algorithms`_ for some background on this).
+The ``-seqhdr`` switch may be used to override this.
 
 Alternate modes
 ---------------
