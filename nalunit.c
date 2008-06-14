@@ -822,13 +822,14 @@ static int read_seq_param_set_data(nal_unit_p   nal,
   nal->decoded = TRUE;
   return 0;
 }
-
+
 /*
- * Read the SEI nal unit and if it is a recovery point stores its data
+ * Read the data for an SEI recovery point
  *
+ * Returns 0 if it succeeds, 1 if some error occurs
  */
 static int read_SEI_recovery_point(nal_unit_p   nal,
-		                           int          payloadSize,
+                                   int          payloadSize,
                                    int          show_nal_details)
 {
   int        err;
@@ -836,12 +837,12 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
   nal_SEI_recovery_data_p data = &(nal->u.sei_recovery);
   u_int32    temp;
 
-  #undef CHECK
-  #define CHECK(name)                                         \
-  if (err)                                                    \
-  {                                                           \
-    fprintf(stderr,"### Error reading %s field from SEI\n",   \
-            (name));                                          \
+#undef CHECK
+#define CHECK(name)                                         \
+  if (err)                                                  \
+  {                                                         \
+    fprintf(stderr,"### Error reading %s field from SEI\n", \
+            (name));                                        \
   }
 
   err = read_exp_golomb(bd,&temp);
@@ -857,7 +858,64 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
   nal->decoded = TRUE; 
   return 0;
 }
+
+/*
+ * Look at the start of an SEI
+ *
+ * Assumes that this *is* a NAL unit representing an SEI
+ *
+ * Don't call this directly - call read_rbsp_data() instead.
+ *
+ * Returns 0 if it succeeds, 1 if some error occurs.
+ */
+static int read_SEI(nal_unit_p   nal,
+                    int          show_nal_details)
+{
+  int err;
+  int SEI_payloadType = 0;
+  int SEI_payloadSize = 0;   // in byte
+  bitdata_p  bd = nal->bit_data;
+  u_int32 temp = 0;
 
+#undef CHECK
+#define CHECK(name)                                         \
+  if (err)                                                  \
+  {                                                         \
+    fprintf(stderr,"### Error reading %s field from SEI\n", \
+            (name));                                        \
+  }
+
+  // read payloadtype (see H.264:7.3.2.3.1)
+  for (;;)
+  {
+    err = read_bits(bd,8,&temp);
+    CHECK("payloadType");
+    if (temp == 0xff)
+      SEI_payloadType += 0xff;
+    else
+      break;
+  }
+  SEI_payloadType += temp;
+  nal->u.sei_recovery.payloadType = SEI_payloadType;
+
+  // read payloadSize
+  for (;;)
+  {
+    err = read_bits(bd,8,&temp);
+    CHECK("payloadSize");
+    if (temp == 0xff)
+      SEI_payloadSize += 0xff;
+    else
+      break;
+  }
+  SEI_payloadSize += temp;
+  nal->u.sei_recovery.payloadSize = SEI_payloadSize;
+
+  if (SEI_payloadType == 6)  // SEI recovery_point
+    err = read_SEI_recovery_point(nal, SEI_payloadSize, show_nal_details);
+  return 0;
+}
+
 /*
  * Look at the start of the RBSP for a NAL unit
  *
@@ -898,47 +956,7 @@ static int read_rbsp_data(nal_unit_p   nal,
   else if (nal->nal_unit_type == 7)                       // Sequence parameter set
     err = read_seq_param_set_data(nal,show_nal_details);
   else if (nal->nal_unit_type == 6)                       // SEI 
-  {
-    int SEI_payloadType = 0;
-    int SEI_payloadSize = 0;   // in byte
-    bitdata_p  bd = nal->bit_data;
-    u_int32 temp = 0;
-#undef CHECK
-#define CHECK(name)                                                     \
-  if (err)                                                              \
-  {                                                                     \
-    fprintf(stderr,"### Error reading %s field from SEI\n", \
-            (name));                                                    \
-  }
-    // read payloadtype (see H.264:7.3.2.3.1)
-    for (;;)
-    {
-        err = read_bits(bd,8,&temp);
-	CHECK("payloadType");
-	if (temp == 0xff)
-		SEI_payloadType += 0xff;
-	else
-		break;
-    }
-    SEI_payloadType += temp;
-    nal->u.sei_recovery.payloadType = SEI_payloadType;
-
-    // read payloadSize
-    for (;;)
-    {
-      err = read_bits(bd,8,&temp);
-      CHECK("payloadSize");
-	  if (temp == 0xff)
-        SEI_payloadSize += 0xff;
-      else
-        break;
-    }
-    SEI_payloadSize += temp;
-    nal->u.sei_recovery.payloadSize = SEI_payloadSize;
-
-    if (SEI_payloadType == 6)                             // SEI recovery_point
-      err = read_SEI_recovery_point(nal, SEI_payloadSize, show_nal_details);
-  }
+    err = read_SEI(nal,show_nal_details);
   else if (show_nal_details)
     printf("@@ nal " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
            "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
@@ -976,12 +994,10 @@ static int read_rbsp_data(nal_unit_p   nal,
  */
 extern int nal_is_SEI_recovery_point(nal_unit_p  nal)
 {
-  int ret_value = FALSE;
-
   if (nal->nal_unit_type == 6)
-    ret_value = (nal->u.sei_recovery.payloadType == 6);
-
-  return ret_value;
+    return (nal->u.sei_recovery.payloadType == 6);
+  else
+    return FALSE;
 }
 
 

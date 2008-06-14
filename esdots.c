@@ -180,18 +180,19 @@ static int report_h262_file_as_dots(ES_p    es,
     {
       time_gop_max = max(time_gop_max, time_gop);
       if (gops) 
-	  time_gop_min = min(time_gop_min, time_gop);
+        time_gop_min = min(time_gop_min, time_gop);
       gops++;
       time_gop_tot += time_gop;
     }
 
     free_h262_item(&item);
-    
+
     if (max > 0 && count >= max)
       break;
   }
   printf("\nFound %d MPEG2 item%s\n",count,(count==1?"":"s"));
-  printf("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f\n",time_gop_max, time_gop_min,time_gop_tot/(gops-1));
+  printf("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f\n",time_gop_max,
+         time_gop_min,time_gop_tot/(gops-1));
   return 0;
 }
 
@@ -311,9 +312,10 @@ static char choose_nal_type(access_unit_p access_unit, int *gop_start_found)
   int ii;
   int gop_start = FALSE;
   nal_unit_p temp_nal_unit;
-  int rec_point_required = TRUE; // FALSE: a random access point is identified as an I frame,
-                                 // TRUE: a random access point is identified as an I frame + recovery_point SEI.
-								 // The value recovery_frame_cnt is never considered (as if it was 0).
+  int rec_point_required = TRUE;
+  // FALSE: a random access point is identified as an I frame,
+  // TRUE:  a random access point is identified as an I frame + recovery_point SEI.
+  //        The value recovery_frame_cnt is never considered (as if it was 0).
 
   if (access_unit->primary_start == NULL)
     printf("_");
@@ -343,20 +345,24 @@ static char choose_nal_type(access_unit_p access_unit, int *gop_start_found)
       character_nal_type = 'I';
       if (!rec_point_required) 
         gop_start = TRUE;
-	  else
+      else
         for (ii=0; ii<access_unit->nal_units->length; ii++)
         {
           temp_nal_unit = access_unit->nal_units->array[ii];
           if (temp_nal_unit->nal_unit_type == NAL_SEI)
+          {
             if (temp_nal_unit->u.sei_recovery.payloadType == 6)
             {
               gop_start = TRUE;
+              // Print a warning if more than one frame are needed for a 
+              // recovery point. This is technically legal but not supported
+              // in our research of random access point. 
               if (temp_nal_unit->u.sei_recovery.recovery_frame_cnt != 0)  
-                printf("!!! recovery_frame_cnt = %d\n", temp_nal_unit->u.sei_recovery.recovery_frame_cnt); 
-                                         // print a warning if more than one frame are needed for a 
-			                             // recovery point. this is however legal but not supported
-		    }                           // in our research of random access point 
-       }
+                printf("!!! recovery_frame_cnt = %d\n",
+                       temp_nal_unit->u.sei_recovery.recovery_frame_cnt); 
+            }
+          }
+        }
     }
     else if (all_slices_P(access_unit))
       character_nal_type = 'P';
@@ -433,22 +439,24 @@ static int dots_by_access_unit(ES_p  es,
 
     char_nal_type = choose_nal_type(access_unit, &gop_start_found);
 
-    // no real gop exists in h.264 but we try to find the distance between two random access points
-	// these can be: IDR frame or I frame with a recovery_point in the SEI 
+    // No real gop exists in h.264 but we try to find the distance between two
+    // random access points. These can be: IDR frame or I frame with a
+    // recovery_point in the SEI 
     if (gop_start_found)
     {
-	  if (!is_first_k_frame)
-	  {
-	    size_gop = access_unit_count - k_frame;
-		size_gop_max = max(size_gop_max, size_gop);
-		size_gop_min = min(size_gop_min, size_gop);
-		size_gop_tot += size_gop;
-		gops++;
-		if (show_gop_time)
-		  printf(": %2.4f\n", (double)size_gop/25 ); // that's the time duration of a "GOP" (if the frame rate is 25fps)
-	  }
-	  is_first_k_frame = FALSE;
-	  k_frame = access_unit_count;
+      if (!is_first_k_frame)
+      {
+        size_gop = access_unit_count - k_frame;
+        size_gop_max = max(size_gop_max, size_gop);
+        size_gop_min = min(size_gop_min, size_gop);
+        size_gop_tot += size_gop;
+        gops++;
+        if (show_gop_time)
+          printf(": %2.4f\n", (double)size_gop/25 ); // that's the time duration of a "GOP"
+                                                     // (if the frame rate is 25fps)
+      }
+      is_first_k_frame = FALSE;
+      k_frame = access_unit_count;
     }
 
     printf("%c", char_nal_type);
@@ -486,7 +494,9 @@ static int dots_by_access_unit(ES_p  es,
          context->nac->count,(context->nac->count==1?"":"s"),
          access_unit_count,(access_unit_count==1?"":"s"));
   if (gops)
-    printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f\n",(double)size_gop_max/25, (double)size_gop_min/25, (double)size_gop_tot/(25*gops));
+    printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f\n",
+           (double)size_gop_max/25, (double)size_gop_min/25,
+           (double)size_gop_tot/(25*gops));
   free_access_unit_context(&context);
   return 0;
 }

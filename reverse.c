@@ -825,7 +825,7 @@ extern int write_packet_data(WRITER   output,
     {
       fprintf(stderr,"### Error writing out data: %s\n"
               "    Wrote %d bytes instead of %d\n",
-              strerror(errno),written,data_len);
+              strerror(errno),(int)written,data_len);
       return 1;
     }
   }

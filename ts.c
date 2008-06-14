@@ -1357,7 +1357,7 @@ static int read_next_TS_packets(TS_reader_p  tsreader,
     {
       fprintf(stderr,"!!! %d byte%s ignored at end of file - not enough"
               " to make a TS packet\n",
-              total % TS_PACKET_SIZE,(total % TS_PACKET_SIZE == 1?"":"s"));
+              (int)(total % TS_PACKET_SIZE),(total % TS_PACKET_SIZE == 1?"":"s"));
       // Retain whatever full packets we *do* have
       total = total - (total % TS_PACKET_SIZE);
       if (total == 0)
