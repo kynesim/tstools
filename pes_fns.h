@@ -472,34 +472,43 @@ extern void report_PES_data_array2(int         stream_type,
 // Server support
 // ============================================================
 /*
- * Prepare for PES packets being written out to a TS writer, and
- * request that they be written out.
+ * Packets can be written out to a client via a TS writer, as a
+ * "side effect" of reading them. The original mechanism was to
+ * write out PES packets (as TS) as they are read. This will work
+ * for PS or TS data, and writes out only those PES packets that
+ * have been read for video or audio data.
  *
- * The effect is that, each time a new PES packet is read in, it will
- * be written out to the TS output stream.
+ * An alternative, which will only work for TS input data, is
+ * to write out TS packets as they are read. This will write all
+ * TS packets to the client.
  *
  * - `reader` is our PES reader context
  * - `tswriter` is the TS writer
+ * - if `write_PES`, then write PES packets out as they are read from
+ *   the input, otherwise write TS packets.
  * - `program_freq` is how often to write out program data (PAT/PMT)
+ *   if we are writing PES data (if we are writing TS data, then the
+ *   program data will be in the original TS packets)
  */
 extern void set_server_output(PES_reader_p  reader,
                               TS_writer_p   tswriter,
+                              int           write_PES,
                               int           program_freq);
 /*
- * Start PES packets being written out to a TS writer (again).
+ * Start packets being written out to a TS writer (again).
  *
- * The effect is that, each time a new PES packet is read in, it will
- * be written out to the TS output stream.
+ * If packets were already being written out, this does nothing.
  *
- * If PES packets were already being written out, this does nothing.
+ * If set_server_output() has not been called to define a TS writer
+ * context, this will have no effect.
  *
  * If `reader` is NULL, nothing is done.
  */
 extern void start_server_output(PES_reader_p  reader);
 /*
- * Stop PES packets being written out to a TS writer.
+ * Stop packets being written out to a TS writer.
  *
- * If PES packets were already not being written out, this does nothing.
+ * If packets were already not being written out, this does nothing.
  *
  * If set_server_output() has not been called to define a TS writer
  * context, this will have no effect.
@@ -516,6 +525,8 @@ extern void stop_server_output(PES_reader_p  reader);
  * This "expansion" or "padding" of the data can be useful for benchmarking
  * the recipient, as the extra data (which has an irrelevant stream id)
  * will be ignored by the video processor, but not by preceding systems.
+ *
+ * This does nothing if TS packets are being output directly.
  *
  * - `reader` is our PES reader context
  * - `extra` is how many extra packets to output per "real" packet.

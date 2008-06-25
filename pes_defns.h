@@ -200,6 +200,17 @@ struct PES_reader
   // with an irrelevant stream id).
   int		    pes_padding;
 
+  // If the original data is TS, and we want to send *all* of said data
+  // to the server, it is sensible to write the *TS packets* as a side
+  // effect of reading, rather than the PES packets. Thus we also have
+  int               write_TS_packets;
+  // Obviously, one assumes that we are not going to be doing both at
+  // the same time (since they write through the same tswriter interface)
+
+  // In either case, sometimes it is useful to suppress writing packets
+  // out for a while
+  int               suppress_writing;
+
   // Debugging: if this is set, and the appropriate code is compiled into
   // pes.c (see DEBUG_READ_PACKETS), then report on each PES packet read
   // and written. Even if DEBUG_READ_PACKETS is not defined, some output

@@ -123,6 +123,9 @@ struct tsserve_context
   int      dolby_is_dvb;
   int      force_stream_type;
   int      repeat_program_every;
+
+  // Transport Stream specific options
+  int      tsdirect;
 };
 typedef struct tsserve_context *tsserve_context_p;
 
@@ -2057,7 +2060,8 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     
     // Request that PES packets be written out to the TS writer as
     // a "side effect" of reading them in
-    set_server_output(reader[ii],tswriter,context->repeat_program_every);
+    set_server_output(reader[ii],tswriter,!context->tsdirect,
+                      context->repeat_program_every);
     set_server_padding(reader[ii],context->pes_padding);
   }
   
@@ -2114,6 +2118,18 @@ static int test_play(PES_reader_p    reader,
   int  err = 0;
   int  started = FALSE;
   int  ii;
+
+  if (num_fast == 0 && num_faster == 0 && num_reverse == 0)
+  {
+    // Special case -- just play through
+    printf(">> Just playing at normal speed\n");
+    set_PES_reader_video_only(reader,video_only);
+    err = play_normal(stream,tswriter,verbose,quiet,0,reverse_data);
+    if (err == EOF)
+      return 0;
+    else
+      return err;
+  }
 
   printf(">> Going through sequence twice\n");
 
@@ -3080,7 +3096,8 @@ static int test_reader(tsserve_context_p  context,
   // Actually read the input and write the output...
   // Request that PES packets be written out to the TS writer as
   // a "side effect" of reading them in
-  set_server_output(reader,tswriter,context->repeat_program_every);
+  set_server_output(reader,tswriter,!context->tsdirect,
+                    context->repeat_program_every);
   set_server_padding(reader,context->pes_padding);
 
   // And play...
@@ -3191,12 +3208,15 @@ static int command_reader(tsserve_context_p  context,
     return 1;
   }
 
-  // Request that PES packets be written out to the TS writer as
-  // a "side effect" of reading them in
+  // Request that packets be written out to the TS writer as a "side effect" of
+  // reading them in. The default is to write PES packets (just for the video
+  // and audio data), but the alternative is to write all TS packets (if the
+  // data *is* TS)
   for (ii = 0; ii < MAX_INPUT_FILES; ii++)
     if (reader[ii] != NULL)
     {
-      set_server_output(reader[ii],tswriter,context->repeat_program_every);
+      set_server_output(reader[ii],tswriter,!context->tsdirect,
+                        context->repeat_program_every);
       set_server_padding(reader[ii],context->pes_padding);
     }
 
@@ -3381,6 +3401,18 @@ static void print_detailed_usage()
     "  -dolby dvb       Use stream type 0x06 (the default)\n"
     "  -dolby atsc      Use stream type 0x81\n"
     "\n"
+    "Transport Stream Switches:\n"
+    "\n"
+    "  The following switches are only applicable if the input data is TS.\n"
+    "\n"
+    "  -tsdirect         In normal play, copy all TS packets to the client,\n"
+    "                    instead of just sending the PES packets for the video\n"
+    "                    and audio streams'\n"
+    "\n"
+    "  Note that when -tsdirect is specified, PES packets are still inspected\n"
+    "  to allow building up the fast forward/reverse indices.\n"
+    "  Also, -prepeat, -pes_padding and -drop will have no effect with this switch.\n"
+    "\n"
     "Other stuff:\n"
     "\n"
     "  -prepeat <n>      Output the program data (PAT/PMT) after every <n>\n"
@@ -3452,6 +3484,9 @@ static void print_detailed_usage()
     "  -r <nr>           speed, then <nn> at normal speed again, then\n"
     "                    reverse past <nr>. Repeat until stopped.\n"
     "\n"
+    "  If '-f 0 -ff 0 -r 0' is specified, then the data will just play at\n"
+    "  normal speed, ignoring -n.\n"
+    "\n"
     "  -skiptest         Test forwards and backwards skipping.\n"
     "\n"
     "  -output <name>, -o <name>\n"
@@ -3506,6 +3541,9 @@ int main(int argc, char **argv)
   context.pcr_pid    = context.video_pid; // Use PCRs from the video stream
   context.repeat_program_every = 100;
 
+  // Transport Stream specific options
+  context.tsdirect = FALSE;     // Write to server as a side effect of PES reading
+
   context.force_stream_type = FALSE;
   context.want_h262 = TRUE; // shouldn't matter
   context.dolby_is_dvb = TRUE;
@@ -3545,6 +3583,10 @@ int main(int argc, char **argv)
       {
         action = ACTION_TEST;
         skiptest = FALSE;
+      }
+      else if (!strcmp("-tsdirect",argv[argno]))
+      {
+        context.tsdirect = TRUE; // Write to server as a side effect of TS reading
       }
       else if (!strcmp("-n",argv[argno]))
       {

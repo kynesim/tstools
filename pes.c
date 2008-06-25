@@ -38,6 +38,7 @@
 #include "pes_fns.h"
 #include "pidint_fns.h"
 #include "h262_fns.h"
+#include "tswrite_fns.h"
 #include "misc_fns.h"
 
 //#define DEBUG
@@ -1366,6 +1367,7 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
   for (;;)
   {
     int     err;
+    byte   *ts_packet;
     int     payload_unit_start_indicator;
     byte   *adapt;
     int     adapt_len;
@@ -1377,14 +1379,21 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
     // Remember the position of the packet we're going to read
     reader->posn = reader->tsreader->posn;
 
-    // Read the next packet
-    err = get_next_TS_packet(reader->tsreader,&pid,
-                             &payload_unit_start_indicator,
-                             &adapt,&adapt_len,&payload,&payload_len);
+    // And read it
+    // Remember that `ts_packet` will not persist, as it is a pointer
+    // into the TS buffering innards
+    err = read_next_TS_packet(reader->tsreader,&ts_packet);
     if (err == EOF)
     {
-      // Check for an unbounded (length indicated as zero) video stream
-      // with a PES packet outstanding
+      // If we've been given EOF, then either we're just *read* EOF
+      // instead of a packet (the obvious case), or we read some data
+      // that was terminated by EOF last time, and the EOF was "deferred"
+      // by the underlying buffering methods.
+      // So, just in case, we'll check for an unbounded (length marked as
+      // zero) video stream PES packet
+      // XXX Note that an unbounded packet will thus not be correctly written
+      // XXX out when we've been asked to write_TS_packets -- fix this if it
+      // XXX ever becomes a problem
       check_for_EOF_packet(reader,packet_data);
       if (*packet_data == NULL)
         return EOF;
@@ -1397,6 +1406,29 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
               reader->posn);
       return 1;
     }
+    err = split_TS_packet(ts_packet,&pid,&payload_unit_start_indicator,
+                          &adapt,&adapt_len,&payload,&payload_len);
+    if (err)
+    {
+      fprintf(stderr,"### Error interpreting TS packet at " OFFSET_T_FORMAT "\n",
+              reader->posn);
+      return 1;
+    }
+
+    // If we're writing out TS packets directly to a client, then this
+    // is probably a sensible place to do it.
+    if (reader->write_TS_packets && reader->tswriter != NULL &&
+        !reader->suppress_writing)
+    {
+      err = tswrite_write(reader->tswriter,ts_packet,pid,FALSE,0);
+      if (err)
+      {
+        fprintf(stderr,"### Error writing TS packet (PID %04x) at "
+                OFFSET_T_FORMAT "\n",pid,reader->posn);
+        return 1;
+      }
+    }
+
 
 #if DEBUG_PES_ASSEMBLY
     printf("@@@ TS packet at " OFFSET_T_FORMAT " with pid %3x",
@@ -1467,7 +1499,7 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
       free(reader->pmt_data);
       reader->pmt_data = NULL; reader->pmt_data_len = reader->pmt_data_used = 0;
 
-      if (reader->write_PES_packets)
+      if (reader->write_PES_packets && !reader->suppress_writing)
       {
         // XXX We *probably* should check if it's changed before doing this,
         //     but at least by outputting it again we ensure it's current
@@ -1688,6 +1720,8 @@ static int build_PES_reader_datastructure(int            give_info,
 
   new->tswriter = NULL;
   new->write_PES_packets = FALSE;
+  new->write_TS_packets = FALSE;
+  new->suppress_writing = TRUE;
   new->dont_write_current_packet = FALSE;
   new->pes_padding = 0;
 
@@ -2293,6 +2327,7 @@ extern int read_next_PES_packet(PES_reader_p  reader)
   if (reader->packet != NULL)
   {
     if (reader->write_PES_packets && reader->tswriter != NULL &&
+        !reader->suppress_writing &&
         !reader->dont_write_current_packet)
     {
       // Aha - we need to output the previous PES packet
@@ -3579,34 +3614,42 @@ extern int find_ESCR_in_PES(byte      data[],
 // Server support
 // ============================================================
 /*
- * Prepare for PES packets being written out to a TS writer, and
- * request that they be written out.
+ * Packets can be written out to a client via a TS writer, as a
+ * "side effect" of reading them. The original mechanism was to
+ * write out PES packets (as TS) as they are read. This will work
+ * for PS or TS data, and writes out only those PES packets that
+ * have been read for video or audio data.
  *
- * The effect is that, each time a new PES packet is read in, it will
- * be written out to the TS output stream.
+ * An alternative, which will only work for TS input data, is
+ * to write out TS packets as they are read. This will write all
+ * TS packets to the client.
  *
  * - `reader` is our PES reader context
  * - `tswriter` is the TS writer
+ * - if `write_PES`, then write PES packets out as they are read from
+ *   the input, otherwise write TS packets.
  * - `program_freq` is how often to write out program data (PAT/PMT)
+ *   if we are writing PES data (if we are writing TS data, then the
+ *   program data will be in the original TS packets)
  */
 extern void set_server_output(PES_reader_p  reader,
                               TS_writer_p   tswriter,
+                              int           write_PES,
                               int           program_freq)
 {
   reader->tswriter = tswriter;
   reader->program_freq = program_freq;
   reader->program_index = 0;
-  reader->write_PES_packets = TRUE;
+  reader->write_PES_packets = write_PES;
+  reader->write_TS_packets = !write_PES;
+  reader->suppress_writing = FALSE;
   return;
 }
 
 /*
- * Start PES packets being written out to a TS writer (again).
+ * Start packets being written out to a TS writer (again).
  *
- * The effect is that, each time a new PES packet is read in, it will
- * be written out to the TS output stream.
- *
- * If PES packets were already being written out, this does nothing.
+ * If packets were already being written out, this does nothing.
  *
  * If set_server_output() has not been called to define a TS writer
  * context, this will have no effect.
@@ -3616,21 +3659,21 @@ extern void set_server_output(PES_reader_p  reader,
 extern void start_server_output(PES_reader_p  reader)
 {
   if (reader != NULL)
-    reader->write_PES_packets = TRUE;
+    reader->suppress_writing = FALSE;
   return;
 }
 
 /*
- * Stop PES packets being written out to a TS writer.
+ * Stop packets being written out to a TS writer.
  *
- * If PES packets were already not being written out, this does nothing.
+ * If packets were already not being written out, this does nothing.
  *
  * If `reader` is NULL, nothing is done.
  */
 extern void stop_server_output(PES_reader_p  reader)
 {
   if (reader != NULL)
-    reader->write_PES_packets = FALSE;
+    reader->suppress_writing = TRUE;
   return;
 }
 
@@ -3643,6 +3686,8 @@ extern void stop_server_output(PES_reader_p  reader)
  * This "expansion" or "padding" of the data can be useful for benchmarking
  * the recipient, as the extra data (which has an irrelevant stream id)
  * will be ignored by the video processor, but not by preceding systems.
+ *
+ * This does nothing if TS packets are being output directly.
  *
  * - `reader` is our PES reader context
  * - `extra` is how many extra packets to output per "real" packet.
