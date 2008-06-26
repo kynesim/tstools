@@ -1391,9 +1391,6 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
       // by the underlying buffering methods.
       // So, just in case, we'll check for an unbounded (length marked as
       // zero) video stream PES packet
-      // XXX Note that an unbounded packet will thus not be correctly written
-      // XXX out when we've been asked to write_TS_packets -- fix this if it
-      // XXX ever becomes a problem
       check_for_EOF_packet(reader,packet_data);
       if (*packet_data == NULL)
         return EOF;
@@ -1415,6 +1412,11 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
       return 1;
     }
 
+#if DEBUG_PES_ASSEMBLY
+    printf("@@@ TS packet at " OFFSET_T_FORMAT " with pid %3x",
+           reader->posn,pid);
+#endif
+
     // If we're writing out TS packets directly to a client, then this
     // is probably a sensible place to do it.
     if (reader->write_TS_packets && reader->tswriter != NULL &&
@@ -1428,12 +1430,6 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
         return 1;
       }
     }
-
-
-#if DEBUG_PES_ASSEMBLY
-    printf("@@@ TS packet at " OFFSET_T_FORMAT " with pid %3x",
-           reader->posn,pid);
-#endif
 
     if (pid == 0)  // PAT
     {
@@ -3715,6 +3711,13 @@ extern int write_program_data(PES_reader_p  reader,
   byte     prog_type[2];
   int      err;
   u_int32  pcr_pid;
+
+  // If we are writing out TS data as a side effect of reading TS when
+  // assembling our PES packets, we should not write out any program
+  // data ourselves, as it is (or should be) already in the TS data
+  if (reader->write_TS_packets &&
+      !reader->suppress_writing)        // should we care about suppression?
+    return 0;
 
   // Of course, if we haven't *found* any program information yet,
   // there's not much we can do (even if the user is overriding the

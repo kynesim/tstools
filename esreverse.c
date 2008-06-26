@@ -655,7 +655,7 @@ int main(int argc, char **argv)
     if (use_server)
     {
       // For testing purposes, let's try outputting video as we collect data
-      set_server_output(es->reader,output.ts_output,100);
+      set_server_output(es->reader,output.ts_output,FALSE,100);
       es->reader->debug_read_packets = TRUE;
     }
   }

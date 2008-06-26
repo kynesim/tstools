@@ -3881,6 +3881,9 @@ int main(int argc, char **argv)
     }
   }
 
+  if (context.tsdirect && !quiet)
+    printf("Serving all TS packets, not just video/audio streams\n");
+
   if (context.drop_packets && !quiet)
     printf("DROPPING: Keeping %d TS packet%s, then dropping (throwing away) %d\n",
            context.drop_packets,(context.drop_packets==1?"":"s"),
