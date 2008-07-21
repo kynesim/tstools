@@ -39,12 +39,15 @@
  *
  * - `file` is the file descriptor of the ADTS file to read from
  * - `frame` is the ADTS frame that is read
+ * - `flags` indicates if we are forcing the recognition of "emphasis"
+ *   fields, etc.
  *
  * Returns 0 if all goes well, EOF if end-of-file is read, and 1 if something
  * goes wrong.
  */
 extern int read_next_adts_frame(int            file,
-                                audio_frame_p *frame);
+                                audio_frame_p *frame,
+                                unsigned int   flags);
 
 
 #endif // _adts_fns

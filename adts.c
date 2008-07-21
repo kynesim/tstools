@@ -45,12 +45,15 @@
  *
  * - `file` is the file descriptor of the ADTS file to read from
  * - `frame` is the ADTS frame that is read
+ * - `flags` indicates if we are forcing the recognition of "emphasis"
+ *   fields, etc.
  *
  * Returns 0 if all goes well, EOF if end-of-file is read, and 1 if something
  * goes wrong.
  */
 extern int read_next_adts_frame(int            file,
-                                audio_frame_p *frame)
+                                audio_frame_p *frame,
+                                unsigned int   flags)
 {
 #define JUST_ENOUGH 6 // just enough to hold the bits of the headers we want
 
@@ -59,6 +62,7 @@ extern int read_next_adts_frame(int            file,
   byte   header[JUST_ENOUGH];
   byte  *data = NULL;
   int    frame_length;
+  int    has_emphasis = 0;
 
   offset_t  posn = tell_file(file);
 #if DEBUG
@@ -102,16 +106,21 @@ extern int read_next_adts_frame(int            file,
     printf("   layer is %d, not 0 (in frame at " OFFSET_T_FORMAT ")\n",
            layer,posn);
 
-  if (id == 1)
+  // Experience appears to show that emphasis doesn't exist in MPEG-2 AVC.
+  // But it does exist in (ID=1) MPEG-4 streams.
+  // 
+  // .. or if forced.
+
+  has_emphasis = (flags & ADTS_FLAG_NO_EMPHASIS) ? 0 :
+    ((flags & ADTS_FLAG_FORCE_EMPHASIS) || !id);
+
+  if (!has_emphasis)
   {
-    // We assume the Emphasis field is not present
-    // (experience appears to show that it is not used for MPEG-2 AVC)
     frame_length = ((header[3] & 0x03) << 11) | (header[4] << 3) |
       ((unsigned)(header[5] & 0xE0) >> 5);
   }
   else
   {
-    // We assume the Emphasis field *is* present
     frame_length = (header[4] << 5) | ((unsigned)(header[5] & 0xF8) >> 3);
   }
 #if DEBUG

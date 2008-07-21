@@ -178,6 +178,8 @@ static int merge_with_avs(avs_context_p  video_context,
   switch (audio_type)
   {
   case AUDIO_ADTS:
+  case AUDIO_ADTS_MPEG2:
+  case AUDIO_ADTS_MPEG4:
     prog_type[1] = ADTS_AUDIO_STREAM_TYPE;
     break;
   case AUDIO_L2:
@@ -392,6 +394,8 @@ static int merge_with_h264(access_unit_context_p  video_context,
   switch (audio_type)
   {
   case AUDIO_ADTS:
+  case AUDIO_ADTS_MPEG2:
+  case AUDIO_ADTS_MPEG4:
     prog_type[1] = ADTS_AUDIO_STREAM_TYPE;
     break;
   case AUDIO_L2:
@@ -570,6 +574,8 @@ static void print_usage()
     "\n"
     "  -adts             The audio stream is ADTS (the default)\n"
     "  -l2               The audio stream is MPEG layer 2 audio\n"
+    "  -mp2adts          The audio stream is MPEG-2 style ADTS regardless of ID bit\n"
+    "  -mp4adts          The audio stream is MPEG-4 style ADTS regardless of ID bit\n"
     "\n"
     "Limitations\n"
     "===========\n"
@@ -670,6 +676,14 @@ int main(int argc, char **argv)
       else if (!strcmp("-h264",argv[ii]))
       {
         video_type = VIDEO_H264;
+      }
+      else if (!strcmp("-mp2adts", argv[ii]))
+      {
+        audio_type = AUDIO_ADTS_MPEG2;
+      }
+      else if (!strcmp("-mp4adts", argv[ii]))
+      {
+        audio_type = AUDIO_ADTS_MPEG4;
       }
       else if (!strcmp("-avs",argv[ii]))
       {

@@ -46,6 +46,9 @@ typedef struct audio_frame *audio_frame_p;
 #define AUDIO_ADTS      ADTS_AUDIO_STREAM_TYPE
 #define AUDIO_L2        MPEG2_AUDIO_STREAM_TYPE
 
+#define AUDIO_ADTS_MPEG2 0x100
+#define AUDIO_ADTS_MPEG4 0x101
+
 #define AUDIO_STR(x)    ((x)==AUDIO_UNKNOWN?"unknown":  \
                          (x)==AUDIO_ADTS   ?"ADTS":     \
                          (x)==AUDIO_L2     ?"MPEG2":    \

@@ -98,8 +98,12 @@ extern int read_next_audio_frame(int            file,
 {
   switch (audio_type)
   {
+  case AUDIO_ADTS_MPEG2:
+    return read_next_adts_frame(file,frame,ADTS_FLAG_NO_EMPHASIS);
+  case AUDIO_ADTS_MPEG4:
+    return read_next_adts_frame(file,frame,ADTS_FLAG_FORCE_EMPHASIS);
   case AUDIO_ADTS:
-    return read_next_adts_frame(file,frame);
+    return read_next_adts_frame(file,frame,0);
   case AUDIO_L2:
     return read_next_l2audio_frame(file,frame);
   default:
