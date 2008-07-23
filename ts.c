@@ -1439,7 +1439,19 @@ extern int read_next_TS_packet(TS_reader_p  tsreader,
 
 // Let's guess for a maximum number of TS entries we're likely to need
 // to be able to hold...
-#define PCR_READ_AHEAD_SIZE     ((1024*1024)/TS_PACKET_SIZE)
+// XXX
+// XXX But whatever number we guess here will be too small for some
+// XXX streams, or so big it's really quite over the top for most
+// XXX (and more than I'd like). So maybe we should have something
+// XXX that's likely to cope for most streams, and we should (ideally)
+// XXX have a way for the user to set the size with a swich, but also
+// XXX (perhaps) we should allow the reader to continue (using the last
+// XXX calculated rate) if we can't read ahead? Or perhaps having the
+// XXX switch is enough, for the nonce... Or maybe we should allow the
+// XXX buffer to grow (on demand, within some sort of reason) if it
+// XXX needs to.
+// XXX
+#define PCR_READ_AHEAD_SIZE     20000          // a made-up number
 static byte     TS_buffer[PCR_READ_AHEAD_SIZE][TS_PACKET_SIZE];
 // For convenience (since we'll already have calculated this once),
 // remember each packets PID
@@ -1461,6 +1473,10 @@ static u_int64  TS_buffer_time_per_TS = 0;
 // For diagnostic purposes, the sequence number of TS_buffer[0]
 // (and thus, of the overall read-ahead buffer) in the overall file
 static int      TS_buffer_posn = 0;
+// Did we read an EOF before finding a "second" PCR?
+// (perhaps we should instead call this "TS_playing_out", but that's
+// less directly named from how we set it)
+static int      TS_had_EOF = FALSE;
 
 /* Fill up the PCR read-ahead buffer with TS entries, until we hit
  * one (of the correct PID) with a PCR.
@@ -1532,7 +1548,7 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
   }
   // If we ran out of buffer, then we've really got no choice but to give up
   // with an appropriate grumble
-  fprintf(stderr,"!!! tsplay: Next PCR not found when reading forwards"
+  fprintf(stderr,"!!! Next PCR not found when reading forwards"
           " (for %d TS packets, starting at TS packet %d)\n",PCR_READ_AHEAD_SIZE,
           TS_buffer_posn);
   return 1;
@@ -1619,8 +1635,29 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
   int err;
   if (TS_buffer_next == TS_buffer_len)
   {
-    err = fill_TS_packet_buffer(tsreader);
-    if (err) return err;
+    if (TS_had_EOF)
+    {
+      // We'd already run out of look-ahead packets, so just return
+      // our (deferred) end-of-file
+      return EOF;
+    }
+    else
+    {
+      err = fill_TS_packet_buffer(tsreader);
+      if (err == EOF)
+      {
+        // An EOF means we read the end-of-file before finding the next
+        // TS packet with a PCR. We could stop here (returning EOF), but
+        // whilst that would mean all TS packets had guaranteed accurate
+        // PCRs, it would also mean that we would ignore some TS packets
+        // at the end of the file. This proved unacceptable in practice,
+        // so our second best choice is to "play out" using the last
+        // known PCR rate-of-change.
+        TS_had_EOF = TRUE;              // remember we're playing out
+      }
+      else if (err)
+        return err;
+    }
   }
 
   *data = TS_buffer[TS_buffer_next];
@@ -1628,7 +1665,7 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
 
   TS_buffer_next ++;
 
-  if (TS_buffer_next == TS_buffer_len)
+  if (TS_buffer_next == TS_buffer_len && !TS_had_EOF)
   {
     // Why, this is the very packet with its own PCR
     *pcr = TS_buffer_end_pcr;
@@ -1713,6 +1750,15 @@ extern int read_buffered_TS_packet(TS_reader_p  tsreader,
   // Read the next packet
   if (*count == start_count)
   {
+    // XXX
+    // XXX We *strongly* assume that we will find two PCRs (in the
+    // XXX required distance -- I think it's best to declare that
+    // XXX "not a problem", by fiat.
+    // XXX
+    // XXX But is it acceptable that we ignore any TS packets before
+    // XXX the first packet with a PCR? Probably more so than that we
+    // XXX should ignore any packets at the end of the file.
+    // XXX
     err = read_first_TS_packet_from_buffer(tsreader,TS_buffer_pcr_pid,
                                            start_count,data,pid,pcr,count);
     if (err)
