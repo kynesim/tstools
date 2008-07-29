@@ -426,9 +426,6 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
  * Call this before the first call of read_buffered_TS_packet().
  *
  * - `pcr_pid` is the PID within which we should look for PCR entries
- *
- * Returns 0 if all went well, 1 if something went wrong, EOF if we got an
- * unexpected EOF.
  */
 extern void prime_read_buffered_TS_packet(u_int32      pcr_pid);
 /*
