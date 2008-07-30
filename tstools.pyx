@@ -1,8 +1,4 @@
-"""es.pyx -- Pyrex bindings for es.c
-
-Whilst starting, "compile" with::
-
-    pyrexc  es.pyx -o es.pyx.c
+"""tstools.pyx -- Pyrex bindings for the TS tools
 """
 
 # If we're going to use definitions like this in more than one pyx file, we'll
@@ -40,6 +36,7 @@ cdef class ESStream:
     """
 
     cdef ES_p stream
+    cdef readonly object filename
 
     # It appears to be recommended to make __cinit__ expand to take more
     # arguments (if __init__ ever gains them), since both get the same

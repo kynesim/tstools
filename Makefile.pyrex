@@ -1,0 +1,27 @@
+# This is a preliminary Makefile for experimentin with Pyrex builds
+# It assumes that the normal tstools Makefile has been used to build
+# the tools already. It also assumes that Pyrex is installed, and that
+# pyrexc is on the path. It probably assumes Linux or Mac OS/X as well...
+
+# Is there a way to generalise this? I don't like embedding the version,
+# in particular
+PYTHON_PREFIX=/usr
+PYTHON_VERSION=2.5
+PYTHON_INCLUDES=-I$(PYTHON_PREFIX)/include/python$(PYTHON_VERSION)
+
+LINK_FLAGS=-fPIC -Llib -ltstools -lm -lpython$(PYTHON_VERSION)
+
+.PHONY: all
+all:
+	python Setup.py build_ext --inplace
+
+# I've never been able to figure out how to stop this grumbling about
+# a circular dependency. Yet it seems to do the right thing.
+##%.pyx.c: %.pyx
+##	pyrexc $< -o $@
+
+##%_pyx.so: %.pyx.c
+##	$(CC) -shared $< -o $@ $(PYTHON_INCLUDES) $(LINK_FLAGS)
+
+.PHONY: clean
+clean:
