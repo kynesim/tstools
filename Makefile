@@ -143,7 +143,8 @@ PROG_OBJS = \
   $(OBJDIR)/tsinfo.o \
   $(OBJDIR)/tsplay.o \
   $(OBJDIR)/tsreport.o \
-  $(OBJDIR)/tsserve.o
+  $(OBJDIR)/tsserve.o \
+  $(OBJDIR)/ts_packet_insert.o
 #\
 #  $(OBJDIR)/test_ps.o
 
@@ -175,7 +176,8 @@ PROGS = \
   $(BINDIR)/tsinfo \
   $(BINDIR)/tsreport \
   $(BINDIR)/tsplay \
-  $(BINDIR)/tsserve
+  $(BINDIR)/tsserve \
+  $(BINDIR)/ts_packet_insert
 #\
 #  $(BINDIR)/test_ps
 
@@ -255,6 +257,9 @@ $(BINDIR)/test_ps:	$(OBJDIR)/test_ps.o $(LIB)
 $(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(LIB)
 		$(CC) $< -o $(BINDIR)/ts2ps $(LDFLAGS) $(LIBOPTS)
 
+$(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(LIB)
+		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LDFLAGS) $(LIBOPTS)
+
 
 $(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(LIB)
 		$(CC) $< -o $(BINDIR)/test_pes $(LDFLAGS) $(LIBOPTS)
@@ -321,6 +326,8 @@ $(OBJDIR)/tsinfo.o:       tsinfo.c $(TS_H) misc_fns.h version.h
 $(OBJDIR)/tsreport.o:     tsreport.c $(TS_H) fmtx.h misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tsserve.o:     tsserve.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) version.h
+	$(CC) -c $< -o $@ $(CFLAGS)
+$(OBJDIR)/ts_packet_insert.o:     ts_packet_insert.c 
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tsplay.o:       tsplay.c $(TS_H) misc_fns.h $(PS_H) $(PES_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
