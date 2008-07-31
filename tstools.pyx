@@ -22,7 +22,7 @@ cdef extern from 'es_defns.h':
 
 cdef extern from 'es_fns.h':
     int open_elementary_stream(char *filename, ES_p *es)
-    void free_elementary_stream(ES_p *es)
+    void close_elementary_stream(ES_p *es)
     int find_and_build_next_ES_unit(ES_p es, ES_unit_p *unit)
     void free_ES_unit(ES_unit_p *unit)
     void report_ES_unit(FILE *stream, ES_unit_p unit)
@@ -44,6 +44,8 @@ cdef class ESStream:
     # try the recommended route
     def __cinit__(self,filename,*args,**kwargs):
         retval = open_elementary_stream(filename,&self.stream)
+        print 'retval',retval
+        print 'stream %d'%<int>self.stream
         if retval != 0:
             raise TSToolsException,'Error opening ES file %s'%filename
 
@@ -53,4 +55,4 @@ cdef class ESStream:
         self.filename = filename
 
     def __dealloc__(self):
-        free_elementary_stream(&self.stream)
+        close_elementary_stream(&self.stream)
