@@ -1,0 +1,26 @@
+Some tests for the Python binding of the TS tools
+=================================================
+
+It's difficult to find example data files that are generally available. For
+the moment, I'm going to use a file I have locally, and unfortunately others
+will have to manage without. This is still better than no testing...
+
+    >>> test_es_file = '/Users/tibs/sw/tstools/data/aladdin.es'
+
+First, check we've got the basics working:
+
+    >>> from tstools import ESStream
+    >>> stream = ESStream(test_es_file)
+
+The filename is available as a "readonly" value:
+
+    >>> stream.filename
+    '/Users/tibs/sw/tstools/data/aladdin.es'
+
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set filetype=rst tabstop=8 shiftwidth=2 expandtab:

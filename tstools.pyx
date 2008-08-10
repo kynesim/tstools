@@ -68,8 +68,6 @@ cdef class ESStream:
     # try the recommended route
     def __cinit__(self,filename,*args,**kwargs):
         retval = open_elementary_stream(filename,&self.stream)
-        print 'retval',retval
-        print 'stream %d'%<int>self.stream
         if retval != 0:
             raise TSToolsException,'Error opening ES file %s'%filename
 
