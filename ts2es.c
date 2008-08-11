@@ -241,7 +241,9 @@ static int extract_pid_packets(TS_reader_p  tsreader,
         // If we haven't *started* a packet, we can't use this,
         // since it will just look like random bytes when written out.
         if (need_packet_start)
-          continue;
+          {
+            continue;
+          }
 
         data = payload;
         data_len = payload_len;

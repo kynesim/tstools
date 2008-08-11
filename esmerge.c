@@ -120,7 +120,7 @@ static int is_I_or_IDR_frame(access_unit_p  frame)
 }
 
 /*
- * Merge the given elemetary streams to the given output.
+ * Merge the given elementary streams to the given output.
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
@@ -131,6 +131,7 @@ static int merge_with_avs(avs_context_p  video_context,
                           int            audio_samples_per_frame,
                           int            audio_sample_rate,
                           double         video_frame_rate,
+                          int            pat_pmt_freq,
                           int            quiet,
                           int            verbose,
                           int            debugging)
@@ -247,6 +248,22 @@ static int merge_with_avs(avs_context_p  video_context,
                (is_avs_I_frame(avs_frame)?"**":"++"),
                video_frame_count,video_time,video_pts);
 
+      if (pat_pmt_freq && !(video_frame_count % pat_pmt_freq))
+        {
+          if (verbose)
+            {
+              printf("\nwriting PAT and PMT (frame = %d, freq = %d).. ", 
+                     video_frame_count, pat_pmt_freq);
+            }
+
+          err = write_TS_program_data2(output, 
+                                       1, // tsid
+                                       1, // Program number
+                                       DEFAULT_PMT_PID,
+                                       DEFAULT_VIDEO_PID, // PCR pid
+                                       2, prog_pids, prog_type);
+        }
+
       // PCR counts frames as seen in the stream, so is easy
       // The presentation and decoding time for B frames (if we ever get any)
       // could reasonably be the same as the PCR.
@@ -315,7 +332,7 @@ static int merge_with_avs(avs_context_p  video_context,
         return 1;
       }
       free_audio_frame(&aframe);
-    }
+    }    
   }
 
   if (!quiet)
@@ -336,7 +353,7 @@ static int merge_with_avs(avs_context_p  video_context,
 }
 
 /*
- * Merge the given elemetary streams to the given output.
+ * Merge the given elementary streams to the given output.
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
@@ -347,6 +364,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
                            int                    audio_samples_per_frame,
                            int                    audio_sample_rate,
                            int                    video_frame_rate,
+                           int                    pat_pmt_freq,
                            int                    quiet,
                            int                    verbose,
                            int                    debugging)
@@ -445,6 +463,22 @@ static int merge_with_h264(access_unit_context_p  video_context,
         printf("\n%s video frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
                (is_I_or_IDR_frame(access_unit)?"**":"++"),
                video_frame_count,video_time,video_pts);
+
+      if (pat_pmt_freq && !(video_frame_count % pat_pmt_freq))
+        {
+          if (verbose)
+            {
+              printf("\nwriting PAT and PMT (frame = %d, freq = %d).. ", 
+                     video_frame_count, pat_pmt_freq);
+            }
+          err = write_TS_program_data2(output, 
+                                       1, // tsid
+                                       1, // Program number
+                                       DEFAULT_PMT_PID,
+                                       DEFAULT_VIDEO_PID, // PCR pid
+                                       2, prog_pids, prog_type);
+        }
+
 
       // PCR counts frames as seen in the stream, so is easy
       // The presentation and decoding time for B frames (if we ever get any)
@@ -577,6 +611,10 @@ static void print_usage()
     "  -mp2adts          The audio stream is MPEG-2 style ADTS regardless of ID bit\n"
     "  -mp4adts          The audio stream is MPEG-4 style ADTS regardless of ID bit\n"
     "\n"
+    "  -patpmtfreq <f>    PAT and PMT will be inserted every <f> video frames. \n"
+    "                     by default, f = 0 and PAT/PMT are inserted only at  \n"
+    "                     the start of the output stream.\n"
+    "\n"
     "Limitations\n"
     "===========\n"
     "For the moment, the video input must be H.264 or AVS, and the audio input\n"
@@ -607,6 +645,7 @@ int main(int argc, char **argv)
   int    video_frame_rate = DEFAULT_VIDEO_FRAME_RATE;
   int    audio_type = AUDIO_ADTS;
   int    video_type = VIDEO_H264;
+  int    pat_pmt_freq = 0;
   int    ii = 1;
 
 #if TEST_PTS_DTS
@@ -689,6 +728,12 @@ int main(int argc, char **argv)
       {
         video_type = VIDEO_AVS;
       }
+      else if (!strcmp("-patpmtfreq", argv[ii]))
+        {
+          err = int_value("patpmtfreq", argv[ii], argv[ii+1], TRUE, 10, &pat_pmt_freq);
+          if (err) { return 1; }
+          ++ii;
+        }
       else
       {
         fprintf(stderr,"### esmerge: "
@@ -828,12 +873,14 @@ int main(int argc, char **argv)
                           audio_type,
                           audio_samples_per_frame,audio_sample_rate,
                           video_frame_rate,
+                          pat_pmt_freq,
                           quiet,verbose,debugging);
   else if (video_type == VIDEO_AVS)
     err = merge_with_avs(avs_video_context,audio_file,output,
                          audio_type,
                          audio_samples_per_frame,audio_sample_rate,
                          video_frame_rate,
+                         pat_pmt_freq,
                          quiet,verbose,debugging);
   else
   {

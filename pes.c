@@ -41,6 +41,7 @@
 #include "tswrite_fns.h"
 #include "misc_fns.h"
 
+
 //#define DEBUG
 #define DEBUG_READ_PACKETS 0
 #define DEBUG_PES_ASSEMBLY 0
@@ -1403,6 +1404,7 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
               reader->posn);
       return 1;
     }
+
     err = split_TS_packet(ts_packet,&pid,&payload_unit_start_indicator,
                           &adapt,&adapt_len,&payload,&payload_len);
     if (err)

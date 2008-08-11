@@ -530,6 +530,7 @@ static int play_normal(stream_context  stream,
                        int             verbose,
                        int             quiet,
                        int             num_normal,
+                       int             tsdirect,
                        reverse_data_p  reverse_data)
 {
   int  err;
@@ -538,8 +539,14 @@ static int play_normal(stream_context  stream,
 
   if (extra_info) printf("Playing at normal speed\n");
 
-  err = write_program_data(reader,output);
-  if (err) return err;
+  /* Do not write program data if we're in tsdirect mode -
+   *  it'll change and some programs can't cope
+   */
+  if (!tsdirect)
+    {
+      err = write_program_data(reader,output);
+      if (err) return err;
+    }
 
   start_server_output(reader);
 
@@ -936,7 +943,8 @@ static int resync_after_filter(stream_context  stream,
  * if the current command has changed.
  */
 static int back_to_normal(stream_context  stream,
-                          TS_writer_p     output)
+                          TS_writer_p     output,
+                          int             tsdirect)
 {
   int          err;
   ES_p         es = EXTRACT_ES_FROM_STREAM(stream);
@@ -953,10 +961,13 @@ static int back_to_normal(stream_context  stream,
     return 0;
   }
   
-  // It can't hurt to reiterate the program data, and if we were just
-  // playing a different program stream, it's a good idea
-  err = write_program_data(reader,output);
-  if (err) return err;
+  if (!tsdirect)
+    {
+      // It can't hurt to reiterate the program data, and if we were just
+      // playing a different program stream, it's a good idea
+      err = write_program_data(reader,output);
+      if (err) return err;
+    }
 
   // When playing forwards at normal speed, each PES packet is read in,
   // processed to extract information, and then (automatically) written
@@ -1149,6 +1160,7 @@ static int play_stripped(stream_context  stream,
                          TS_writer_p     output,
                          int             verbose,
                          int             quiet,
+                         int             tsdirect,
                          int             num_fast,
                          int             with_seq_hdrs)
 {
@@ -1163,10 +1175,13 @@ static int play_stripped(stream_context  stream,
   // remembering anything about last time we filtered
   reset_filter_context(fcontext,0);
   
-  // Ensure we've got program data available (probably not necessary,
-  // but unlikely to hurt)
-  err = write_program_data(reader,output);
-  if (err) return err;
+  if (!tsdirect)
+    {
+      // Ensure we've got program data available (probably not necessary,
+      // but unlikely to hurt)
+      err = write_program_data(reader,output);
+      if (err) return err;
+    }
 
   if (extra_info) printf("Fast forwarding (strip)\n");
 
@@ -1230,6 +1245,7 @@ static int play_filtered(stream_context  stream,
                          TS_writer_p     output,
                          int             verbose,
                          int             quiet,
+                         int             tsdirect,
                          int             num_faster,
                          int             frequency,
                          int             with_seq_hdrs)
@@ -1249,10 +1265,13 @@ static int play_filtered(stream_context  stream,
   // anything about last time we filtered
   reset_filter_context(fcontext,frequency);
   
-  // Ensure we've got program data available (probably not necessary,
-  // but unlikely to hurt)
-  err = write_program_data(reader,output);
-  if (err) return err;
+  if (!tsdirect)
+    {
+      // Ensure we've got program data available (probably not necessary,
+      // but unlikely to hurt)
+      err = write_program_data(reader,output);     
+      if (err) return err;
+    }
 
   if (extra_info) printf("Fast forwarding (filter)\n");
 
@@ -1370,7 +1389,8 @@ static int skip_forwards(stream_context  stream,
                          int             with_seq_hdrs,
                          int             num_to_skip,
                          int             verbose,
-                         int             quiet)
+                         int             quiet, 
+                         int             tsdirect)
 {
   int  err;
   ES_p es = EXTRACT_ES_FROM_STREAM(stream);
@@ -1390,10 +1410,13 @@ static int skip_forwards(stream_context  stream,
   // anything about last time we filtered
   reset_filter_context(fcontext,num_to_skip);
   
-  // Ensure we've got program data available (probably not necessary,
-  // but unlikely to hurt)
-  err = write_program_data(reader,output);
-  if (err) return err;
+  if (!tsdirect)
+    {
+      // Ensure we've got program data available (probably not necessary,
+      // but unlikely to hurt)
+      err = write_program_data(reader,output);
+      if (err) return err;
+    }
 
   if (extra_info) printf("Skipping forwards (%d frames)\n",num_to_skip);
 
@@ -1511,16 +1534,20 @@ static int skip_backwards(stream_context  stream,
                           int             num_to_skip,
                           int             verbose,
                           int             quiet,
+                          int             tsdirect,
                           reverse_data_p  reverse_data)
 {
   int  err;
   ES_p es = EXTRACT_ES_FROM_STREAM(stream);
   PES_reader_p reader = es->reader;
   
-  // Ensure we've got program data available (probably not necessary,
-  // but unlikely to hurt)
-  err = write_program_data(reader,output);
-  if (err) return err;
+  if (!tsdirect)
+    {
+      // Ensure we've got program data available (probably not necessary,
+      // but unlikely to hurt)
+      err = write_program_data(reader,output);
+      if (err) return err;
+    }
 
   if (extra_info) printf("Skipping backwards (%d frames)\n",num_to_skip);
 
@@ -1561,6 +1588,7 @@ static int play_reverse(stream_context   stream,
                         TS_writer_p      output,
                         int              verbose,
                         int              quiet,
+                        int              tsdirect,
                         int              frequency,
                         int              num_reverse,
                         reverse_data_p   reverse_data)
@@ -1571,10 +1599,13 @@ static int play_reverse(stream_context   stream,
 
   if (extra_info) printf("Reversing\n");
 
-  // Ensure we've got program data available (probably not necessary,
-  // but unlikely to hurt)
-  err = write_program_data(reader,output);
-  if (err) return err;
+  if (tsdirect)
+    {
+      // Ensure we've got program data available (probably not necessary,
+      // but unlikely to hurt)
+      err = write_program_data(reader,output);
+      if (err) return err;
+    }
 
 #if SHOW_REVERSE_DATA
   if (extra_info)
@@ -1630,6 +1661,7 @@ static int obey_command(char            this_command,
                         int             video_only,
                         int             verbose,
                         int             quiet,
+                        int             tsdirect,
                         int             with_seq_hdrs,
                         int             ffrequency,
                         int             rfrequency)
@@ -1653,13 +1685,13 @@ static int obey_command(char            this_command,
                          tswriter->where.socket,which);
       if (last_command != COMMAND_NORMAL && started[which])
       {
-        err = back_to_normal(stream[which],tswriter);
+        err = back_to_normal(stream[which],tswriter,tsdirect);
         if (err) return 1;
       }
       started[which] = TRUE;
       set_PES_reader_video_only(reader[which],video_only);
       err = play_normal(stream[which],tswriter,verbose,quiet,0,
-                        reverse_data[which]);
+                        tsdirect, reverse_data[which]);
       // If we've had a new command, and it's not 'n' again...
       if (err == COMMAND_RETURN_CODE && tswriter->command != COMMAND_NORMAL)
         err = flush_after_normal(stream[which],tswriter,verbose,quiet);
@@ -1680,7 +1712,7 @@ static int obey_command(char            this_command,
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_stripped(stream[which],scontext[which],tswriter,
-                          verbose,quiet,0,with_seq_hdrs);
+                          verbose,quiet,tsdirect,0,with_seq_hdrs);
       break;
 
     case COMMAND_FAST_FAST:
@@ -1690,7 +1722,7 @@ static int obey_command(char            this_command,
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_filtered(stream[which],fcontext[which],tswriter,
-                          verbose,quiet,0,ffrequency,with_seq_hdrs);
+                          verbose,quiet,tsdirect,0,ffrequency,with_seq_hdrs);
       break;
 
     case COMMAND_REVERSE:
@@ -1700,6 +1732,7 @@ static int obey_command(char            this_command,
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_reverse(stream[which],tswriter,verbose,quiet,
+                         tsdirect,
                          rfrequency,0,reverse_data[which]);
       if (err == 0)
       {
@@ -1716,6 +1749,7 @@ static int obey_command(char            this_command,
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_reverse(stream[which],tswriter,verbose,quiet,
+                         tsdirect,
                          2*rfrequency,0,reverse_data[which]);
       if (err == 0)
       {
@@ -1733,7 +1767,7 @@ static int obey_command(char            this_command,
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_forwards(stream[which],tswriter,
                           fcontext[which],with_seq_hdrs,
-                          SMALL_SKIP_DISTANCE,verbose,quiet);
+                          SMALL_SKIP_DISTANCE,verbose,quiet,tsdirect);
       this_command = COMMAND_NORMAL;  // aim to continue with normal play
       break;
       
@@ -1744,7 +1778,7 @@ static int obey_command(char            this_command,
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_backwards(stream[which],tswriter,SMALL_SKIP_DISTANCE,
-                           verbose,quiet,reverse_data[which]);
+                           verbose,quiet,tsdirect,reverse_data[which]);
       this_command = COMMAND_NORMAL;  // aim to continue with normal play
       break;
       
@@ -1756,7 +1790,7 @@ static int obey_command(char            this_command,
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_forwards(stream[which],tswriter,
                           fcontext[which],with_seq_hdrs,
-                          BIG_SKIP_DISTANCE,verbose,quiet);
+                          BIG_SKIP_DISTANCE,verbose,quiet,tsdirect);
       this_command = COMMAND_NORMAL;  // aim to continue with normal play
       break;
       
@@ -1767,7 +1801,7 @@ static int obey_command(char            this_command,
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_backwards(stream[which],tswriter,BIG_SKIP_DISTANCE,
-                           verbose,quiet,reverse_data[which]);
+                           verbose,quiet,tsdirect,reverse_data[which]);
       this_command = COMMAND_NORMAL;  // aim to continue with normal play
       break;
 
@@ -1896,6 +1930,7 @@ static int play(int             default_index,
                 int             video_only,
                 int             verbose,
                 int             quiet,
+                int             tsdirect,
                 int             with_seq_hdrs,
                 int             ffrequency,
                 int             rfrequency)
@@ -1951,7 +1986,7 @@ static int play(int             default_index,
 
     err = obey_command(this_command,last_command,&which,
                        started,reader,stream,fcontext,scontext,reverse_data,
-                       tswriter,video_only,verbose,quiet,with_seq_hdrs,
+                       tswriter,video_only,verbose,quiet,tsdirect,with_seq_hdrs,
                        ffrequency,rfrequency);
     if (err == EOF)
       return 0;  // The user gave the 'q'uit command
@@ -1984,6 +2019,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
   filter_context  fcontext[MAX_INPUT_FILES];
   filter_context  scontext[MAX_INPUT_FILES];
 
+    printf("tsserve[5]\n");
   if (!quiet)
     printf("\nSetting up environment\n");
 
@@ -2012,6 +2048,18 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     if (!quiet)
       printf("Setting up stream %d\n",ii);
     
+    // Request that PES packets be written out to the TS writer as
+    // a "side effect" of reading them in
+    // 
+    // This needs to be done early because build_elementary_stream_PES
+    //  does some readahead which may otherwise consume the first
+    //  bit of the stream - rrw 2008/07/23
+    //
+    set_server_output(reader[ii],tswriter,!context->tsdirect,
+                      context->repeat_program_every);
+
+    set_server_padding(reader[ii],context->pes_padding);
+
     // Wrap our PES stream up as an ES stream
     err = build_elementary_stream_PES(reader[ii],&es[ii]);
     if (err)
@@ -2037,6 +2085,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
       goto tidy_up;
     }
 
+
     // Tell it what PID and stream id to use when outputting reversed data
     set_reverse_pid(reverse_data[ii],reader[ii]->output_video_pid,
                     DEFAULT_VIDEO_STREAM_ID);
@@ -2051,6 +2100,8 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
       fprintf(stderr,"### Unable to build filter context for stream %d\n",ii);
       goto tidy_up;
     }
+
+
     err = build_filter_context(stream[ii],TRUE,0,&scontext[ii]);
     if (err)
     {
@@ -2058,11 +2109,6 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
       goto tidy_up;
     }
     
-    // Request that PES packets be written out to the TS writer as
-    // a "side effect" of reading them in
-    set_server_output(reader[ii],tswriter,!context->tsdirect,
-                      context->repeat_program_every);
-    set_server_padding(reader[ii],context->pes_padding);
   }
   
   // Start off our output with some null packets - this is in case the
@@ -2076,8 +2122,8 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
 
   // And, at last, do what we came for
   err = play(context->default_file_index,reader,stream,fcontext,scontext,reverse_data,
-             tswriter,context->video_only,verbose,quiet,context->with_seq_hdrs,
-             context->ffrequency,context->rfrequency);
+             tswriter,context->video_only,verbose,quiet,context->tsdirect,
+             context->with_seq_hdrs,context->ffrequency,context->rfrequency);
 
 tidy_up:
   for (ii = 0; ii < MAX_INPUT_FILES; ii++)
@@ -2107,6 +2153,7 @@ static int test_play(PES_reader_p    reader,
                      int             video_only,
                      int             verbose,
                      int             quiet,
+                     int             tsdirect,
                      int             num_normal,
                      int             num_fast,
                      int             num_faster,
@@ -2124,7 +2171,7 @@ static int test_play(PES_reader_p    reader,
     // Special case -- just play through
     printf(">> Just playing at normal speed\n");
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,0,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,0,reverse_data);
     if (err == EOF)
       return 0;
     else
@@ -2140,13 +2187,13 @@ static int test_play(PES_reader_p    reader,
     printf("** Normal speed for %d\n",num_normal);
     if (started)
     {
-      err = back_to_normal(stream,tswriter);
+      err = back_to_normal(stream,tswriter,tsdirect);
       if (err) return 1;
     }
     started = TRUE;
 
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2164,7 +2211,8 @@ static int test_play(PES_reader_p    reader,
     if (verbose || extra_info) printf("\n\n");
     printf("** Fast forward for %d\n",num_fast);
     set_PES_reader_video_only(reader,TRUE);
-    err = play_stripped(stream,scontext,tswriter,verbose,quiet,num_fast,
+    err = play_stripped(stream,scontext,tswriter,verbose,quiet,tsdirect,
+                        num_fast,
                         with_seq_hdrs);
     if (err == EOF)
       break;
@@ -2175,11 +2223,11 @@ static int test_play(PES_reader_p    reader,
     if (verbose || extra_info) printf("\n\n");
     printf("** Normal speed for %d\n",num_normal);
 
-    err = back_to_normal(stream,tswriter);
+    err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
 
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2197,7 +2245,8 @@ static int test_play(PES_reader_p    reader,
     if (verbose || extra_info) printf("\n\n");
     printf("** Faster forward for %d\n",num_faster);
     set_PES_reader_video_only(reader,TRUE);
-    err = play_filtered(stream,fcontext,tswriter,verbose,quiet,num_faster,
+    err = play_filtered(stream,fcontext,tswriter,verbose,quiet,tsdirect,
+                        num_faster,
                         ffrequency,with_seq_hdrs);
     if (err == EOF)
       break;
@@ -2208,11 +2257,11 @@ static int test_play(PES_reader_p    reader,
     if (verbose || extra_info) printf("\n\n");
     printf("** Normal speed for %d\n",num_normal);
 
-    err = back_to_normal(stream,tswriter);
+    err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
 
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2231,6 +2280,7 @@ static int test_play(PES_reader_p    reader,
     printf("** Reverse for %d\n",num_reverse);
     set_PES_reader_video_only(reader,TRUE);
     err = play_reverse(stream,tswriter,verbose,quiet,rfrequency,
+                       tsdirect,
                        num_reverse,reverse_data);
     if (err == EOF)
       break;
@@ -2261,6 +2311,7 @@ static int test_skip(PES_reader_p    reader,
                      int             video_only,
                      int             verbose,
                      int             quiet,
+                     int             tsdirect,
                      int             with_seq_hdrs)
 {
   int  err = 0;
@@ -2279,13 +2330,13 @@ static int test_skip(PES_reader_p    reader,
     printf("** Normal speed for %d\n",num_normal);
     if (started)
     {
-      err = back_to_normal(stream,tswriter);
+      err = back_to_normal(stream,tswriter,tsdirect);
       if (err) return 1;
     }
     started = TRUE;
 
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2303,7 +2354,7 @@ static int test_skip(PES_reader_p    reader,
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_forwards(stream,tswriter,fcontext,with_seq_hdrs,
-                        SMALL_SKIP_DISTANCE,verbose,quiet);
+                        SMALL_SKIP_DISTANCE,verbose,quiet,tsdirect);
     if (err == EOF)
       break;
     else if (err)
@@ -2315,7 +2366,7 @@ static int test_skip(PES_reader_p    reader,
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_forwards(stream,tswriter,fcontext,with_seq_hdrs,
-                        SMALL_SKIP_DISTANCE,verbose,quiet);
+                        SMALL_SKIP_DISTANCE,verbose,quiet,tsdirect);
     if (err == EOF)
       break;
     else if (err)
@@ -2325,11 +2376,11 @@ static int test_skip(PES_reader_p    reader,
     if (verbose || extra_info) printf("\n\n");
     printf("** Normal speed for %d\n",num_normal);
 
-    err = back_to_normal(stream,tswriter);
+    err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
 
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2346,7 +2397,7 @@ static int test_skip(PES_reader_p    reader,
     printf("** Skip backwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
-    err = skip_backwards(stream,tswriter,1,verbose,quiet,reverse_data);
+    err = skip_backwards(stream,tswriter,1,verbose,quiet,tsdirect,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2357,7 +2408,7 @@ static int test_skip(PES_reader_p    reader,
     printf("** Skip backwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
-    err = skip_backwards(stream,tswriter,1,verbose,quiet,reverse_data);
+    err = skip_backwards(stream,tswriter,1,verbose,quiet,tsdirect,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2367,11 +2418,11 @@ static int test_skip(PES_reader_p    reader,
     if (verbose || extra_info) printf("\n\n");
     printf("** Normal speed for %d\n",num_normal);
 
-    err = back_to_normal(stream,tswriter);
+    err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
 
     set_PES_reader_video_only(reader,video_only);
-    err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+    err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2389,7 +2440,7 @@ static int test_skip(PES_reader_p    reader,
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_forwards(stream,tswriter,fcontext,with_seq_hdrs,
-                        SMALL_SKIP_DISTANCE,verbose,quiet);
+                        SMALL_SKIP_DISTANCE,verbose,quiet,tsdirect);
     if (err == EOF)
       break;
     else if (err)
@@ -2400,7 +2451,7 @@ static int test_skip(PES_reader_p    reader,
     printf("** Skip backwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
-    err = skip_backwards(stream,tswriter,1,verbose,quiet,reverse_data);
+    err = skip_backwards(stream,tswriter,1,verbose,quiet,tsdirect,reverse_data);
     if (err == EOF)
       break;
     else if (err)
@@ -2412,11 +2463,11 @@ static int test_skip(PES_reader_p    reader,
   if (verbose || extra_info) printf("\n\n");
   printf("** Normal speed for %d\n",num_normal);
 
-  err = back_to_normal(stream,tswriter);
+  err = back_to_normal(stream,tswriter,tsdirect);
   if (err) return 1;
 
   set_PES_reader_video_only(reader,video_only);
-  err = play_normal(stream,tswriter,verbose,quiet,num_normal,reverse_data);
+  err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
   if (err == EOF)
   {
     printf("** End of file\n");
@@ -2455,6 +2506,7 @@ static int test_play_pes_packets(PES_reader_p   reader,
                                  int            video_only,
                                  int            verbose,
                                  int            quiet,
+                                 int            tsdirect,
                                  int            num_normal,
                                  int            num_fast,
                                  int            num_faster,
@@ -2551,10 +2603,10 @@ static int test_play_pes_packets(PES_reader_p   reader,
 
     if (skiptest)
       err = test_skip(reader,stream,fcontext,scontext,reverse_data,tswriter,
-                      video_only,verbose,quiet,FALSE);
+                      video_only,verbose,quiet,tsdirect,FALSE);
     else
       err = test_play(reader,stream,fcontext,scontext,reverse_data,tswriter,
-                      video_only,verbose,quiet,
+                      video_only,verbose,quiet,tsdirect,
                       num_normal,num_fast,num_faster,num_reverse,
                       ffrequency,rfrequency,FALSE);
 
@@ -2609,10 +2661,10 @@ static int test_play_pes_packets(PES_reader_p   reader,
 
     if (skiptest)
       err = test_skip(reader,stream,fcontext,scontext,reverse_data,tswriter,
-                      video_only,verbose,quiet,with_seq_hdrs);
+                      video_only,verbose,quiet,tsdirect,with_seq_hdrs);
     else
       err = test_play(reader,stream,fcontext,scontext,reverse_data,tswriter,
-                      video_only,verbose,quiet,
+                      video_only,verbose,quiet,tsdirect,
                       num_normal,num_fast,num_faster,num_reverse,
                       ffrequency,rfrequency,with_seq_hdrs);
 
@@ -3065,7 +3117,8 @@ static int test_reader(tsserve_context_p  context,
                        int                num_reverse,
                        int                skiptest,
                        int                verbose,
-                       int                quiet)
+                       int                quiet,
+                       int                tsdirect)
 {
   int  err;
   TS_writer_p   tswriter = NULL;
@@ -3103,7 +3156,7 @@ static int test_reader(tsserve_context_p  context,
   // And play...
   err = test_play_pes_packets(reader,tswriter,
                               context->pad_start,context->video_only,
-                              verbose,quiet,
+                              verbose,quiet,tsdirect,
                               num_normal,num_fast,num_faster,num_reverse,
                               context->ffrequency,context->rfrequency,
                               skiptest,context->with_seq_hdrs);
@@ -3903,7 +3956,7 @@ int main(int argc, char **argv)
   case ACTION_TEST:
     err = test_reader(&context,output_to_file,output_name,output_port,
                       num_normal,num_fast,num_faster,num_reverse,skiptest,
-                      verbose,quiet);
+                      verbose,quiet,context.tsdirect);
     if (err)
     {
       fprintf(stderr,"### tsserve: Error playing to %s\n",output_name);

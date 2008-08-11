@@ -31,6 +31,23 @@
 
 #include "adts_defns.h"
 #include "audio_fns.h"
+
+/* Specify this flag to indicate that there is no emphasis
+ *  field in the ADTS header. Generally, MPEG-2 ADTS audio
+ *  (ID=0) has no emphasis field and MPEG-4 (ID=1) has 
+ *  emphasis, but some H.264/AAC streams have 
+ *  MPEG-4 ADTS with no emphasis and in those cases, you'll
+ *  need this flag.
+ */
+#define ADTS_FLAG_NO_EMPHASIS  (1<<0)
+
+/* Specify this flag to indicate that there is always an
+ * emphasis field, even if the ID says there isn't one -
+ * included for symmetry with NO_EMPHASIS.
+ */
+#define ADTS_FLAG_FORCE_EMPHASIS (1<<1)
+
+
 /*
  * Read the next ADTS frame.
  *
