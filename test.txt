@@ -17,6 +17,20 @@ The filename is available as a "readonly" value:
     >>> stream.filename
     '/Users/tibs/sw/tstools/data/aladdin.es'
 
+We should be able to iterate over its ES units:
+
+    >>> count = 0
+    >>> for unit in stream:
+    ...     count += 1
+    ...     unit.show()
+    ...     if count > 5:
+    ...         break
+
+Unfortunately, the *result* of that printout (from ``unit.show()``) goes to C
+``stdout``, so the doctest mechanism doesn't get to test it. On the other
+hand, that means it also doesn't care what the specifics of the data output
+are, which is good if a different ES file is used...
+
 
 // Local Variables:
 // tab-width: 8

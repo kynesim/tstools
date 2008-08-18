@@ -31,6 +31,9 @@
 cdef extern from "stdio.h":
     ctypedef struct FILE:
         int _fileno
+    cdef enum:
+        EOF = -1
+    cdef FILE *stdout
 
 cdef extern from 'es_defns.h':
     # The reader for an ES file
@@ -54,7 +57,61 @@ cdef extern from 'es_fns.h':
 # Is this the best thing to do?
 class TSToolsException(Exception):
     pass
-    
+
+
+cdef class ESUnit:
+    """A Python class representing an ES unit.
+    """
+
+    cdef ES_unit_p unit
+
+    # It appears to be recommended to make __cinit__ expand to take more
+    # arguments (if __init__ ever gains them), since both get the same
+    # things passed to them. Hmm, normally I'd trust myself, but let's
+    # try the recommended route
+    def __cinit__(self, *args,**kwargs):
+        pass
+
+    def __init__(self):
+        pass
+
+    def show(self):
+        report_ES_unit(stdout, self.unit)
+
+    #def _set_unit(self, ES_unit_p unit):
+    #    if self.unit:
+    #        raise TSToolsException,'ESUnit already has an ES unit associated'
+    #    else:
+    #        self.unit = unit
+
+    def __dealloc__(self):
+        free_ES_unit(&self.unit)
+
+    def __repr__(self):
+        return 'ES unit %d'%self.count
+
+    cdef __set_es_unit(self, ES_unit_p unit):
+        if self.unit == NULL:
+            raise ValueError,'ES unit already defined'
+        else:
+            self.unit = unit
+
+# Is this the simplest way? Since it appears that a class method
+# doesn't want to take a non-Python item as an argument...
+cdef _next_ESUnit(ES_p stream, filename):
+    cdef ES_unit_p unit
+    retval = find_and_build_next_ES_unit(stream, &unit)
+    if retval == EOF:
+        raise StopIteration
+    elif retval != 0:
+        raise TSToolsException,'Error getting next ES unit from file %s'%filename
+
+    cdef ESUnit u
+    u = ESUnit()
+    u.unit = unit
+    #u._set_unit(unit)
+    return u
+
 cdef class ESStream:
     """A Python class representing an ES stream, readable from a file.
     """
@@ -78,3 +135,13 @@ cdef class ESStream:
 
     def __dealloc__(self):
         close_elementary_stream(&self.stream)
+
+    def __iter__(self):
+        return self
+
+    # For Pyrex classes, we define a __next__ instead of a next method
+    # in order to form our iterator
+    def __next__(self):
+        """Our iterator interface retrieves the ES units from the stream.
+        """
+        return _next_ESUnit(self.stream,self.filename)
