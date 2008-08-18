@@ -22,14 +22,15 @@ We should be able to iterate over its ES units:
     >>> count = 0
     >>> for unit in stream:
     ...     count += 1
-    ...     unit.show()
+    ...     print unit
     ...     if count > 5:
     ...         break
-
-Unfortunately, the *result* of that printout (from ``unit.show()``) goes to C
-``stdout``, so the doctest mechanism doesn't get to test it. On the other
-hand, that means it also doesn't care what the specifics of the data output
-are, which is good if a different ES file is used...
+    ES unit: start code 00
+    ES unit: start code 01
+    ES unit: start code 02
+    ES unit: start code 03
+    ES unit: start code 04
+    ES unit: start code 05
 
 
 // Local Variables:

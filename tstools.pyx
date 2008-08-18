@@ -35,16 +35,20 @@ cdef extern from "stdio.h":
         EOF = -1
     cdef FILE *stdout
 
+ctypedef char byte
+
 cdef extern from 'es_defns.h':
     # The reader for an ES file
     struct elementary_stream:
         pass
+
     ctypedef elementary_stream  ES
     ctypedef elementary_stream *ES_p
 
     # An actual ES unit
     struct ES_unit:
-        pass
+        byte start_code
+
     ctypedef ES_unit *ES_unit_p
 
 cdef extern from 'es_fns.h':
@@ -88,7 +92,7 @@ cdef class ESUnit:
         free_ES_unit(&self.unit)
 
     def __repr__(self):
-        return 'ES unit %d'%self.count
+        return 'ES unit: start code %02x'%self.unit.start_code
 
     cdef __set_es_unit(self, ES_unit_p unit):
         if self.unit == NULL:
