@@ -10,12 +10,16 @@ will have to manage without. This is still better than no testing...
 First, check we've got the basics working:
 
     >>> from tstools import ESStream
-    >>> stream = ESStream(test_es_file)
+    >>> try:
+    ...     stream = ESStream(test_es_file)
+    ... except:
+    ...     test_es_file = '/home/tibs/Videos/aladdin.es'
+    ...     stream = ESStream(test_es_file)
 
 The filename is available as a "readonly" value:
 
-    >>> stream.filename
-    '/Users/tibs/sw/tstools/data/aladdin.es'
+    >>> stream.filename == test_es_file
+    True
 
 We should be able to iterate over its ES units:
 
