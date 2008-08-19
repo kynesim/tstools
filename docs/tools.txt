@@ -297,6 +297,7 @@ It looks like this::
     [E>iEbEbEpEbEbEpEbEbEpEbEbE: 0.4800s
     ...
 
+The gop times are computed supposing thatthe frame rate is 25 fps. If this is not the case, the value can be changed using the -fr switch (e.g. "-fr 30").
 
 esfilter
 ========
