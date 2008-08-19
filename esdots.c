@@ -50,6 +50,8 @@
 #include "misc_fns.h"
 #include "version.h"
 
+double   frame_rate = 25.0; // default frame rate. this can be modified using the switch "-fr"
+
 static inline
 int umod(unsigned int a, unsigned int b)
 {
@@ -70,10 +72,10 @@ static void h262_item_dot(h262_item_p  item,
   static int frames = 0;
   static int temp_frames = 0;
 
-  // print the time for each I-picture (timing between two GOPs) 
+  // print the time every time we find a random access point (time between two GOPs)
   if (item->unit.start_code == 0xB3)
   {
-    *delta_gop = (frames - temp_frames)/25.; // time between two GOPs [in seconds]
+    *delta_gop = (frames - temp_frames)/frame_rate; // time between two GOPs [in seconds]
     temp_frames = frames;
     if (show_gop_time && temp_frames)
       printf(": %2.4fs\n", *delta_gop);
@@ -81,8 +83,8 @@ static void h262_item_dot(h262_item_p  item,
 
   if (item->unit.start_code == 0x00)
   {
-    if (frames % (25*60) == 0)
-      printf("\n %d minute%s\n",frames/(25*60),(frames/(25*60)==1?"":"s")); 
+    if (frames % ((int)frame_rate*60) == 0) 
+      printf("\n %d minute%s\n",frames/(int)(frame_rate*60),(frames/(int)(frame_rate*60)==1?"":"s")); 
     frames++;
   }
 
@@ -191,8 +193,8 @@ static int report_h262_file_as_dots(ES_p    es,
       break;
   }
   printf("\nFound %d MPEG2 item%s\n",count,(count==1?"":"s"));
-  printf("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f\n",time_gop_max,
-         time_gop_min,time_gop_tot/(gops-1));
+  printf("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f (frame rate = %2.2f)\n",time_gop_max,
+         time_gop_min,time_gop_tot/(gops-1), frame_rate);
   return 0;
 }
 
@@ -212,7 +214,7 @@ static int report_avs_file_as_dots(ES_p    es,
   int            err = 0;
   int            count = 0;
   int            frames = 0;
-  double         frame_rate = 25.0;      // as a guess
+  //double         frame_rate = 25.0;      // as a guess
   avs_context_p  context;
 
   if (verbose)
@@ -452,7 +454,7 @@ static int dots_by_access_unit(ES_p  es,
         size_gop_tot += size_gop;
         gops++;
         if (show_gop_time)
-          printf(": %2.4f\n", (double)size_gop/25 ); // that's the time duration of a "GOP"
+          printf(": %2.4f\n", (double)size_gop/frame_rate ); // that's the time duration of a "GOP"
                                                      // (if the frame rate is 25fps)
       }
       is_first_k_frame = FALSE;
@@ -493,10 +495,10 @@ static int dots_by_access_unit(ES_p  es,
   printf("\nFound %d NAL unit%s in %d access unit%s\n",
          context->nac->count,(context->nac->count==1?"":"s"),
          access_unit_count,(access_unit_count==1?"":"s"));
-  if (gops)
-    printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f\n",
-           (double)size_gop_max/25, (double)size_gop_min/25,
-           (double)size_gop_tot/(25*gops));
+  if (gops) //only if there is more than 1 gop
+    printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f (frame rate = %2.2f)\n",
+           (double)size_gop_max/frame_rate, (double)size_gop_min/frame_rate,
+           (double)size_gop_tot/(frame_rate*gops), frame_rate);
   free_access_unit_context(&context);
   return 0;
 }
@@ -692,7 +694,8 @@ static void print_usage()
     "  -es               Report ES units, rather than any 'higher' unit\n"
     "                    (not necessarily suppported for all file types)\n"
     "  -gop              Show the duration of each GOP (for MPEG-2 steams)\n"
-    "                    OR the distance between random access points (H.264)\n" 
+    "                    OR the distance between random access points (H.264)\n"
+    "  -fr               Set the video frame rate (default = 25 fps)\n"
     "\n"
     "Stream type:\n"
     "  If input is from a file, then the program will look at the start of\n"
@@ -777,8 +780,8 @@ int main(int argc, char **argv)
         verbose = TRUE;
       else if (!strcmp("-max",argv[ii]) || !strcmp("-m",argv[ii]))
       {
-        CHECKARG("es2dots",ii);
-        err = int_value("esfilter",argv[ii],argv[ii+1],TRUE,10,&max);
+        CHECKARG("esdots",ii);
+        err = int_value("esdots",argv[ii],argv[ii+1],TRUE,10,&max);
         if (err) return 1;
         ii++;
       }
@@ -788,6 +791,13 @@ int main(int argc, char **argv)
         use_pes = TRUE;
       else if (!strcmp("-gop",argv[ii]))
         show_gop_time = TRUE;
+      else if (!strcmp("-fr",argv[ii]))
+      {
+        CHECKARG("esdots",ii);
+        err = double_value("esdots",argv[ii],argv[ii+1],TRUE,&frame_rate);
+        if (err) return 1;
+        ii++;
+      }
       else
       {
         fprintf(stderr,"### esdots: "
