@@ -35,6 +35,11 @@ cdef extern from "stdio.h":
         EOF = -1
     cdef FILE *stdout
 
+cdef extern from "compat.h":
+    # We don't need to define 'offset_t' exactly, just to let Pyrex
+    # know it's vaguely int-like
+    ctypedef int offset_t
+
 ctypedef char byte
 
 cdef extern from 'es_defns.h':
@@ -45,9 +50,21 @@ cdef extern from 'es_defns.h':
     ctypedef elementary_stream  ES
     ctypedef elementary_stream *ES_p
 
+    # A location within said stream
+    struct _ES_offset:
+        offset_t    infile      # as used by lseek
+        int         inpacket    # in PES file, offset within PES packet
+
+    ctypedef _ES_offset ES_offset
+
     # An actual ES unit
     struct ES_unit:
-        byte start_code
+        ES_offset   start_posn
+        byte       *data
+        unsigned    data_len
+        unsigned    data_size
+        byte        start_code
+        byte        PES_had_PTS
 
     ctypedef ES_unit *ES_unit_p
 
@@ -57,6 +74,10 @@ cdef extern from 'es_fns.h':
     int find_and_build_next_ES_unit(ES_p es, ES_unit_p *unit)
     void free_ES_unit(ES_unit_p *unit)
     void report_ES_unit(FILE *stream, ES_unit_p unit)
+
+    int seek_ES(ES_p es, ES_offset where)
+    int compare_ES_offsets(ES_offset offset1, ES_offset offset2)
+
 
 # Is this the best thing to do?
 class TSToolsException(Exception):
@@ -79,7 +100,11 @@ cdef class ESUnit:
     def __init__(self):
         pass
 
-    def show(self):
+    def report(self):
+        """Report (briefly) on an ES unit. This write to C stdout, which means
+        that Python has no control over the output. A proper Python version of
+        this will be provided eventually.
+        """
         report_ES_unit(stdout, self.unit)
 
     #def _set_unit(self, ES_unit_p unit):
@@ -110,6 +135,10 @@ cdef _next_ESUnit(ES_p stream, filename):
     elif retval != 0:
         raise TSToolsException,'Error getting next ES unit from file %s'%filename
 
+    # From http://www.philhassey.com/blog/2007/12/05/pyrex-from-confusion-to-enlightenment/
+    # Pyrex doesn't do type inference, so it doesn't detect that 'u' is allowed
+    # to hold an ES_unit_p. It's up to us to *tell* it, specifically, what type
+    # 'u' is going to be.
     cdef ESUnit u
     u = ESUnit()
     u.unit = unit
