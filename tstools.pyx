@@ -34,6 +34,26 @@ cdef extern from "stdio.h":
     cdef enum:
         EOF = -1
     cdef FILE *stdout
+    # Associate a stream (returned) with an existing file descriptor.
+    # The specified mode must be compatible with the existing mode of
+    # the file descriptor. Closing the stream will close the descriptor
+    # as well.
+    cdef FILE *fdopen(int fildes, char *mode)
+
+cdef FILE *convert_python_file(object file):
+    """Given a Python file object, return an equivalent stream.
+    There are *so many things* dodgy about doing this...
+    """
+    cdef int fileno
+    cdef char *mode
+    cdef FILE *stream
+    fileno = file.fileno()
+    mode = file.mode
+    stream = fdopen(fileno, mode) 
+    if stream == NULL:
+        raise TSToolsException, 'Error converting Python file to C FILE *'
+    else:
+        return stream
 
 cdef extern from "compat.h":
     # We don't need to define 'offset_t' exactly, just to let Pyrex
@@ -71,12 +91,26 @@ cdef extern from 'es_defns.h':
 cdef extern from 'es_fns.h':
     int open_elementary_stream(char *filename, ES_p *es)
     void close_elementary_stream(ES_p *es)
+
+    int build_elementary_stream_file(int input, ES_p *es)
+    void free_elementary_stream(ES_p *es)
+
     int find_and_build_next_ES_unit(ES_p es, ES_unit_p *unit)
     void free_ES_unit(ES_unit_p *unit)
     void report_ES_unit(FILE *stream, ES_unit_p unit)
 
+    # We perhaps need a Python object to represent an ES_offset?
+    # Otherwise, it's going to be hard to use them within Python itself
     int seek_ES(ES_p es, ES_offset where)
     int compare_ES_offsets(ES_offset offset1, ES_offset offset2)
+
+    # I'd like to be able to *write* ES files, so...
+    # Python file objects can return a file descriptor (i.e., integer)
+    # via their fileno() method, so the simplest thing to do may be to
+    # add a new C function that uses write() instead of fwrite(). Or I
+    # could use fdopen to turn the fileno() into a FILE *...
+    int build_ES_unit(ES_unit_p *unit)
+    int write_ES_unit(FILE *output, ES_unit_p unit)
 
 
 # Is this the best thing to do?
@@ -129,6 +163,11 @@ cdef class ESUnit:
 # doesn't want to take a non-Python item as an argument...
 cdef _next_ESUnit(ES_p stream, filename):
     cdef ES_unit_p unit
+    # The C function assumes it has a valid ES stream passed to it
+    # = I don't think we're always called with such
+    if stream == NULL:
+        raise TSToolsException,'No ES stream to read'
+
     retval = find_and_build_next_ES_unit(stream, &unit)
     if retval == EOF:
         raise StopIteration
@@ -146,31 +185,72 @@ cdef _next_ESUnit(ES_p stream, filename):
     return u
 
 cdef class ESStream:
-    """A Python class representing an ES stream, readable from a file.
+    """A Python class representing an ES stream.
+
+    Initially, always a file (so maybe this should be ESFile?)
+
+    We support opening for read, or opening (creating) a new file
+    for write. For the moment, we don't support appending.
+
+    So, create a new ESStream as either:
+
+        * ESStream(filename,'r') or
+        * ESStream(filename,'w')
+
+    Note that there is always an implicit 'b' attached to the mode (i.e., the
+    file is accessed in binary mode).
     """
 
-    cdef ES_p stream
+    cdef object python_file     # File as opened by Python
+    cdef FILE *file_stream      # The corresponding C file stream
+    cdef ES_p  stream           # For reading an existing ES stream
     cdef readonly object filename
+    cdef readonly object mode
+    cdef object actual_mode
 
     # It appears to be recommended to make __cinit__ expand to take more
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
     # try the recommended route
-    def __cinit__(self,filename,*args,**kwargs):
-        retval = open_elementary_stream(filename,&self.stream)
-        if retval != 0:
-            raise TSToolsException,'Error opening ES file %s'%filename
+    def __cinit__(self,filename,mode='r',*args,**kwargs):
+        if mode == 'r':
+            actual_mode = 'rb'
+            self.python_file = open(filename,actual_mode)
+            fileno = self.python_file.fileno()
+            self.file_stream = fdopen(fileno,actual_mode)
+            retval = build_elementary_stream_file(fileno,&self.stream)
+            if retval != 0:
+                raise TSToolsException,'Error starting to read ES file %s'%filename
+        elif mode == 'w':
+            actual_mode = 'wb'
+            self.python_file = open(filename,actual_mode)
+            fileno = self.python_file.fileno()
+            self.file_stream = fdopen(fileno,actual_mode)
+        else:
+            raise ValueError,"Only modes 'r' and 'w' supported for ESStream"
 
-    def __init__(self,filename):
-        # The __cinit__ method will already have *used* the filename,
-        # but it may be useful to remember it for later on
+    def __init__(self,filename,mode='r'):
+        # What should go in __init__ and what in __cinit__ ???
         self.filename = filename
+        self.mode = mode
+        self.actual_mode = mode + 'b'
 
     def __dealloc__(self):
-        close_elementary_stream(&self.stream)
+        if self.stream != NULL:
+            free_elementary_stream(&self.stream)
 
     def __iter__(self):
         return self
+
+    def is_readable(self):
+        """This is a convenience method, whilst reading and writing are exclusive.
+        """
+        return self.mode == 'r' and self.stream != NULL
+
+    def is_writable(self):
+        """This is a convenience method, whilst reading and writing are exclusive.
+        """
+        return self.mode == 'w' and self.file_stream != NULL
 
     # For Pyrex classes, we define a __next__ instead of a next method
     # in order to form our iterator
@@ -178,3 +258,13 @@ cdef class ESStream:
         """Our iterator interface retrieves the ES units from the stream.
         """
         return _next_ESUnit(self.stream,self.filename)
+
+    def close(self):
+        if self.python_file:
+            self.python_file.close()
+            self.python_file = None
+            self.mode = None
+        # Apparently we can't call the __dealloc__ method itself,
+        # but I think this is sensible to do here...
+        if self.stream != NULL:
+            free_elementary_stream(&self.stream)

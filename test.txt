@@ -21,12 +21,23 @@ The filename is available as a "readonly" value:
     >>> stream.filename == test_es_file
     True
 
+We've opened it for read:
+
+    >>> stream.is_readable() == True
+    True
+    >>> stream.is_writable() == False
+    True
+    >>> stream.mode
+    'r'
+
 We should be able to iterate over its ES units:
 
     >>> count = 0
+    >>> es_unit_list = []
     >>> for unit in stream:
     ...     count += 1
     ...     print unit
+    ...     es_unit_list.append(unit)
     ...     if count > 5:
     ...         break
     ES unit: start code 00
@@ -35,6 +46,35 @@ We should be able to iterate over its ES units:
     ES unit: start code 03
     ES unit: start code 04
     ES unit: start code 05
+
+And close it:
+
+    >>> stream.close()
+    >>> stream.is_writable() == False
+    True
+    >>> stream.is_readable() == False
+    True
+    >>> stream.mode is None
+    True
+
+And write another file...
+
+    >>> import tempfile
+    >>> import os
+    >>> directory = tempfile.mkdtemp()
+    >>> filename = os.path.join(directory,'tstools_test_1.es')
+    >>> out = ESStream(filename,'w')
+    >>> out.filename == filename
+    True
+    >>> out.is_readable() == False
+    True
+    >>> out.is_writable() == True
+    True
+    >>> out.mode
+    'w'
+    >>> for unit in es_unit_list:
+    ...    pass     # well, this bit isn't done yet
+    >>> out.close()
 
 
 // Local Variables:
