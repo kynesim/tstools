@@ -33,8 +33,9 @@ setup(
   name = 'tstools',
   ext_modules=[ 
     Extension("tstools", ["tstools.pyx"],
+              include_dirs=['..'],
               libraries=['tstools'],
-              library_dirs=['lib'],
+              library_dirs=['../lib'],
               ),
     ],
   cmdclass = {'build_ext': build_ext}
