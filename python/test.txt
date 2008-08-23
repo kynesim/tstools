@@ -57,6 +57,21 @@ And close it:
     >>> stream.mode is None
     True
 
+ES units can be compared for equality (but not order):
+
+    >>> es_unit_list[0] == es_unit_list[0]
+    1
+    >>> es_unit_list[0] == es_unit_list[1]
+    0
+    >>> es_unit_list[0] != es_unit_list[1]
+    1
+    >>> es_unit_list[0] != es_unit_list[0]
+    0
+    >>> es_unit_list[0] < es_unit_list[1]
+    Traceback (most recent call last):
+    ...
+    TypeError: ESUnit only supports == and != comparisons
+
 And write another file...
 
     >>> import tempfile

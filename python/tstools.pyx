@@ -117,6 +117,27 @@ cdef extern from 'es_fns.h':
 class TSToolsException(Exception):
     pass
 
+cdef same_ES_unit(ES_unit_p this, ES_unit_p that):
+    """Two ES units do not need to be at the same place to be the same.
+    """
+    if this.data_len != that.data_len:
+        return False
+    for 0 <= ii < this.data_len:
+        if this.data[ii] != that.data[ii]:
+            return False
+    return True
+
+cdef class ESUnit       # Forward declaration
+cdef object compare_ESUnits(ESUnit this, ESUnit that, int op):
+    """op is 2 for ==, 3 for !=, other values not allowed.
+    """
+    if op == 2:     # ==
+        return same_ES_unit(this.unit, that.unit)
+    elif op == 3:   # !=
+        return not same_ES_unit(this.unit, that.unit)
+    else:
+        #return NotImplemented
+        raise TypeError, 'ESUnit only supports == and != comparisons'
 
 cdef class ESUnit:
     """A Python class representing an ES unit.
@@ -158,6 +179,9 @@ cdef class ESUnit:
             raise ValueError,'ES unit already defined'
         else:
             self.unit = unit
+
+    def __richcmp__(self,other,op):
+        return compare_ESUnits(self,other,op)
 
 # Is this the simplest way? Since it appears that a class method
 # doesn't want to take a non-Python item as an argument...
@@ -258,6 +282,7 @@ cdef class ESStream:
         """Our iterator interface retrieves the ES units from the stream.
         """
         return _next_ESUnit(self.stream,self.filename)
+
 
     def close(self):
         if self.python_file:
