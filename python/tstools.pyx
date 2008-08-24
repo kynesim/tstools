@@ -40,6 +40,16 @@ cdef extern from "stdio.h":
     # as well.
     cdef FILE *fdopen(int fildes, char *mode)
 
+    cdef FILE *fopen(char *path, char *mode)
+    cdef int fclose(FILE *stream)
+    cdef int fileno(FILE *stream)
+
+cdef extern from "errno.h":
+    cdef int errno
+
+cdef extern from "string.h":
+    cdef char *strerror(int errnum)
+
 cdef FILE *convert_python_file(object file):
     """Given a Python file object, return an equivalent stream.
     There are *so many things* dodgy about doing this...
@@ -162,12 +172,6 @@ cdef class ESUnit:
         """
         report_ES_unit(stdout, self.unit)
 
-    #def _set_unit(self, ES_unit_p unit):
-    #    if self.unit:
-    #        raise TSToolsException,'ESUnit already has an ES unit associated'
-    #    else:
-    #        self.unit = unit
-
     def __dealloc__(self):
         free_ES_unit(&self.unit)
 
@@ -205,61 +209,59 @@ cdef _next_ESUnit(ES_p stream, filename):
     cdef ESUnit u
     u = ESUnit()
     u.unit = unit
-    #u._set_unit(unit)
     return u
 
-cdef class ESStream:
+cdef class ESFile:
     """A Python class representing an ES stream.
 
     Initially, always a file (so maybe this should be ESFile?)
 
     We support opening for read, or opening (creating) a new file
-    for write. For the moment, we don't support appending.
+    for write. For the moment, we don't support appending, and
+    support for trying to read and write the same file is undefined.
 
-    So, create a new ESStream as either:
+    So, create a new ESFile as either:
 
-        * ESStream(filename,'r') or
-        * ESStream(filename,'w')
+        * ESFile(filename,'r') or
+        * ESFile(filename,'w')
 
     Note that there is always an implicit 'b' attached to the mode (i.e., the
     file is accessed in binary mode).
     """
 
-    cdef object python_file     # File as opened by Python
     cdef FILE *file_stream      # The corresponding C file stream
+    cdef int   fileno           # and file number
     cdef ES_p  stream           # For reading an existing ES stream
-    cdef readonly object filename
+    cdef readonly object name
     cdef readonly object mode
-    cdef object actual_mode
 
     # It appears to be recommended to make __cinit__ expand to take more
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
     # try the recommended route
     def __cinit__(self,filename,mode='r',*args,**kwargs):
+        actual_mode = mode+'b'
+        self.file_stream = fopen(filename,mode)
+        if self.file_stream == NULL:
+            raise TSToolsException,"Error opening file '%s'"\
+                    " with (actual) mode '%s': %s"%(filename,mode,strerror(errno))
+        self.fileno = fileno(self.file_stream)
         if mode == 'r':
-            actual_mode = 'rb'
-            self.python_file = open(filename,actual_mode)
-            fileno = self.python_file.fileno()
-            self.file_stream = fdopen(fileno,actual_mode)
-            retval = build_elementary_stream_file(fileno,&self.stream)
+            retval = build_elementary_stream_file(self.fileno,&self.stream)
             if retval != 0:
-                raise TSToolsException,'Error starting to read ES file %s'%filename
-        elif mode == 'w':
-            actual_mode = 'wb'
-            self.python_file = open(filename,actual_mode)
-            fileno = self.python_file.fileno()
-            self.file_stream = fdopen(fileno,actual_mode)
-        else:
-            raise ValueError,"Only modes 'r' and 'w' supported for ESStream"
+                raise TSToolsException,'Error attaching elementary stream to file %s'%filename
 
     def __init__(self,filename,mode='r'):
         # What should go in __init__ and what in __cinit__ ???
-        self.filename = filename
+        self.name = filename
         self.mode = mode
-        self.actual_mode = mode + 'b'
 
     def __dealloc__(self):
+        if self.file_stream != NULL:
+            retval = fclose(self.file_stream)
+            if retval != 0:
+                raise TSToolsException,"Error closing file '%s':"\
+                        " %s"%(filename,strerror(errno))
         if self.stream != NULL:
             free_elementary_stream(&self.stream)
 
@@ -281,15 +283,38 @@ cdef class ESStream:
     def __next__(self):
         """Our iterator interface retrieves the ES units from the stream.
         """
-        return _next_ESUnit(self.stream,self.filename)
+        return _next_ESUnit(self.stream,self.name)
 
+    def read(self):
+        """Read the next ES unit from this stream.
+        """
+        try:
+            return _next_ESUnit(self.stream,self.name)
+        except StopIteration:
+            raise EOFError
+
+    def write(self, ESUnit unit):
+        """Write an ES unit to this stream.
+        """
+        if self.file_stream == NULL:
+            raise TSToolsException,'ESFile does not seem to have been opened for write'
+
+        retval = write_ES_unit(self.file_stream,unit.unit)
+        if retval != 0:
+            raise TSToolsException,'Error writing ES unit to file %s'%self.name
 
     def close(self):
-        if self.python_file:
-            self.python_file.close()
-            self.python_file = None
-            self.mode = None
         # Apparently we can't call the __dealloc__ method itself,
         # but I think this is sensible to do here...
+        if self.file_stream != NULL:
+            retval = fclose(self.file_stream)
+            if retval != 0:
+                raise TSToolsException,"Error closing file '%s':"\
+                        " %s"%(filename,strerror(errno))
         if self.stream != NULL:
             free_elementary_stream(&self.stream)
+        # And obviously we're not available any more
+        self.file_stream = NULL
+        self.fileno = -1
+        self.name = None
+        self.mode = None

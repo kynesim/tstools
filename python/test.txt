@@ -9,16 +9,16 @@ will have to manage without. This is still better than no testing...
 
 First, check we've got the basics working:
 
-    >>> from tstools import ESStream
+    >>> from tstools import ESFile
     >>> try:
-    ...     stream = ESStream(test_es_file)
+    ...     stream = ESFile(test_es_file)
     ... except:
     ...     test_es_file = '/home/tibs/Videos/aladdin.es'
-    ...     stream = ESStream(test_es_file)
+    ...     stream = ESFile(test_es_file)
 
 The filename is available as a "readonly" value:
 
-    >>> stream.filename == test_es_file
+    >>> stream.name == test_es_file
     True
 
 We've opened it for read:
@@ -78,8 +78,8 @@ And write another file...
     >>> import os
     >>> directory = tempfile.mkdtemp()
     >>> filename = os.path.join(directory,'tstools_test_1.es')
-    >>> out = ESStream(filename,'w')
-    >>> out.filename == filename
+    >>> out = ESFile(filename,'w')
+    >>> out.name == filename
     True
     >>> out.is_readable() == False
     True
@@ -88,8 +88,24 @@ And write another file...
     >>> out.mode
     'w'
     >>> for unit in es_unit_list:
-    ...    pass     # well, this bit isn't done yet
+    ...    out.write(unit)
     >>> out.close()
+
+Did that do the right thing? Check that we can read the units back (one by
+one, to test the ``read`` method), and that the units we read back are
+identical to those we wrote.
+
+    >>> infile = ESFile(filename,'r')
+    >>> other_units = []
+    >>> for ii in range(0,6):
+    ...    other_units.append(infile.read())
+    >>>
+    >>> for ii in range(0,6):
+    ...    if es_unit_list[ii] != other_units[ii]:
+    ...        print 'Error: unit %d does not match'%ii
+    ...        break
+
+
 
 
 // Local Variables:
