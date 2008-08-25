@@ -1,4 +1,11 @@
 """tstools.pyx -- Pyrex bindings for the TS tools
+
+This is being developed on a Mac, running OS X. I expect that it will also
+build on a Linux machine. I do not expect it to build (as it stands) on
+Windows, as it is making assumptions that may not follow thereon.
+
+It is my intent to worry about Windows after it works on the platforms that
+I can test most easily!
 """
 
 # ***** BEGIN LICENSE BLOCK *****
@@ -50,6 +57,11 @@ cdef extern from "errno.h":
 cdef extern from "string.h":
     cdef char *strerror(int errnum)
 
+# Copied from the Pyrex documentation...
+cdef extern from "Python.h":
+    object PyString_FromStringAndSize(char *v, int len)
+    int PyString_AsStringAndSize(object obj, char **buffer, Py_ssize_t* length) except -1
+
 cdef FILE *convert_python_file(object file):
     """Given a Python file object, return an equivalent stream.
     There are *so many things* dodgy about doing this...
@@ -65,12 +77,14 @@ cdef FILE *convert_python_file(object file):
     else:
         return stream
 
+cdef extern from "stdint.h":
+    ctypedef int uint8_t        # !!! *some* sort of int..
+
 cdef extern from "compat.h":
     # We don't need to define 'offset_t' exactly, just to let Pyrex
     # know it's vaguely int-like
     ctypedef int offset_t
-
-ctypedef char byte
+    ctypedef uint8_t byte
 
 cdef extern from 'es_defns.h':
     # The reader for an ES file
@@ -186,6 +200,21 @@ cdef class ESUnit:
 
     def __richcmp__(self,other,op):
         return compare_ESUnits(self,other,op)
+
+    def __getattr__(self,name):
+        if name == 'start_posn':
+            return (self.unit.start_posn.infile,
+                    self.unit.start_posn.inpacket)
+        elif name == 'data':
+            # Cast the first parameter so that the C compiler is happy
+            # when compiling the (derived) tstools.c
+            return PyString_FromStringAndSize(<char *>self.unit.data, self.unit.data_len)
+        elif name == 'start_code':
+            return self.unit.start_code
+        elif name == 'PES_had_PTS':
+            return self.unit.PES_had_PTS
+        else:
+            raise AttributeError
 
 # Is this the simplest way? Since it appears that a class method
 # doesn't want to take a non-Python item as an argument...

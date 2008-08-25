@@ -57,6 +57,25 @@ And close it:
     >>> stream.mode is None
     True
 
+We can ask an ES unit about itself:
+
+    >>> unit = es_unit_list[0]
+    >>> unit.start_posn
+    (0, 0)
+    >>> unit.start_code
+    0
+    >>> unit.PES_had_PTS
+    0
+    >>> data = unit.data
+    >>> len(data)
+    14
+    >>> data[0]
+    '\x00'
+    >>> unit.fred
+    Traceback (most recent call last):
+    ...
+    AttributeError
+
 ES units can be compared for equality (but not order):
 
     >>> es_unit_list[0] == es_unit_list[0]
