@@ -170,6 +170,49 @@ cdef same_ES_unit(ES_unit_p this, ES_unit_p that):
             return False
     return True
 
+cdef class ESOffset:
+    """An offset within an ES file.
+
+    If the ES unit was read directly from a raw ES file, then a simple file
+    offset is sufficient.
+
+    However, if we're reading from a PS or TS file (via the PES reading layer),
+    then we have the offset of the PES packet, and then the offset of the ES
+    unit therein.
+    
+    We *could* just use a tuple for this, but it's nice to have a bit more
+    documentation self-evident.
+    """
+
+    # Keep the original names, even though they're not very Pythonic
+    cdef readonly long long infile      # Hoping this is 64 bit...
+    cdef readonly int       inpacket
+
+    def __cinit__(self, infile, inpacket):
+        self.infile = infile
+        self.inpacket = inpacket
+
+    def __init__(self, infile, inpacket):
+        pass
+
+    def __repr__(self):
+        return '%08d/%08d'%(self.inpacket,self.infile)
+
+    def report(self):
+        print 'Offset %d in packet at offset %d in file'%(self.inpacket,self.infile)
+
+    def __cmp__(self,other):
+        if self.infile > other.infile:
+            return 1
+        elif self.infile < other.infile:
+            return -1
+        elif self.inpacket > other.inpacket:
+            return 1
+        elif self.inpacket < other.inpacket:
+            return -1
+        else:
+            return 0
+
 cdef class ESUnit       # Forward declaration
 cdef object compare_ESUnits(ESUnit this, ESUnit that, int op):
     """op is 2 for ==, 3 for !=, other values not allowed.
@@ -192,7 +235,7 @@ cdef class ESUnit:
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
     # try the recommended route
-    def __cinit__(self,data=None, *args,**kwargs):
+    def __cinit__(self, data=None, *args,**kwargs):
         cdef char       *buffer
         cdef Py_ssize_t  length
         if data:
@@ -232,8 +275,8 @@ cdef class ESUnit:
 
     def __getattr__(self,name):
         if name == 'start_posn':
-            return (self.unit.start_posn.infile,
-                    self.unit.start_posn.inpacket)
+            return ESOffset(self.unit.start_posn.infile,
+                            self.unit.start_posn.inpacket)
         elif name == 'data':
             # Cast the first parameter so that the C compiler is happy
             # when compiling the (derived) tstools.c
@@ -259,6 +302,16 @@ cdef _next_ESUnit(ES_p stream, filename):
         raise StopIteration
     elif retval != 0:
         raise TSToolsException,'Error getting next ES unit from file %s'%filename
+
+    # I'd like to be able to do:
+    #     return ESUnit(unit=unit)
+    # but it's not possible to pass anything other than a Python object
+    # to methods, and an ES_unit_p is not (which is the point of what we're
+    # doing!). I could take the innards of the ES unit, and pass them as
+    # individual arguments, appropriately mangled, but that seems a bit like
+    # overkill when the (rather inelegant but at least hidden in this factory
+    # method) approach below actually works.
+    # Maybe I'll figure out something better as I learn more about Pyrex.
 
     # From http://www.philhassey.com/blog/2007/12/05/pyrex-from-confusion-to-enlightenment/
     # Pyrex doesn't do type inference, so it doesn't detect that 'u' is allowed

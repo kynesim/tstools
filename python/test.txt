@@ -81,7 +81,7 @@ We can ask an ES unit about itself:
 
     >>> unit = es_unit_list[0]
     >>> unit.start_posn
-    (0, 0)
+    00000000/00000000
     >>> unit.start_code
     0
     >>> unit.PES_had_PTS
@@ -162,6 +162,43 @@ identical to those we wrote.
     ...        print 'Error: unit %d does not match'%ii
     ...        break
 
+We already saw an ESOffset being returned:
+
+    >>> es_unit_list[0].start_posn
+    00000000/00000000
+    >>> es_unit_list[1].start_posn
+    00000000/00000014
+    >>> es_unit_list[1].start_posn.report()
+    Offset 0 in packet at offset 14 in file
+
+We can create our own:
+
+    >>> from tstools import ESOffset
+    >>> offset = ESOffset(59,27)
+    >>> offset.report()
+    Offset 27 in packet at offset 59 in file
+    >>> offset.infile
+    59L
+    >>> offset.inpacket
+    27
+
+Files can get very long -- the underlying ``lseek`` call can probably take
+64-bit offsets. With luck, the Pyrex implementation can too:
+
+    >>> loffset = ESOffset(0x1111111111111111,5)
+    >>> loffset.report()
+    Offset 5 in packet at offset 1229782938247303441 in file
+
+That's why we got the "59L" in an earlier example...
+
+And it may be useful to be able to compare them:
+
+    >>> es_unit_list[1].start_posn >  es_unit_list[0].start_posn
+    True
+    >>> es_unit_list[1].start_posn == es_unit_list[1].start_posn
+    True
+    >>> es_unit_list[0].start_posn <  es_unit_list[1].start_posn
+    True
 
 
 
