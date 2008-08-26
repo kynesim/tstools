@@ -35,6 +35,7 @@ I can test most easily!
 # If we're going to use definitions like this in more than one pyx file, we'll
 # need to define the shared types in a .pxd file and use cimport to import
 # them.
+
 cdef extern from "stdio.h":
     ctypedef struct FILE:
         int _fileno
@@ -59,7 +60,25 @@ cdef extern from "string.h":
 
 # Copied from the Pyrex documentation...
 cdef extern from "Python.h":
+    # Return a new string object with a copy of the string v as value and
+    # length len on success, and NULL on failure. If v is NULL, the contents of
+    # the string are uninitialized.
     object PyString_FromStringAndSize(char *v, int len)
+
+    # Return a NUL-terminated representation of the contents of the object obj
+    # through the output variables buffer and length. 
+    #
+    # The function accepts both string and Unicode objects as input. For
+    # Unicode objects it returns the default encoded version of the object. If
+    # length is NULL, the resulting buffer may not contain NUL characters; if
+    # it does, the function returns -1 and a TypeError is raised. 
+    #
+    # The buffer refers to an internal string buffer of obj, not a copy. The
+    # data must not be modified in any way, unless the string was just created
+    # using PyString_FromStringAndSize(NULL, size). It must not be deallocated.
+    # If string is a Unicode object, this function computes the default
+    # encoding of string and operates on that. If string is not a string object
+    # at all, PyString_AsStringAndSize() returns -1 and raises TypeError.
     int PyString_AsStringAndSize(object obj, char **buffer, Py_ssize_t* length) except -1
 
 cdef FILE *convert_python_file(object file):
@@ -133,7 +152,7 @@ cdef extern from 'es_fns.h':
     # via their fileno() method, so the simplest thing to do may be to
     # add a new C function that uses write() instead of fwrite(). Or I
     # could use fdopen to turn the fileno() into a FILE *...
-    int build_ES_unit(ES_unit_p *unit)
+    int build_ES_unit_from_data(ES_unit_p *unit, byte *data, unsigned data_len)
     int write_ES_unit(FILE *output, ES_unit_p unit)
 
 
@@ -173,10 +192,16 @@ cdef class ESUnit:
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
     # try the recommended route
-    def __cinit__(self, *args,**kwargs):
-        pass
+    def __cinit__(self,data=None, *args,**kwargs):
+        cdef char       *buffer
+        cdef Py_ssize_t  length
+        if data:
+            PyString_AsStringAndSize(data, &buffer, &length)
+            retval = build_ES_unit_from_data(&self.unit, <byte *>buffer, length);
+            if retval < 0:
+                raise TSToolsException,'Error building ES unit from Python string'
 
-    def __init__(self):
+    def __init__(self,data=None):
         pass
 
     def report(self):
@@ -190,7 +215,11 @@ cdef class ESUnit:
         free_ES_unit(&self.unit)
 
     def __repr__(self):
-        return 'ES unit: start code %02x'%self.unit.start_code
+        text = 'ES unit: start code %02x, len %4d:'%(self.unit.start_code,
+                                                    self.unit.data_len)
+        for 0 <= ii < min(self.unit.data_len,8):
+            text += ' %02x'%self.unit.data[ii]
+        return text
 
     cdef __set_es_unit(self, ES_unit_p unit):
         if self.unit == NULL:

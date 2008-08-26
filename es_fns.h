@@ -155,6 +155,18 @@ extern void clear_ES_unit(ES_unit_p  unit);
 extern int build_ES_unit(ES_unit_p  *unit);
 
 /*
+ * Build a new ES unit datastructure, from a given data array.
+ *
+ * Takes a copy of 'data'. Sets 'start_code' appropriately,
+ * sets 'start_posn' to (0,0), and 'PES_had_PTS' to FALSE.
+ *
+ * Returns 0 if it succeeds, 1 if some error occurs.
+ */
+extern int build_ES_unit_from_data(ES_unit_p  *unit,
+                                   byte       *data,
+                                   u_int32     data_len);
+
+/*
  * Tidy up and free an ES unit datastructure after we've finished with it.
  *
  * Empties the ES unit datastructure, frees it, and sets `unit` to NULL.

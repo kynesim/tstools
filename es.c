@@ -333,6 +333,41 @@ extern int build_ES_unit(ES_unit_p  *unit)
 }
 
 /*
+ * Build a new ES unit datastructure, from a given data array.
+ *
+ * Takes a copy of 'data'. Sets 'start_code' appropriately,
+ * sets 'start_posn' to (0,0), and 'PES_had_PTS' to FALSE.
+ *
+ * Returns 0 if it succeeds, 1 if some error occurs.
+ */
+extern int build_ES_unit_from_data(ES_unit_p  *unit,
+                                   byte       *data,
+                                   u_int32     data_len)
+{
+  ES_unit_p  new = malloc(SIZEOF_ES_UNIT);
+  if (new == NULL)
+  {
+    fprintf(stderr,"### Unable to allocate ES unit datastructure\n");
+    return 1;
+  }
+  new->data = malloc(data_len);
+  if (new->data == NULL)
+  {
+    fprintf(stderr,"### Unable to allocate ES unit data buffer\n");
+    return 1;
+  }
+  (void) memcpy(new->data, data, data_len);
+  new->data_len  = data_len;
+  new->data_size = data_len;
+  new->start_code = data[3];
+  new->start_posn.infile = 0;
+  new->start_posn.inpacket = 0;
+  new->PES_had_PTS = FALSE;    // See the header file
+  *unit = new;
+  return 0;
+}
+
+/*
  * Tidy up and free an ES unit datastructure after we've finished with it.
  *
  * Empties the ES unit datastructure, frees it, and sets `unit` to NULL.

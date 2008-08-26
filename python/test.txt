@@ -40,12 +40,32 @@ We should be able to iterate over its ES units:
     ...     es_unit_list.append(unit)
     ...     if count > 5:
     ...         break
-    ES unit: start code 00
-    ES unit: start code 01
-    ES unit: start code 02
-    ES unit: start code 03
-    ES unit: start code 04
-    ES unit: start code 05
+    ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    ES unit: start code 01, len  972: 00 00 01 01 1a 10 73 10
+    ES unit: start code 02, len  515: 00 00 01 02 1a 10 b3 05
+    ES unit: start code 03, len  372: 00 00 01 03 2a 11 31 41
+    ES unit: start code 04, len  347: 00 00 01 04 32 11 75 8f
+    ES unit: start code 05, len  335: 00 00 01 05 32 11 70 8b
+
+From hexdump I get (something that can be written out as)::
+
+   00 00 01 00 01 1a 01 02 20 00 00 00 00 00
+   00 00 01 01 1a 10 73 10 1e 67 08 53 75 65 bf 1d 00 6d ...
+
+which tends to support those results (applying the rule "split before
+00 00 01")..
+
+    Confusingly ('cos it confuses me, who am easily confused), ``esreport -es -v``
+    gives me something that translates as::
+
+        ES unit: start code 00, len   12: 00 00 01 00 00 4a 0c 98
+        ES unit: start code 01, len 1717: 00 00 01 01 1a 87 e2 40
+        ES unit: start code 02, len  988: 00 00 01 02 1b f8 90 69
+        ES unit: start code 03, len  865: 00 00 01 03 2a 93 e2 45
+        ES unit: start code 04, len  803: 00 00 01 04 2a 93 e2 45
+        ES unit: start code 05, len  685: 00 00 01 05 32 93 e2 65
+
+    (which suggests I'm misremembering how that works).
 
 And close it:
 
@@ -71,6 +91,11 @@ We can ask an ES unit about itself:
     14
     >>> data[0]
     '\x00'
+    >>> text = 'data:'
+    >>> for ii in range(8):
+    ...    text += ' %02x'%ord(data[ii])
+    >>> print text
+    data: 00 00 01 00 01 1a 01 02
     >>> unit.fred
     Traceback (most recent call last):
     ...
@@ -90,6 +115,19 @@ ES units can be compared for equality (but not order):
     Traceback (most recent call last):
     ...
     TypeError: ESUnit only supports == and != comparisons
+
+We can create an ES unit from a Python 'string':
+
+    >>> from tstools import ESUnit
+    >>> print 'old ',repr(es_unit_list[0])
+    old  ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    >>> new = ESUnit(es_unit_list[0].data)
+    >>> print 'new ',repr(new)
+    new  ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    >>> print 'old ',repr(es_unit_list[0])
+    old  ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    >>> new == es_unit_list[0]
+    True
 
 And write another file...
 
