@@ -200,6 +200,29 @@ And it may be useful to be able to compare them:
     >>> es_unit_list[0].start_posn <  es_unit_list[1].start_posn
     True
 
+Seeking (to the start of an ES unit) is useful. However, the following are
+just testing the three ways of specifying the location to seek to:
+
+    >>> f = ESFile(test_es_file)
+    >>> o = ESOffset(10,20)
+    >>> f.seek(o)
+    (10, 20)
+    >>> f.seek(20)
+    (20, 0)
+    >>> f.seek(30,40)
+    (30, 40)
+    >>> f.seek(10,20,30)
+    Traceback (most recent call last):
+    ...
+    TypeError: Seek argument must be one integer, two integers or an ESOffset
+    >>> f.seek('fred')
+    Traceback (most recent call last):
+    ...
+    TypeError: Seek argument must be one integer, two integers or an ESOffset
+    >>> f.seek(-1)
+    Traceback (most recent call last):
+    ...
+    TSToolsException: Error seeking to (-1,) in file '/Users/tibs/sw/tstools/data/aladdin.es'
 
 
 // Local Variables:

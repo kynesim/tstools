@@ -3,6 +3,11 @@
 # the tools already. It also assumes that Pyrex is installed, and that
 # pyrexc is on the path. It probably assumes Linux or Mac OS/X as well...
 
+# Note: Building tstools.pyx needs at least Pyrex 0.9.7 (because I use the new
+# 'for' loop syntax, apart from anything else). On Ubuntu, this means
+# installing it "by hand", as the version packaged for Hardy Heron (as of
+# 27-Aug-2008, at least) is 0.9.6.4
+
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
 # 

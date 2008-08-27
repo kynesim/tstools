@@ -396,6 +396,35 @@ cdef class ESFile:
         """
         return _next_ESUnit(self.stream,self.name)
 
+    def seek(self,*args):
+        """Seek to the given 'offset', which should be the start of an ES unit.
+
+        'offset' may be a single integer (if the file is a raw ES file), an
+        ESOffset (for any sort of ES file), or a tuple of (infile,inpacket)
+
+        Returns an (infile,inpacket) tuple according to where it sought to.
+        """
+        cdef ES_offset where
+        try:
+            if len(args) == 1:
+                try:
+                    where.infile = args[0].infile
+                    where.inpacket = args[0].inpacket
+                except:
+                    where.infile = args[0]
+                    where.inpacket = 0
+            elif len(args) == 2:
+                where.infile, where.inpacket = args
+            else:
+                raise TypeError
+        except:
+            raise TypeError,'Seek argument must be one integer, two integers or an ESOffset'
+        retval = seek_ES(self.stream,where)
+        if retval != 0:
+            raise TSToolsException,"Error seeking to %s in file '%s'"%(args,self.name)
+        else:
+            return (where.infile, where.inpacket)
+
     def read(self):
         """Read the next ES unit from this stream.
         """
