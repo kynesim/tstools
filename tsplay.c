@@ -844,7 +844,8 @@ static void print_usage(int summary)
       );
   printf(
     "\n"
-    "  -mcastif <ipaddr> If output is via UDP, and <host> is a multicast\n"
+    "  -mcastif <ipaddr>\n"
+    "  -i <ipaddr>       If output is via UDP, and <host> is a multicast\n"
     "                    address, then <ipaddr> is the IP address of the\n"
     "                    network interface to use. This may not be supported\n"
     "                    on some versions of Windows.\n"
@@ -1168,7 +1169,7 @@ int main(int argc, char **argv)
         output_name = argv[ii+1];
         ii++;
       }
-      else if (!strcmp("-mcastif",argv[ii]))
+      else if (!strcmp("-mcastif",argv[ii]) || !strcmp("-i",argv[ii]))
       {
         CHECKARG("tsplay",ii);
         multicast_if = argv[ii+1];
