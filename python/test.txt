@@ -81,7 +81,7 @@ We can ask an ES unit about itself:
 
     >>> unit = es_unit_list[0]
     >>> unit.start_posn
-    00000000/00000000
+    0+0
     >>> unit.start_code
     0
     >>> unit.PES_had_PTS
@@ -165,11 +165,16 @@ identical to those we wrote.
 We already saw an ESOffset being returned:
 
     >>> es_unit_list[0].start_posn
-    00000000/00000000
+    0+0
     >>> es_unit_list[1].start_posn
-    00000000/00000014
+    14+0
     >>> es_unit_list[1].start_posn.report()
     Offset 0 in packet at offset 14 in file
+
+Output more like that produced by the C report tools can also be obtained:
+
+    >>> print es_unit_list[1].start_posn.formatted()
+    00000000/00000014
 
 We can create our own:
 
@@ -181,6 +186,18 @@ We can create our own:
     59L
     >>> offset.inpacket
     27
+
+There are keywords for the arguments, as well, for clarity:
+
+    >>> ESOffset(infile=59,inpacket=27) == offset
+    True
+
+And both default to 0:
+
+    >>> ESOffset(infile=37).report()
+    Offset 0 in packet at offset 37 in file
+    >>> ESOffset().report()
+    Offset 0 in packet at offset 0 in file
 
 Files can get very long -- the underlying ``lseek`` call can probably take
 64-bit offsets. With luck, the Pyrex implementation can too:
@@ -201,16 +218,17 @@ And it may be useful to be able to compare them:
     True
 
 Seeking (to the start of an ES unit) is useful. However, the following are
-just testing the three ways of specifying the location to seek to:
+just testing the three ways of specifying the location to seek to (which may
+be overkill, but all seemed sensible at the time):
 
     >>> f = ESFile(test_es_file)
     >>> o = ESOffset(10,20)
     >>> f.seek(o)
-    (10, 20)
+    10+20
     >>> f.seek(20)
-    (20, 0)
+    20+0
     >>> f.seek(30,40)
-    (30, 40)
+    30+40
     >>> f.seek(10,20,30)
     Traceback (most recent call last):
     ...
@@ -223,6 +241,23 @@ just testing the three ways of specifying the location to seek to:
     Traceback (most recent call last):
     ...
     TSToolsException: Error seeking to (-1,) in file '/Users/tibs/sw/tstools/data/aladdin.es'
+
+Let's try proper seeking, though:
+
+    >>> p = f.seek(es_unit_list[-1].start_posn)
+    >>> p == es_unit_list[-1].start_posn
+    True
+    >>> u = f.read()
+    >>> u.start_posn == es_unit_list[-1].start_posn
+    True
+    >>> u == es_unit_list[-1]
+    True
+
+OK. So ``seek()`` returns a tuple of (infile,inpacket), whilst the
+``start_posn`` attribute is an ``ESOffset``. Which may or may not make sense
+-- but I really would rather the latter had *some* annotation explicit as to
+what each field means, because it *is* impossible to decide rationally which
+order they should come in.
 
 
 // Local Variables:

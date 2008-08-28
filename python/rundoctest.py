@@ -30,6 +30,11 @@ def main():
     if not filename:
         filename = "test.txt"
 
+    print
+    print 'Ignore any output lines starting ### or !!!.  These are written by the'
+    print 'underlying C library, and are not "seen" (or hidden) by doctest.'
+    print
+
     (failures,tests) = doctest.testfile(filename,verbose=verbose)
 
     testword = "test"
@@ -38,6 +43,11 @@ def main():
     if failures != 1: failword = "failures"
     print
     print "File %s: %d %s, %d %s"%(filename,tests,testword,failures,failword)
+    print
+    if failures == 0:
+        print 'The little light is GREEN'
+    else:
+        print 'The little light is RED'
 
 if __name__ == "__main__":
     main()

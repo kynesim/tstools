@@ -188,14 +188,23 @@ cdef class ESOffset:
     cdef readonly long long infile      # Hoping this is 64 bit...
     cdef readonly int       inpacket
 
-    def __cinit__(self, infile, inpacket):
+    def __cinit__(self, infile=0, inpacket=0):
         self.infile = infile
         self.inpacket = inpacket
 
-    def __init__(self, infile, inpacket):
+    def __init__(self, infile=0, inpacket=0):
         pass
 
     def __repr__(self):
+        """Return a fairly compact and (relatively) self-explanatory format
+        """
+        return '%d+%d'%(self.infile,self.inpacket)
+
+    def formatted(self):
+        """Return a representation that is similar to that returned by the C tools.
+
+        Beware that this is <inpacket>+<infile>, which is reversed from the ``repr``.
+        """
         return '%08d/%08d'%(self.inpacket,self.infile)
 
     def report(self):
@@ -402,7 +411,7 @@ cdef class ESFile:
         'offset' may be a single integer (if the file is a raw ES file), an
         ESOffset (for any sort of ES file), or a tuple of (infile,inpacket)
 
-        Returns an (infile,inpacket) tuple according to where it sought to.
+        Returns an ESOffset according to where it sought to.
         """
         cdef ES_offset where
         try:
@@ -423,7 +432,7 @@ cdef class ESFile:
         if retval != 0:
             raise TSToolsException,"Error seeking to %s in file '%s'"%(args,self.name)
         else:
-            return (where.infile, where.inpacket)
+            return ESOffset(where.infile,where.inpacket)
 
     def read(self):
         """Read the next ES unit from this stream.

@@ -35,9 +35,11 @@
 .PHONY: all setup test
 all:	setup test
 
+.PHONY: setup
 setup:
 	python Setup.py build_ext --inplace
 
+.PHONY: test
 test:	setup
 	./rundoctest.py
 
