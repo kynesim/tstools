@@ -271,6 +271,11 @@ cdef class ESUnit:
                                                     self.unit.data_len)
         for 0 <= ii < min(self.unit.data_len,8):
             text += ' %02x'%self.unit.data[ii]
+
+        if self.unit.data_len == 9:
+            text += ' %02x'%self.unit.data[8]
+        elif self.unit.data_len > 9:
+            text += '...'
         return text
 
     cdef __set_es_unit(self, ES_unit_p unit):
@@ -467,3 +472,12 @@ cdef class ESFile:
         self.fileno = -1
         self.name = None
         self.mode = None
+
+# ----------------------------------------------------------------------
+# vim: set filetype=python expandtab shiftwidth=4:
+# [X]Emacs local variables declaration - place us into python mode
+# Local Variables:
+# mode:python
+# py-indent-offset:4
+# End:
+

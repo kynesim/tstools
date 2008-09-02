@@ -1,20 +1,15 @@
 Some tests for the Python binding of the TS tools
 =================================================
 
-It's difficult to find example data files that are generally available. For
-the moment, I'm going to use a file I have locally, and unfortunately others
-will have to manage without. This is still better than no testing...
+We shall assume that our standard sample data has been downloaded and expanded
+into our sibling ``data`` directory. See the ``../data/setup.sh`` script.
 
-    >>> test_es_file = '/Users/tibs/sw/tstools/data/aladdin.es'
+    >>> test_es_file = '../data/ed24p_11.video.es'
 
 First, check we've got the basics working:
 
     >>> from tstools import ESFile
-    >>> try:
-    ...     stream = ESFile(test_es_file)
-    ... except:
-    ...     test_es_file = '/home/tibs/Videos/aladdin.es'
-    ...     stream = ESFile(test_es_file)
+    >>> stream = ESFile(test_es_file)
 
 The filename is available as a "readonly" value:
 
@@ -40,32 +35,20 @@ We should be able to iterate over its ES units:
     ...     es_unit_list.append(unit)
     ...     if count > 5:
     ...         break
-    ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
-    ES unit: start code 01, len  972: 00 00 01 01 1a 10 73 10
-    ES unit: start code 02, len  515: 00 00 01 02 1a 10 b3 05
-    ES unit: start code 03, len  372: 00 00 01 03 2a 11 31 41
-    ES unit: start code 04, len  347: 00 00 01 04 32 11 75 8f
-    ES unit: start code 05, len  335: 00 00 01 05 32 11 70 8b
+    ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
+    ES unit: start code b5, len    9: 00 00 01 b5 85 45 4b 5d 80
+    ES unit: start code 01, len 1645: 00 00 01 01 0a b0 10 09...
+    ES unit: start code 02, len 1634: 00 00 01 02 0a b0 10 09...
+    ES unit: start code 03, len   16: 00 00 01 03 0a b0 10 07...
+    ES unit: start code 04, len   15: 00 00 01 04 0a b0 10 02...
 
-From hexdump I get (something that can be written out as)::
+From ``hexdump -C`` I get (something that can be written out as)::
 
-   00 00 01 00 01 1a 01 02 20 00 00 00 00 00
-   00 00 01 01 1a 10 73 10 1e 67 08 53 75 65 bf 1d 00 6d ...
+    00 00 01 00 01 df ff fb b8
+    00 00 01 b5 85 45 4b 5d 80
+    00 00 01 01 0a b0 10 09 1c 56 ec d8 72 94 01 ...
 
-which tends to support those results (applying the rule "split before
-00 00 01")..
-
-    Confusingly ('cos it confuses me, who am easily confused), ``esreport -es -v``
-    gives me something that translates as::
-
-        ES unit: start code 00, len   12: 00 00 01 00 00 4a 0c 98
-        ES unit: start code 01, len 1717: 00 00 01 01 1a 87 e2 40
-        ES unit: start code 02, len  988: 00 00 01 02 1b f8 90 69
-        ES unit: start code 03, len  865: 00 00 01 03 2a 93 e2 45
-        ES unit: start code 04, len  803: 00 00 01 04 2a 93 e2 45
-        ES unit: start code 05, len  685: 00 00 01 05 32 93 e2 65
-
-    (which suggests I'm misremembering how that works).
+which tends to support those results.
 
 And close it:
 
@@ -88,14 +71,14 @@ We can ask an ES unit about itself:
     0
     >>> data = unit.data
     >>> len(data)
-    14
+    9
     >>> data[0]
     '\x00'
     >>> text = 'data:'
     >>> for ii in range(8):
     ...    text += ' %02x'%ord(data[ii])
     >>> print text
-    data: 00 00 01 00 01 1a 01 02
+    data: 00 00 01 00 01 df ff fb
     >>> unit.fred
     Traceback (most recent call last):
     ...
@@ -120,12 +103,12 @@ We can create an ES unit from a Python 'string':
 
     >>> from tstools import ESUnit
     >>> print 'old ',repr(es_unit_list[0])
-    old  ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    old  ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
     >>> new = ESUnit(es_unit_list[0].data)
     >>> print 'new ',repr(new)
-    new  ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    new  ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
     >>> print 'old ',repr(es_unit_list[0])
-    old  ES unit: start code 00, len   14: 00 00 01 00 01 1a 01 02
+    old  ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
     >>> new == es_unit_list[0]
     True
 
@@ -167,14 +150,14 @@ We already saw an ESOffset being returned:
     >>> es_unit_list[0].start_posn
     0+0
     >>> es_unit_list[1].start_posn
-    14+0
+    9+0
     >>> es_unit_list[1].start_posn.report()
-    Offset 0 in packet at offset 14 in file
+    Offset 0 in packet at offset 9 in file
 
 Output more like that produced by the C report tools can also be obtained:
 
     >>> print es_unit_list[1].start_posn.formatted()
-    00000000/00000014
+    00000000/00000009
 
 We can create our own:
 
@@ -240,7 +223,7 @@ be overkill, but all seemed sensible at the time):
     >>> f.seek(-1)
     Traceback (most recent call last):
     ...
-    TSToolsException: Error seeking to (-1,) in file '/Users/tibs/sw/tstools/data/aladdin.es'
+    TSToolsException: Error seeking to (-1,) in file '../data/ed24p_11.video.es'
 
 Let's try proper seeking, though:
 

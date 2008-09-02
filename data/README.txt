@@ -10,11 +10,25 @@ at least *some* predictable data to play with.
 
 Contents of this directory
 ==========================
-Still to be finalised (but probably a segment of Elephant's Dream -- see the
-links below for an explanation.
+For Linux users, a convenient ``setup.sh`` is provided, which will use
+``wget`` to download a segment of `Elephant's Dream`_, ``unzip`` it, and
+produce an ES file from (the resulting) TS file.
+
+This is then used as test data by the doctests in the sibling ``python``
+directory.
 
 Useful links
 ============
+
+Consolidated list of test video clip resources
+----------------------------------------------
+http://forum.doom9.org/archive/index.php/t-135034.html
+
+A hopefully usedul resource on the Doom9 forum.
+
+Note the link to a list of "broken" streams:
+
+  http://forum.doom9.org/showthread.php?t=134693
 
 Elephant's Dream
 ----------------
