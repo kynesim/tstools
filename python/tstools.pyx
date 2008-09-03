@@ -473,6 +473,19 @@ cdef class ESFile:
         self.name = None
         self.mode = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, value, tb):
+        if tb is None:
+            # No exception, so just finish normally
+            self.close()
+        else:
+            # Exception occurred, so tidy up
+            self.close()
+            # And allow the exception to be re-raised
+            return False
+
 # ----------------------------------------------------------------------
 # vim: set filetype=python expandtab shiftwidth=4:
 # [X]Emacs local variables declaration - place us into python mode

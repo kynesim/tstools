@@ -1,6 +1,5 @@
 Some tests for the Python binding of the TS tools
 =================================================
-
 We shall assume that our standard sample data has been downloaded and expanded
 into our sibling ``data`` directory. See the ``../data/setup.sh`` script.
 
@@ -241,6 +240,22 @@ OK. So ``seek()`` returns a tuple of (infile,inpacket), whilst the
 -- but I really would rather the latter had *some* annotation explicit as to
 what each field means, because it *is* impossible to decide rationally which
 order they should come in.
+
+The "with" syntax should also work:
+
+    >>> count = 0
+    >>> with ESFile(test_es_file) as f:
+    ...    for unit in f:
+    ...        count += 1
+    ...        print unit
+    ...        if count > 5:
+    ...            break
+    ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
+    ES unit: start code b5, len    9: 00 00 01 b5 85 45 4b 5d 80
+    ES unit: start code 01, len 1645: 00 00 01 01 0a b0 10 09...
+    ES unit: start code 02, len 1634: 00 00 01 02 0a b0 10 09...
+    ES unit: start code 03, len   16: 00 00 01 03 0a b0 10 07...
+    ES unit: start code 04, len   15: 00 00 01 04 0a b0 10 02...
 
 
 // Local Variables:
