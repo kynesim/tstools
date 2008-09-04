@@ -98,6 +98,10 @@ cdef FILE *convert_python_file(object file):
 
 cdef extern from "stdint.h":
     ctypedef int uint8_t        # !!! *some* sort of int..
+    ctypedef int uint32_t       # !!! *some* sort of int..
+
+# PIDs are too long for 16 bits, short enough to fit in 32
+ctypedef uint32_t   PID
 
 cdef extern from "compat.h":
     # We don't need to define 'offset_t' exactly, just to let Pyrex
@@ -339,8 +343,6 @@ cdef _next_ESUnit(ES_p stream, filename):
 cdef class ESFile:
     """A Python class representing an ES stream.
 
-    Initially, always a file (so maybe this should be ESFile?)
-
     We support opening for read, or opening (creating) a new file
     for write. For the moment, we don't support appending, and
     support for trying to read and write the same file is undefined.
@@ -386,7 +388,7 @@ cdef class ESFile:
             retval = fclose(self.file_stream)
             if retval != 0:
                 raise TSToolsException,"Error closing file '%s':"\
-                        " %s"%(filename,strerror(errno))
+                        " %s"%(self.name,strerror(errno))
         if self.stream != NULL:
             free_elementary_stream(&self.stream)
 
@@ -470,6 +472,147 @@ cdef class ESFile:
         # And obviously we're not available any more
         self.file_stream = NULL
         self.fileno = -1
+        self.name = None
+        self.mode = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, value, tb):
+        if tb is None:
+            # No exception, so just finish normally
+            self.close()
+        else:
+            # Exception occurred, so tidy up
+            self.close()
+            # And allow the exception to be re-raised
+            return False
+
+cdef extern from "ts_defns.h":
+    struct _ts_reader:
+        pass
+    ctypedef _ts_reader      TS_reader
+    ctypedef _ts_reader     *TS_reader_p
+
+cdef extern from "ts_fns.h":
+    int open_file_for_TS_read(char *filename, TS_reader_p *tsreader)
+    int close_TS_reader(TS_reader_p *tsreader)
+    int seek_using_TS_reader(TS_reader_p tsreader, offset_t posn)
+    int read_next_TS_packet(TS_reader_p tsreader, byte **packet)
+    int split_TS_packet(byte *buf, PID *pid, int *payload_unit_indicator,
+                        byte **adapt, int *adapt_len,
+                        byte **payload, int *payload_len)
+    int get_next_TS_packet(TS_reader_p tsreader,
+                           PID *pid, int *payload_unit_indicator,
+                           byte **adapt, int *adapt_len,
+                           byte **payload, int *payload_len)
+
+
+cdef class TSPacket:
+    """A convenient representation of a (dissected) TS packet.
+    """
+
+    cdef readonly PID       pid
+    cdef readonly int       payload_start_indicator
+    cdef readonly object    adapt
+    cdef readonly object    payload
+
+
+cdef class TSFile:
+    """A Python class representing a TS file.
+
+    We support opening for read, or opening (creating) a new file
+    for write. For the moment, we don't support appending, and
+    support for trying to read and write the same file is undefined.
+
+    So, create a new TSFile as either:
+
+        * TSFile(filename,'r') or
+        * TSFile(filename,'w')
+
+    Note that there is always an implicit 'b' attached to the mode (i.e., the
+    file is accessed in binary mode).
+    """
+
+    cdef TS_reader_p    tsreader
+
+    cdef readonly object name
+    cdef readonly object mode
+
+    # It appears to be recommended to make __cinit__ expand to take more
+    # arguments (if __init__ ever gains them), since both get the same
+    # things passed to them. Hmm, normally I'd trust myself, but let's
+    # try the recommended route
+    def __cinit__(self,filename,mode='r',*args,**kwargs):
+        actual_mode = mode+'b'
+        if mode == 'r':
+            retval = open_file_for_TS_read(filename,&self.tsreader)
+            if retval == 1:
+                raise TSToolsException,"Error opening file '%s'"\
+                        " for TS reading: %s"%(filename,strerror(errno))
+        elif mode == 'w':
+            raise NotImplemented
+        else:
+            raise TSToolsException,"Error opening file '%s'"\
+                    " with mode '%s' (only 'r' and 'w' supported)"%(filename,mode)
+
+    def __init__(self,filename,mode='r'):
+        # What should go in __init__ and what in __cinit__ ???
+        self.name = filename
+        self.mode = mode
+
+    def __dealloc__(self):
+        if self.tsreader != NULL:
+            retval = close_TS_reader(&self.tsreader)
+            if retval != 0:
+                raise TSToolsException,"Error closing file '%s':"\
+                        " %s"%(self.name,strerror(errno))
+
+    def __iter__(self):
+        return self
+
+    def is_readable(self):
+        """This is a convenience method, whilst reading and writing are exclusive.
+        """
+        return self.mode == 'r' and self.tsreader != NULL
+        pass
+
+    def is_writable(self):
+        """This is a convenience method, whilst reading and writing are exclusive.
+        """
+        return self.mode == 'w'
+        #return self.mode == 'w' and self.file_stream != NULL
+        pass
+
+    # For Pyrex classes, we define a __next__ instead of a next method
+    # in order to form our iterator
+    def __next__(self):
+        """Our iterator interface retrieves the TS packets from the stream.
+        """
+        #return _next_TS_packet(self.stream,self.name)
+        pass
+
+    def seek(self,*args):
+        """Seek to the given offset, which should be a multiple of 188.
+        """
+        pass
+
+    def read(self):
+        """Read the next TS packet from this stream.
+        """
+        try:
+            #return _next_TS_packet(self.stream,self.name)
+            pass
+        except StopIteration:
+            raise EOFError
+
+    def write(self, TSPacket tspacket):
+        """Write an TS packet to this stream.
+        """
+        pass
+
+    def close(self):
+        pass
         self.name = None
         self.mode = None
 

@@ -1,5 +1,11 @@
 Some tests for the Python binding of the TS tools
 =================================================
+
+Elementary streams -- basic functionality
+-----------------------------------------
+In this context, we take an elementary stream to be MPEG-1, MPEG-2 or H.264
+(MPEG-4 Part 10) ES data, as is assumed by the rest of tstools.
+
 We shall assume that our standard sample data has been downloaded and expanded
 into our sibling ``data`` directory. See the ``../data/setup.sh`` script.
 
@@ -256,6 +262,32 @@ The "with" syntax should also work:
     ES unit: start code 02, len 1634: 00 00 01 02 0a b0 10 09...
     ES unit: start code 03, len   16: 00 00 01 03 0a b0 10 07...
     ES unit: start code 04, len   15: 00 00 01 04 0a b0 10 02...
+
+Transport streams -- basic functionality
+----------------------------------------
+Still using sample data, we can read from TS files:
+
+    >>> test_ts_file = '../data/ed24p_11.ts'
+    >>> from tstools import TSFile
+    >>> tsfile = TSFile(test_ts_file)
+    >>> tsfile.name == test_ts_file
+    True
+    >>> tsfile.mode == 'r'
+    True
+    >>> tsfile.is_readable() == True
+    True
+    >>> tsfile.is_writable() == False
+    True
+
+And also:
+
+    >>> tsfile.close()
+    >>> TSFile('no-such-file.fred')
+    Traceback (most recent call last):
+    ...
+    TSToolsException: Error opening file 'no-such-file.fred' for TS reading: No such file or directory
+
+
 
 
 // Local Variables:
