@@ -19,7 +19,7 @@
  * The Initial Developer of the Original Code is Amino Communications Ltd.
  * Portions created by the Initial Developer are Copyright (C) 2008
  * the Initial Developer. All Rights Reserved.
- *
+*
  * Contributor(s):
  *   Amino Communications Ltd, Swavesey, Cambridge UK
  *
@@ -1418,7 +1418,6 @@ int ipv4_string_to_addr(uint32_t *dest, const char *string)
   int val;
   int nr;
   uint32_t out = 0;
-  char *end_p = str_cpy;
   
   for (nr = 0,p = str_cpy; nr < 4 && *p; p = p2+1, ++nr)
     {
@@ -1436,7 +1435,6 @@ int ipv4_string_to_addr(uint32_t *dest, const char *string)
       out |= (val << ((3-nr)<<3));
     }
 
- end:
   (*dest) = out;
   free(str_cpy);
   return rv;
