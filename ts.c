@@ -1202,6 +1202,8 @@ extern int build_TS_reader(int           file,
     return 1;
   }
 
+  memset(new, '\0', SIZEOF_TS_READER);
+
   new->file = file;
   new->posn = 0;
   new->read_ahead_ptr = NULL;
@@ -1210,6 +1212,39 @@ extern int build_TS_reader(int           file,
   *tsreader = new;
   return 0;
 }
+
+
+/* Build a TS packet reader using the given functions as
+ *  read() and seek().
+ *
+ * Returns 0 on success, 1 on failure.
+ */
+extern int build_TS_reader_with_fns(void *handle,
+                                    int (*read_fn)(void *, char *, size_t),
+                                    int (*seek_fn)(void *, offset_t), 
+                                    TS_reader_p *tsreader)
+{
+  TS_reader_p new = malloc(SIZEOF_TS_READER);
+  if (new == NULL)
+  {
+    fprintf(stderr,"### Unable to allocate TS read-ahead buffer\n");
+    return 1;
+  }
+
+  memset(new, '\0', SIZEOF_TS_READER);
+
+  new->file = -1;
+  new->handle = handle;
+  new->read_fn = read_fn;
+  new->seek_fn = seek_fn;
+  new->posn = 0;
+  new->read_ahead_ptr = NULL;
+  new->read_ahead_end = NULL;
+
+  *tsreader = new;
+  return 0;
+}
+
 
 /*
  * Open a file to read TS packets from.
@@ -1297,9 +1332,17 @@ extern int seek_using_TS_reader(TS_reader_p  tsreader,
   tsreader->read_ahead_ptr = NULL;
   tsreader->read_ahead_end = NULL;
   tsreader->posn = posn;
-  return seek_file(tsreader->file,posn);
+
+  if (tsreader->seek_fn)
+    {
+      return tsreader->seek_fn(tsreader->handle, posn);
+    }
+  else
+    {
+      return seek_file(tsreader->file,posn);
+    }
 }
-
+  
 /*
  * Read the next several TS packets, possibly not from the start
  *
@@ -1334,9 +1377,18 @@ static int read_next_TS_packets(TS_reader_p  tsreader,
     // Try to allow for partial reads
     while (total < TS_READ_AHEAD_BYTES)
     {
-      length = read(tsreader->file,
+      if (tsreader->read_fn)
+        {
+          length = tsreader->read_fn(tsreader->handle,
+                                     &(tsreader->read_ahead[total]),
+                                     TS_READ_AHEAD_BYTES-total);
+        }
+      else
+        {
+          length = read(tsreader->file,
                     &(tsreader->read_ahead[total]),
                     TS_READ_AHEAD_BYTES - total);
+        }
       if (length == 0)  // EOF - no more data to read
         break;
       else if (length == -1)

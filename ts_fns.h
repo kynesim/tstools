@@ -289,6 +289,16 @@ extern int write_TS_null_packet(TS_writer_p output);
  */
 extern int build_TS_reader(int           file,
                            TS_reader_p  *tsreader);
+
+
+/* Build a TS packet reader using given functions to read and
+ *  seek.
+ */
+extern int build_TS_reader_with_fns(void *handle, 
+                                    int (*read_fn)(void *, char *, size_t),
+                                    int (*seek_fn)(void *, offset_t), 
+                                    TS_reader_p *tsreader);
+
 /*
  * Open a file to read TS packets from.
  *

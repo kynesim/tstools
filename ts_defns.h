@@ -52,6 +52,14 @@ struct _ts_reader
 {
   int      file;            // the file to read from
   offset_t posn;            // the position of the next-to-be-read TS packet
+  void *handle;             // handle to pass to read_fn and seek_fn.
+
+
+  /* Reader and seek functions. If these are non-NULL we call them
+   *  when we would call read().
+   */
+  int (*read_fn)(void *, char *, size_t);
+  int (*seek_fn)(void *, offset_t);
 
   byte     read_ahead[TS_READ_AHEAD_COUNT*TS_PACKET_SIZE];
   byte    *read_ahead_ptr;  // location of next packet in said array

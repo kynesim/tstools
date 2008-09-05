@@ -49,6 +49,7 @@
 #include "ipv4.h"
 #include "version.h"
 #include "misc_fns.h"
+#include "ts_fns.h"
 
 typedef struct pcapreport_ctx_struct
 {
@@ -57,13 +58,73 @@ typedef struct pcapreport_ctx_struct
   int had_input_name;
   int dump_data;
   int dump_extra;
+  int time_report;
+  int verbose;
   PCAP_reader_p pcreader;
   pcap_hdr_t pcap_hdr;
   char *output_name;
   FILE *output_file;
   uint32_t output_dest_addr;
   uint32_t output_dest_port;
+
+  TS_reader_p ts_r;
+
+  // The temporary read buffer used by our ts reader.
+  uint8_t *tmp_buf;
+  uint32_t tmp_len;
+
+  // ts packet counter for error reporting.
+  uint32_t ts_counter;
+  
+  // packet counter.
+  uint32_t pkt_counter;
+
+  // Last continuity counter.
+  int last_cc;
+
+  // Do we think we currently have cc?
+  int have_cc;
+
+  /*! In 90kHz units, what do you reckon you need to add to 
+   *  PCR to make it into packet time?
+   */
+  int64_t pcr_time_offset;
+
+  /*! What was the last difference between pcr_time_offset and
+   *   the measured time offset?
+   */
+  int64_t last_time_offset;
+  
+  /*! Do we think pcr_time_offset is valid at the minute? */
+  int pcr_time_offset_valid;
+
+  /*! How far do we need to skew (in 90kHz units) to signal a discontinuity? */
+  int64_t skew_discontinuity_threshold;
+
+  /*! Time of last discontinuity, in us */
+  int64_t last_d_us;
+
 } pcapreport_ctx_t;
+
+// Discontinuity threshold is 6s.
+#define SKEW_DISCONTINUITY_THRESHOLD (6*90000)
+
+static void print_usage();
+static int write_out_packet(pcapreport_ctx_t *pctx, 
+			    const uint8_t *data, 
+			    const uint32_t len);
+
+static int digest_times(pcapreport_ctx_t *ctx, 
+			pcaprec_hdr_t *pcap_pkt_hdr,
+			ethernet_packet_t *epkt,
+			ipv4_header_t *ipv4_header, 
+			ipv4_udp_header_t *udp_header,
+			const uint8_t *data,
+			const uint32_t len);
+
+static int digest_times_read(void *handle, char *out_buf, size_t len);
+static int digest_times_seek(void *handle, offset_t val);
+
 
 static void print_usage()
 {
@@ -78,10 +139,18 @@ static void print_usage()
 	 " -o <output file>         Dump selected UDP payloads to the named output file.\n"
 	 " -d <dest ip>:<port>      Select data with the given destination IP and port.\n"
 	 " --dump-data | -D         Dump any data in the input file to stdout.\n"
-	 " --extra-dump | -e    Dump only data which isn't being sent to the -o file.\n"
+	 " --extra-dump | -e        Dump only data which isn't being sent to the -o file.\n"
+	 " --times | -t             Report on PCR vs PCAP timing for the destination specified in -d.\n"
+	 " --verbose | -v           Output metadata about every packet.\n"
+	 " --skew-discontinuity-threshold <number>\n"
+	 "                          Gives the skew discontinuity threshold in 90kHz units.\n"
 	 "\n"
 	 " Specifying 0.0.0.0 for destination IP or 0 for destination port will capture all\n"
 	 " hosts and ports respectively.\n"
+	 "\n"
+	 " Network packet and TS packet numbers start at 0.\n"
+	 "\n"
+	 " Positive skew means that we recieved too low a PCR for this timestamp.\n"
 	 "\n"
 	 );
 }
@@ -94,6 +163,8 @@ int main(int argc, char **argv)
   pcapreport_ctx_t ctx;
 
   memset(&ctx, '\0', sizeof(pcapreport_ctx_t));
+
+  ctx.skew_discontinuity_threshold = SKEW_DISCONTINUITY_THRESHOLD;
 
   if (argc < 2)
     {
@@ -124,6 +195,16 @@ int main(int argc, char **argv)
 		  return 1;
 		}
 	    }
+	  else if (!strcmp("-times", argv[ii]) || 
+		   !strcmp("--times", argv[ii]) || !strcmp("-t", argv[ii]))
+	    {
+	      ++ctx.time_report;
+	    }
+	  else if (!strcmp("-verbose", argv[ii]) || 
+		   !strcmp("--verbose", argv[ii]) || !strcmp("-v", argv[ii]))
+	    {
+	      ++ctx.verbose;
+	    }
 	  else if (!strcmp("--d", argv[ii]) || !strcmp("-d", argv[ii]))
 	    {
 	      char *hostname;
@@ -148,6 +229,18 @@ int main(int argc, char **argv)
 	  else if (!strcmp("--extra-dump", argv[ii]) || !strcmp("-E", argv[ii]))
 	    {
 	      ++ctx.dump_extra;
+	    }
+	  else if (!strcmp("--skew-discontinuity-threshold", argv[ii]))
+	    {
+	      int val;
+	      int rv = 
+		int_value("pcapreport", argv[ii], argv[ii+1], TRUE, 0,
+			  &val); 
+	      ctx.skew_discontinuity_threshold = val;
+	      if (rv) 
+		{
+		  return 1;
+		}
 	    }
 	  else
 	    {
@@ -208,7 +301,6 @@ int main(int argc, char **argv)
   
   {
     int done = 0;
-    int pkt = 0;
 
     while (!done)
       {
@@ -228,9 +320,12 @@ int main(int argc, char **argv)
 	    {
 	      uint8_t *allocated = data;
 
-	      printf("Packet: Time = %d.%d orig_len = %d \n", 
-		     rec_hdr.ts_sec, rec_hdr.ts_usec, 
-		     rec_hdr.orig_len);
+	      if (ctx.verbose)
+		{
+		  printf("pkt: Time = %d.%d orig_len = %d \n", 
+			 rec_hdr.ts_sec, rec_hdr.ts_usec, 
+			 rec_hdr.orig_len);
+		}
 	      
 	      if (!(ctx.pcap_hdr.network == PCAP_NETWORK_TYPE_ETHERNET))
 		{
@@ -255,9 +350,12 @@ int main(int argc, char **argv)
 		    goto dump_out;
 		  }
 
-		printf("Ethernet: src %02x:%02x:%02x:%02x:%02x:%02x "
-		       " dst %02x:%02x:%02x:%02x:%02x:%02x "
-		       "typeorlen 0x%04x\n",
+
+		if (ctx.verbose)
+		  {
+		    printf("++ 802.11: src %02x:%02x:%02x:%02x:%02x:%02x "
+			   " dst %02x:%02x:%02x:%02x:%02x:%02x "
+			   "typeorlen 0x%04x\n",
 		       epkt.src_addr[0], epkt.src_addr[1], 
 		       epkt.src_addr[2], epkt.src_addr[3], 
 		       epkt.src_addr[4], epkt.src_addr[5],
@@ -265,7 +363,8 @@ int main(int argc, char **argv)
 		       epkt.dst_addr[2], epkt.dst_addr[3],
 		       epkt.dst_addr[4], epkt.dst_addr[5], 
 		       epkt.typeorlen);
-		
+		  }
+
 		data = &data[out_st];
 		len = out_len;
 		
@@ -285,17 +384,19 @@ int main(int argc, char **argv)
 		    goto dump_out;
 		  }
 		
-		printf("IPv4: src = %s", 
+		if (ctx.verbose)
+		  {		    
+		    printf("++ IPv4: src = %s", 
 		       ipv4_addr_to_string(ipv4_hdr.src_addr));
-		printf(" dest = %s \n", 
-		       ipv4_addr_to_string(ipv4_hdr.dest_addr));
-		
-		printf(
-		       "IPv4: version = 0x%x hdr_length = 0x%x"
+		    printf(" dest = %s \n", 
+			   ipv4_addr_to_string(ipv4_hdr.dest_addr));
+		    
+		    printf(
+		       "++ IPv4: version = 0x%x hdr_length = 0x%x"
 		       " serv_type = 0x%08x length = 0x%04x\n"
-		       "IPv4: ident = 0x%04x flags = 0x%02x"
+		       "++ IPv4: ident = 0x%04x flags = 0x%02x"
 		       " frag_offset = 0x%04x ttl = %d\n"
-		       "IPv4: proto = %d csum = 0x%04x\n",
+		       "++ IPv4: proto = %d csum = 0x%04x\n",
 		       ipv4_hdr.version,
 		       ipv4_hdr.hdr_length,
 		       ipv4_hdr.serv_type,
@@ -306,7 +407,8 @@ int main(int argc, char **argv)
 		       ipv4_hdr.ttl,
 		       ipv4_hdr.proto,
 		       ipv4_hdr.csum);
-		
+		  }
+
 		data = &data[out_st];
 		len = out_len;
 		
@@ -325,41 +427,41 @@ int main(int argc, char **argv)
 		    goto dump_out;
 		  }
 		
-		printf("UDP: src port = %d "
-		       "dest port = %d len = %d \n",
-		       udp_hdr.source_port,
-			 udp_hdr.dest_port,
-		       udp_hdr.length);
+		if (ctx.verbose)
+		  {
+		    printf("++ udp: src port = %d "
+			   "dest port = %d len = %d \n",
+			   udp_hdr.source_port,
+			   udp_hdr.dest_port,
+			   udp_hdr.length);
+		  }
 		
 		data = &data[out_st];
 		len = out_len;
 		
-		if (ctx.output_name && 
+		if (
 		    (!ctx.output_dest_addr || (ipv4_hdr.dest_addr == ctx.output_dest_addr)) && 
 		    (!ctx.output_dest_port || (udp_hdr.dest_port == ctx.output_dest_port)))
 		  {
 		    ++sent_to_output;
-		    if (!ctx.output_file)
-		      {
-			ctx.output_file = fopen(ctx.output_name, "wb");
-			if (!ctx.output_file)
-			  {
-			    fprintf(stderr,"### pcapreport: Cannot open %s .\n", 
-				    ctx.output_name);
-			    return 1;
-			  }
-		      }
 		    
-		    printf(">> Dumping %d bytes to output file.\n", len);
-		    rv = fwrite(data, len, 1, ctx.output_file);
-		    if (rv != 1)
+		    if (ctx.time_report)
 		      {
-			fprintf(stderr, "### pcapreport: Couldn't write %d bytes"
-				" to %s (error = %d).\n", 
-				len, ctx.output_name, 
-				ferror(ctx.output_file));
-			return 1;
+			rv =digest_times(&ctx, 
+					 &rec_hdr,
+					 &epkt,
+					 &ipv4_hdr,
+					 &udp_hdr, 
+					 data, len);
+			if (rv) { return rv; }
 		      }
+		    if (ctx.output_name)
+		      {
+			rv = write_out_packet(&ctx, data, len);
+			if (rv) { return rv; }
+		      }
+
+		    
 		  }
 	      }
 
@@ -376,11 +478,12 @@ int main(int argc, char **argv)
 	  default:
 	    // Some other error.
 	    fprintf(stderr, "### pcapreport: Can't read packet %d - code %d\n",
-		    pkt, err);
+		    ctx.pkt_counter, err);
 	    ++done;
 	    break;
 	  }
-	++pkt;
+	++ctx.pkt_counter;
+	
       }
   }
 
@@ -392,5 +495,236 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
+static int digest_times(pcapreport_ctx_t *ctx, 
+			pcaprec_hdr_t *pcap_pkt_hdr,
+			ethernet_packet_t *epkt,
+			ipv4_header_t *ipv4_header, 
+			ipv4_udp_header_t *udp_header,
+			const uint8_t *data,
+			const uint32_t len)
+{
+  int rv;
+
+  if (!ctx->ts_r)
+    {
+      rv = build_TS_reader_with_fns(ctx,
+				    digest_times_read, 
+				    digest_times_seek, 
+				    &ctx->ts_r);
+      if (rv)
+	{
+	  fprintf(stderr, "### pcapreport: Cannot create ts reader.\n");
+	  return 1;
+	}
+    }
+
+  // Add all our data to the pool.
+  
+  ctx->tmp_buf = (uint8_t *)realloc(ctx->tmp_buf, ctx->tmp_len + len);
+  memcpy(&ctx->tmp_buf[ctx->tmp_len], data, len);
+  ctx->tmp_len += len;
+
+  // Now read out all the ts packets we can.
+  while (1)
+    {
+      uint8_t *pkt;
+      int rv;
+
+      rv = read_next_TS_packet(ctx->ts_r, &pkt);
+      if (rv == EOF)
+	{
+	  // Got to EOF - return for more data
+	  return 0;
+	}
+
+
+      // Right. Split it ..
+      {
+	uint32_t pid;
+	int pusi;
+	uint8_t *adapt;
+	int adapt_len;
+	uint8_t *payload;
+	int payload_len;
+
+	rv = split_TS_packet(pkt, &pid, &pusi, &adapt, &adapt_len,
+			     &payload, &payload_len);
+	if (rv)
+	  {
+	    printf(">> WARNING: TS packet %d [ packet %d @ %d.%d s ] cannot be split.\n",
+		   ctx->ts_counter, ctx->pkt_counter, 
+		   pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
+	  }
+	else
+	  {
+	    //int cc;
+
+	    // PCR ?
+	    if (adapt && adapt_len)
+	      {
+		int has_pcr;
+		uint64_t pcr;
+		uint64_t t_pcr;
+		int64_t pcr_time_offset;
+
+		get_PCR_from_adaptation_field(adapt, adapt_len, &has_pcr,
+					      &pcr);
+		if (has_pcr)
+		  {
+		    printf(">> Found PCR %lld at %d.%d s \n", 
+			   pcr, pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
+		
+		    // PCR pops out in 27MHz units. Let's do all our comparisons
+		    // in 90kHz.
+		    pcr = pcr / 300;
+		    t_pcr = (((int64_t)pcap_pkt_hdr->ts_usec*9)/100) + 
+ 		      ((int64_t)pcap_pkt_hdr->ts_sec * 90000);
+		
+		    // printf("pcr = %lld t_pcr = %lld diff = %lld\n", 
+		    // pcr, t_pcr, 
+		    // t_pcr - pcr);
+
+		    pcr_time_offset = ((int64_t)t_pcr - (int64_t)pcr);
+		    if (ctx->pcr_time_offset_valid)
+		      {
+			int64_t skew = (pcr_time_offset - ctx->pcr_time_offset);
+			
+			if (skew > ctx->skew_discontinuity_threshold || 
+			    skew < -ctx->skew_discontinuity_threshold)
+			  {
+			    printf(">> Skew discontinuity! Skew = %lld (> %lld) at"
+				   " ts = %d network = %d (PCR %lld Time %d.%d)\n", 
+				   skew, ctx->skew_discontinuity_threshold, 
+				   ctx->ts_counter, ctx->pkt_counter,
+				   pcr, pcap_pkt_hdr->ts_sec,
+				   pcap_pkt_hdr->ts_usec);
+			    
+			    ctx->pcr_time_offset = pcr_time_offset;
+			  }
+			else
+			  {
+			    int64_t rel_tim;
+			    double skew_rate;
+
+			    rel_tim = ((int64_t)pcap_pkt_hdr->ts_usec) + 
+			      ((int64_t)pcap_pkt_hdr->ts_sec * 1000000);
+			    
+			    rel_tim -= ctx->last_d_us;
+			    
+			    skew_rate = (double)skew / ((double)((double)rel_tim / (60*1000000)));
+
+			    printf(">> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min)\n",
+				   ctx->ts_counter, ctx->pkt_counter,
+				   pcr, 
+				   pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec,
+				   (int)(rel_tim / (int64_t)1000000), 
+				   (int)rel_tim%1000000,
+				   skew, pcr_time_offset - ctx->last_time_offset, 
+				   skew_rate);
+			  }
+			ctx->last_time_offset = pcr_time_offset;
+		      }
+		    else
+		      {
+			ctx->pcr_time_offset = ctx->last_time_offset = 
+			  pcr_time_offset;
+			ctx->last_d_us = 
+			  ((int64_t)pcap_pkt_hdr->ts_usec) + 
+			  (((int64_t)pcap_pkt_hdr->ts_sec) * 1000000);
+			
+			ctx->pcr_time_offset_valid = 1;
+		      }
+		  }
+	      }
+	    
+
+#if 0
+	    // CC?
+	    cc = pkt[3]&0x0f;
+	    //printf("cc = %d \n", cc);
+	    if (!ctx->have_cc)
+	      {
+		ctx->have_cc = 1; 
+	      }
+	    else
+	      {
+		if (cc != ((ctx->last_cc + 1)&0xf))
+		  {
+		    printf(">> CC discontinuity! ts = %d network = %d expected %d got %d.\n",
+			   ctx->ts_counter, ctx->pkt_counter, 
+			   (ctx->last_cc+1)&0xf,
+			   cc);
+		  }
+	      }
+	    ctx->last_cc = cc;
+#endif
+	  }
+
+
+	++ctx->ts_counter;
+      }
+    }
+}
+
+static int digest_times_read(void *handle, char *out_buf, size_t len)
+{
+  pcapreport_ctx_t *ctx = (pcapreport_ctx_t *)handle;
+  int nr_bytes = (len < ctx->tmp_len ? len : ctx->tmp_len);
+  int new_tmp_len = ctx->tmp_len - nr_bytes;
+  
+  memcpy(out_buf, ctx->tmp_buf, nr_bytes);
+  memmove(ctx->tmp_buf, &ctx->tmp_buf[nr_bytes], 
+	  new_tmp_len);
+  ctx->tmp_len = new_tmp_len;
+  //   printf(">> read %d bytes from intermediate buffer. \n", nr_bytes);
+
+  return nr_bytes;
+}
+
+
+static int digest_times_seek(void *handle, offset_t val)
+{
+  // Cannot seek in a ts stream.
+  return 1;
+}
+
+static int write_out_packet(pcapreport_ctx_t *ctx, 
+			    const uint8_t *data, 
+			    const uint32_t len)
+{
+  int rv;
+
+  if (ctx->output_name)
+    {
+      if (!ctx->output_file)
+	{
+	  ctx->output_file = fopen(ctx->output_name, "wb");
+	  if (!ctx->output_file)
+	    {
+	      fprintf(stderr,"### pcapreport: Cannot open %s .\n", 
+		      ctx->output_name);
+	      return 1;
+	    }
+	}
+      
+      if (ctx->verbose)
+	{
+	  printf("++   Dumping %d bytes to output file.\n", len);
+	}
+      rv = fwrite(data, len, 1, ctx->output_file);
+      if (rv != 1)
+	{
+	  fprintf(stderr, "### pcapreport: Couldn't write %d bytes"
+		  " to %s (error = %d).\n", 
+		  len, ctx->output_name, 
+		  ferror(ctx->output_file));
+	  return 1;
+	}
+    }
+  return 0;
+}
+
+
 
 /* End file */
