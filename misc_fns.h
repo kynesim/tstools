@@ -30,6 +30,7 @@
 
 #include "misc_defns.h"
 #include "es_defns.h"
+#include <stdint.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -355,6 +356,8 @@ extern int host_value(char  *prefix,
                       char **hostname,
                       int   *port);
 
+
+
 
 // ============================================================
 // Sockets
@@ -408,6 +411,49 @@ extern int disconnect_socket(SOCKET  socket);
 #else  // _WIN32
 extern int disconnect_socket(int  socket);
 #endif // _WIN32
+
+/*! Decode a host byte order address to a static buffer. */
+const char *ipv4_addr_to_string(const uint32_t addr);
+
+/*! Decode a string to a host byte order address */
+int ipv4_string_to_addr(uint32_t *dest, const char *addr);
+
+
+// ============================================================
+// Byte order handling
+// ============================================================
+
+
+static inline uint32_t uint_32_be(const uint8_t *const p)
+{
+  return (((int)p[0]&0xff) << 24) | 
+    (((int)p[1]&0xff) << 16) | 
+    (((int)p[2]&0xff) << 8) |
+    (((int)p[3]&0xff));
+}
+
+
+static inline uint32_t uint_32_le(const uint8_t *const p)
+{
+  return (((int)p[0]&0xff) | 
+	  (((int)p[1]&0xff) << 8) | 
+	  (((int)p[2]&0xff) << 16) | 
+	  (((int)p[3]&0xff) << 24));
+}
+
+
+static inline uint16_t uint_16_be(const uint8_t *const p)
+{
+  return ((((int)p[0])&0xff)<<8) | 
+    ((((int)p[1])&0xff));
+}
+
+static inline uint16_t uint_16_le(const uint8_t *const p)
+{
+  return (((int)p[0]&0xff) | 
+	  ((int)p[1]&0xff)<<8);
+}
+
 
 #endif // _misc_fns
 

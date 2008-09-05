@@ -1397,6 +1397,52 @@ extern int disconnect_socket(int  socket)
   return 0;
 }
 #endif // _WIN32
+
+const char *ipv4_addr_to_string(const uint32_t addr)
+{
+  static char buf[64];
+
+  sprintf(buf, "%d.%d.%d.%d", 
+	  (addr >> 24)&0xff,
+	  (addr >> 16)&0xff,
+	  (addr >> 8)&0xff,
+	  (addr & 0xff));
+  return buf;
+}
+
+int ipv4_string_to_addr(uint32_t *dest, const char *string)
+{
+  char *str_cpy = strdup(string);
+  int rv  =0;
+  char *p, *p2;
+  int val;
+  int nr;
+  uint32_t out = 0;
+  char *end_p = str_cpy;
+  
+  for (nr = 0,p = str_cpy; nr < 4 && *p; p = p2+1, ++nr)
+    {
+      char *px = NULL;
+      p2 = strchr(p, '.');
+      if (p2)
+	{
+          *p2 = '\0';
+	}
+      val = strtoul(p, &px, 0);
+      if (px && *px)
+        {
+          return -1;
+        }
+      out |= (val << ((3-nr)<<3));
+    }
+
+ end:
+  (*dest) = out;
+  free(str_cpy);
+  return rv;
+
+}
+
 
 // Local Variables:
 // tab-width: 8

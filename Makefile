@@ -104,7 +104,8 @@ SRCS = \
  pes.c \
  pidint.c \
  ts.c \
- tswrite.c
+ tswrite.c \
+ pcap.c 
 
 # All of our non-program object modules
 OBJS = \
@@ -125,7 +126,10 @@ OBJS = \
  pidint.o \
  reverse.o \
  ts.o \
- tswrite.o
+ tswrite.o \
+ pcap.o \
+ ethernet.o \
+ ipv4.o
 
 # Our program object modules
 PROG_OBJS = \
@@ -144,7 +148,8 @@ PROG_OBJS = \
   $(OBJDIR)/tsplay.o \
   $(OBJDIR)/tsreport.o \
   $(OBJDIR)/tsserve.o \
-  $(OBJDIR)/ts_packet_insert.o
+  $(OBJDIR)/ts_packet_insert.o \
+  $(OBJDIR)/pcapreport.o 
 #\
 #  $(OBJDIR)/test_ps.o
 
@@ -177,7 +182,8 @@ PROGS = \
   $(BINDIR)/tsreport \
   $(BINDIR)/tsplay \
   $(BINDIR)/tsserve \
-  $(BINDIR)/ts_packet_insert
+  $(BINDIR)/ts_packet_insert \
+  $(BINDIR)/pcapreport 
 #\
 #  $(BINDIR)/test_ps
 
@@ -260,6 +266,11 @@ $(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(LIB)
 $(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(LIB)
 		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LDFLAGS) $(LIBOPTS)
 
+$(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(LIB)
+		$(CC) $< -o $(BINDIR)/pcapreport $(LDFLAGS) $(LIBOPTS)
+
+
+
 
 $(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(LIB)
 		$(CC) $< -o $(BINDIR)/test_pes $(LDFLAGS) $(LIBOPTS)
@@ -332,6 +343,8 @@ $(OBJDIR)/ts_packet_insert.o:     ts_packet_insert.c
 $(OBJDIR)/tsplay.o:       tsplay.c $(TS_H) misc_fns.h $(PS_H) $(PES_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tswrite.o:      tswrite.c misc_fns.h version.h
+	$(CC) -c $< -o $@ $(CFLAGS)
+$(OBJDIR)/pcapreport.o:      pcapreport.c pcap.h version.h misc_fns.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 $(OBJDIR)/test_pes.o: test_pes.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) version.h
