@@ -23,7 +23,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Kynesim, Cambridge UK
+ *   Richard Watts, Kynesim <rrw@kynesim.co.uk>
  *
  * ***** END LICENSE BLOCK *****
  */
