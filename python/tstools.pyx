@@ -499,24 +499,125 @@ cdef extern from "ts_fns.h":
     int close_TS_reader(TS_reader_p *tsreader)
     int seek_using_TS_reader(TS_reader_p tsreader, offset_t posn)
     int read_next_TS_packet(TS_reader_p tsreader, byte **packet)
-    int split_TS_packet(byte *buf, PID *pid, int *payload_unit_indicator,
+    int split_TS_packet(byte *buf, PID *pid, int *payload_unit_start_indicator,
                         byte **adapt, int *adapt_len,
                         byte **payload, int *payload_len)
     int get_next_TS_packet(TS_reader_p tsreader,
-                           PID *pid, int *payload_unit_indicator,
+                           PID *pid, int *payload_unit_start_indicator,
                            byte **adapt, int *adapt_len,
                            byte **payload, int *payload_len)
 
+DEF TS_PACKET_LEN = 188
 
 cdef class TSPacket:
     """A convenient representation of a (dissected) TS packet.
     """
 
     cdef readonly PID       pid
-    cdef readonly int       payload_start_indicator
+    cdef readonly int       pusi        # payload unit start indicator
     cdef readonly object    adapt
     cdef readonly object    payload
 
+    def __cinit__(self,pid=None,pusi=None,adapt=None,payload=None,
+                  data=None,*args,**kwargs):
+        cdef char       *buffer
+        cdef Py_ssize_t  length
+        cdef char       *adapt_buf
+        cdef int         adapt_len
+        cdef char       *payload_buf
+        cdef int         payload_len
+        if data:
+            if len(data) != TS_PACKET_LEN:
+                raise TSToolsException,\
+                        'TSPacket data must be %d bytes long, not %d'%(TS_PACKET_LEN,len(data))
+            PyString_AsStringAndSize(data, &buffer, &length)
+            retval = split_TS_packet(<byte *>buffer,&self.pid,&self.pusi,
+                                     <byte **>&adapt_buf,&adapt_len,
+                                     <byte **>&payload_buf,&payload_len)
+            if retval < 0:
+                raise TSToolsException,'Error splitting TS packet data from Python string'
+            if adapt_len == 0:
+                self.adapt = None
+            else:
+                self.adapt = PyString_FromStringAndSize(adapt_buf,adapt_len)
+            if payload_len == 0:
+                self.payload = None
+            else:
+                self.payload = PyString_FromStringAndSize(payload_buf,payload_len)
+        else:
+            self.pid = pid
+            self.pusi = pusi
+            self.adapt = adapt
+            self.payload = payload
+
+    def __init__(self,pid=None,pusi=None,adapt=None,payload=None,data=None):
+        pass
+
+    def __dealoc__(self):
+        pass
+
+    def is_padding(self):
+        return self.pid == 0x1fff
+
+    def data(self):
+        cdef byte buf[TS_PACKET_LEN]
+        buf[0] = 0x47
+        buf[1] = (self.pid & 0xFF00) >> 8
+        if self.pusi:
+            buf[1] |= 0x40
+        buf[2] = self.pid & 0xFF
+
+        if self.adapt:
+            buf[3] = len(self.adapt)
+            for 0 < ii < len(self.adapt):
+                buf[4+ii] = ord(self.adapt[ii])
+            pstart = 4+len(self.adapt)
+        else:
+            buf[3] = 0
+            pstart = 4
+
+        if self.payload:
+            for 0 < ii < len(self.payload):
+                buf[pstart+ii] = ord(self.payload[ii])
+            buf_len = pstart + len(self.payload)
+        else:
+            buf_len = pstart
+
+        return PyString_FromStringAndSize(<char *>buf,buf_len)
+
+    def __repr__(self):
+        text = 'TS packet PID %04x'%self.pid
+        if self.pusi:
+            text += ' [pusi]'
+        if self.adapt and self.payload:
+            text += ' A+P'
+        elif self.adapt:
+            text += ' A'
+        elif self.payload:
+            text += ' P'
+        data = self.data()[3:]
+        for ch in data[:8]:
+            text += ' %02x'%ord(ch)
+        if len(data) == 9:
+            text += ' %02x'%ord(ch)
+        elif len(data) > 8:
+            text += '...'
+        return text
+
+    def __richcmp__(self,other,op):
+        if op == 2:     # ==
+            return (self.pid == other.pid and
+                    self.pusi == other.pusi and
+                    self.adapt == other.adapt and
+                    self.payload == other.payload)
+        elif op == 3:   # !=
+            return (self.pid != other.pid or
+                    self.pusi != other.pusi or
+                    self.adapt != other.adapt or
+                    self.payload != other.payload)
+        else:
+            #return NotImplemented
+            raise TypeError, 'TSPacket only supports == and != comparisons'
 
 cdef class TSFile:
     """A Python class representing a TS file.
@@ -600,11 +701,30 @@ cdef class TSFile:
     def read(self):
         """Read the next TS packet from this stream.
         """
-        try:
-            #return _next_TS_packet(self.stream,self.name)
-            pass
-        except StopIteration:
-            raise EOFError
+        cdef PID   pid
+        cdef int   pusi
+        cdef byte *adapt_buf
+        cdef int   adapt_len
+        cdef byte *payload_buf
+        cdef int   payload_len
+        if self.tsreader == NULL:
+            raise TSToolsException,'No TS stream to read'
+        retval = get_next_TS_packet(self.tsreader,
+                                    &pid,&pusi,&adapt_buf,&adapt_len,
+                                    &payload_buf,&payload_len);
+        if retval == EOF:
+            raise StopIteration
+        elif retval < 0:
+            raise TSToolsException,'Error getting next TS packet from file %s'%self.name
+        if adapt_len == 0:
+            adapt = None
+        else:
+            adapt = PyString_FromStringAndSize(<char *>adapt_buf,adapt_len)
+        if payload_len == 0:
+            payload = None
+        else:
+            payload = PyString_FromStringAndSize(<char *>payload_buf,payload_len)
+        return TSPacket(pid,pusi,adapt,payload)
 
     def write(self, TSPacket tspacket):
         """Write an TS packet to this stream.

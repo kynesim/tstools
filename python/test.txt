@@ -287,6 +287,68 @@ And also:
     ...
     TSToolsException: Error opening file 'no-such-file.fred' for TS reading: No such file or directory
 
+Trusty hexdump suggests that the first few TS packets start::
+
+    47 1f ff 10 ff ff ff ff ff ff ff ff ff ff ff ff
+
+i.e., they look are padding packets, with PID 0x1FFF. tsreport appears to show
+the first interesting TS packet occurring at 13348, which is 71*188::
+
+    13348: TS Packet 72 PID 0032 [pusi] stream type not identified
+    PES header
+      Start code:        00 00 01
+      Stream ID:         bd   (189) SYSTEM START: Private stream 1
+      PES packet length: 0612 (1554)
+      Flags:             84 80 data-aligned : PTS
+      PES header len 15
+      PTS 54347445
+      Data (160 bytes): 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75 dd 6f 87 ae 95 2c ee dc cf ae 95 5b b2 31 13 8c 56 fd 32 a5 4f a1 43 5e 95 f3 ea 6f 9e d7 75 0a 93 f5 4b 9f 4e 73 0d f2 a7 b4 df 53 54 82 1b e7 68 1f d2 7e 99 2a 97 ee 9e bf 7c a9 25 78 62 4e 7f 4a 2b a4 b4 dc d8 56 9d 31 18 4f a9 bf 7c a6 d5 c8 6a 95 3e 54 be 15 34 ca 61 42 7d 0d f2 a7 af 6c 3f 7c 43 5b e7 d5 ab b6 74 e5 fa 57 ce 9d a4 af 49 53 f4 a9 60 25 9c 95 fa 97 b7 12 99 6f 55 22 40 77 17 b2 e9 54 24 ad 59 e4 5d 2f 61 c4 36 ee
+
+That's 0x3424, and hexdump shows it staring::
+
+    47 40 32 14 00 00 01 bd 06 12 84 80 0f 21 0c f5 8d 6b ff ff ff
+    ff ff ff ff ff ff ff 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75
+
+Interpreted as:
+
+* ``47``: it's TS
+* ``40 32``: it's PID 0x32, with the PUSI bit set
+* ``14`` == ``0001.0100``: that ``0001`` means we have a payload only (no
+  adaptation field), so payload length is 184
+
+With that information, we should be able to do the following::
+
+    >>> p = None
+    >>> with TSFile(test_ts_file) as f:
+    ...     count = 0
+    ...     p = f.read()
+    ...     while p.is_padding():
+    ...         count += 1
+    ...         p = f.read()
+    ...     print count
+    71
+    >>> print p.pid
+    50
+    >>> print p.pusi
+    1
+    >>> print p.adapt
+    None
+
+The payload itself won't print out nicely, as it's binary, but we can check
+its length:
+
+    >>> print len(p.payload)
+    184
+
+and the short representation of the TS packet:
+
+    >>> print repr(p)
+    TS packet PID 0032 [pusi] P 00 00 00 01 bd 06 12 84...
+    >>> text = ''
+    >>> for ch in p.data():
+    ...    text += ' %02x'%ord(ch)
+    >>> print text
+     47 40 32 00 00 00 01 bd 06 12 84 80 0f 21 0c f5 8d 6b ff ff ff ff ff ff ff ff ff ff 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75 dd 6f 87 ae 95 2c ee dc cf ae 95 5b b2 31 13 8c 56 fd 32 a5 4f a1 43 5e 95 f3 ea 6f 9e d7 75 0a 93 f5 4b 9f 4e 73 0d f2 a7 b4 df 53 54 82 1b e7 68 1f d2 7e 99 2a 97 ee 9e bf 7c a9 25 78 62 4e 7f 4a 2b a4 b4 dc d8 56 9d 31 18 4f a9 bf 7c a6 d5 c8 6a 95 3e 54 be 15 34 ca 61 42 7d 0d f2 a7 af 6c 3f 7c 43 5b e7 d5 ab b6 74 e5 fa 57 ce 9d a4 af 49 53 f4 a9 60 25 9c 95 fa 97 b7 12 99 6f 55 22 40 77 17 b2 e9 54 24 ad 59 e4 5d 2f 61 c4 36 ee
 
 
 
