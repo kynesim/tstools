@@ -619,6 +619,43 @@ cdef class TSPacket:
             #return NotImplemented
             raise TypeError, 'TSPacket only supports == and != comparisons'
 
+# Not a method, honest
+# (__dealloc__ is not allowed to call Python methods, just in case,
+# and Python methods don't seem to be allowed to call __dealloc__,
+# since I assume it's not a "real" method)
+cdef _TSFile_close_for_read(TS_reader_p *tsreader):
+    if tsreader != NULL:
+        retval = close_TS_reader(tsreader)
+        if retval != 0:
+            raise TSToolsException,"Error closing file '%s':"\
+                    " %s"%(self.name,strerror(errno))
+
+cdef TSPacket _next_TSPacket(TS_reader_p tsreader, filename):
+    cdef PID   pid
+    cdef int   pusi
+    cdef byte *adapt_buf
+    cdef int   adapt_len
+    cdef byte *payload_buf
+    cdef int   payload_len
+    if tsreader == NULL:
+        raise TSToolsException,'No TS stream to read'
+    retval = get_next_TS_packet(tsreader,
+                                &pid,&pusi,&adapt_buf,&adapt_len,
+                                &payload_buf,&payload_len);
+    if retval == EOF:
+        raise StopIteration
+    elif retval == 1:
+        raise TSToolsException,'Error getting next TS packet from file %s'%filename
+    if adapt_len == 0:
+        adapt = None
+    else:
+        adapt = PyString_FromStringAndSize(<char *>adapt_buf,adapt_len)
+    if payload_len == 0:
+        payload = None
+    else:
+        payload = PyString_FromStringAndSize(<char *>payload_buf,payload_len)
+    return TSPacket(pid,pusi,adapt,payload)
+
 cdef class TSFile:
     """A Python class representing a TS file.
 
@@ -663,11 +700,12 @@ cdef class TSFile:
         self.mode = mode
 
     def __dealloc__(self):
-        if self.tsreader != NULL:
-            retval = close_TS_reader(&self.tsreader)
-            if retval != 0:
-                raise TSToolsException,"Error closing file '%s':"\
-                        " %s"%(self.name,strerror(errno))
+        _TSFile_close_for_read(&self.tsreader)
+        #if self.tsreader != NULL:
+        #    retval = close_TS_reader(&self.tsreader)
+        #    if retval != 0:
+        #        raise TSToolsException,"Error closing file '%s':"\
+        #                " %s"%(self.name,strerror(errno))
 
     def __iter__(self):
         return self
@@ -690,41 +728,24 @@ cdef class TSFile:
     def __next__(self):
         """Our iterator interface retrieves the TS packets from the stream.
         """
-        #return _next_TS_packet(self.stream,self.name)
-        pass
+        return _next_TSPacket(self.tsreader,self.name)
 
-    def seek(self,*args):
+    def seek(self,offset):
         """Seek to the given offset, which should be a multiple of 188.
+
+        Note that the method does not check the value of 'offset'.
         """
-        pass
+        retval = seek_using_TS_reader(self.tsreader,offset)
+        if retval == 1:
+            raise TSToolsException,'Error seeking to %d in file %s'%(offset,self.name)
 
     def read(self):
         """Read the next TS packet from this stream.
         """
-        cdef PID   pid
-        cdef int   pusi
-        cdef byte *adapt_buf
-        cdef int   adapt_len
-        cdef byte *payload_buf
-        cdef int   payload_len
-        if self.tsreader == NULL:
-            raise TSToolsException,'No TS stream to read'
-        retval = get_next_TS_packet(self.tsreader,
-                                    &pid,&pusi,&adapt_buf,&adapt_len,
-                                    &payload_buf,&payload_len);
-        if retval == EOF:
-            raise StopIteration
-        elif retval < 0:
-            raise TSToolsException,'Error getting next TS packet from file %s'%self.name
-        if adapt_len == 0:
-            adapt = None
-        else:
-            adapt = PyString_FromStringAndSize(<char *>adapt_buf,adapt_len)
-        if payload_len == 0:
-            payload = None
-        else:
-            payload = PyString_FromStringAndSize(<char *>payload_buf,payload_len)
-        return TSPacket(pid,pusi,adapt,payload)
+        try:
+            return _next_TSPacket(self.tsreader,self.name)
+        except StopIteration:
+            raise EOFError
 
     def write(self, TSPacket tspacket):
         """Write an TS packet to this stream.
@@ -732,7 +753,14 @@ cdef class TSFile:
         pass
 
     def close(self):
-        pass
+        ## Since we don't appear to be able to call our __dealloc__ "method",
+        ## and we're not allowed to call Python methods..
+        #if self.tsreader != NULL:
+        #    retval = close_TS_reader(&self.tsreader)
+        #    if retval != 0:
+        #        raise TSToolsException,"Error closing file '%s':"\
+        #                " %s"%(self.name,strerror(errno))
+        _TSFile_close_for_read(&self.tsreader)
         self.name = None
         self.mode = None
 
