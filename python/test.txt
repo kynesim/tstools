@@ -335,12 +335,12 @@ With that information, we should be able to do the following::
     None
 
 The payload itself won't print out nicely, as it's binary, but we can check
-its length:
+its length::
 
     >>> print len(p.payload)
     184
 
-and the short representation of the TS packet:
+and the short representation of the TS packet::
 
     >>> print repr(p)
     TS packet PID 0032 [pusi] P 00 00 00 01 bd 06 12 84...
@@ -350,12 +350,12 @@ and the short representation of the TS packet:
     >>> print text
      47 40 32 00 00 00 01 bd 06 12 84 80 0f 21 0c f5 8d 6b ff ff ff ff ff ff ff ff ff ff 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75 dd 6f 87 ae 95 2c ee dc cf ae 95 5b b2 31 13 8c 56 fd 32 a5 4f a1 43 5e 95 f3 ea 6f 9e d7 75 0a 93 f5 4b 9f 4e 73 0d f2 a7 b4 df 53 54 82 1b e7 68 1f d2 7e 99 2a 97 ee 9e bf 7c a9 25 78 62 4e 7f 4a 2b a4 b4 dc d8 56 9d 31 18 4f a9 bf 7c a6 d5 c8 6a 95 3e 54 be 15 34 ca 61 42 7d 0d f2 a7 af 6c 3f 7c 43 5b e7 d5 ab b6 74 e5 fa 57 ce 9d a4 af 49 53 f4 a9 60 25 9c 95 fa 97 b7 12 99 6f 55 22 40 77 17 b2 e9 54 24 ad 59 e4 5d 2f 61 c4 36 ee
 
-Let's remember that packet:
+Let's remember that packet::
 
     >>> first_interesting_TS_packet = p
 
 We have comparisons (but only for equality) on TS packets. Remember those
-first N packets are all padding...
+first N packets are all padding::
 
     >>> f = TSFile(test_ts_file)
     >>> p0 = f.read()
@@ -368,7 +368,7 @@ first N packets are all padding...
     >>> p0 == first_interesting_TS_packet
     0
 
-Normal iteration works as well:
+Normal iteration works as well::
 
     **This test is too slow -- consider changing it for something else**
 
@@ -376,14 +376,16 @@ Normal iteration works as well:
     ...    count = 0
     ...    for packet in f:
     ...        count += 1
-    ...    print 'There are %d TS packets'%count
-    ...    print 'The last is:',repr(packet)
-    There are 1748171 TS packets
-    The last is: TS packet PID 1fff 00
+    ...        if not packet.is_padding():
+    ...            break
+    ...    print 'There are %d padding TS packets at the start'%count
+    ...    print 'The first non-padding packet is:',repr(packet)
+    There are 72 padding TS packets at the start
+    The first non-padding packet is: TS packet PID 0032 [pusi] P 00 ff 00 01 bd 06 12 84...
 
 We should be able to seek, although only multiples of 188 are likely to be
 useful (the read after the seek to offset 27 will fail becuse it doesn't find
-a 0x47 at the start of the data it is asked to read):
+a 0x47 at the start of the data it is asked to read)::
 
     >>> f = TSFile(test_ts_file)
     >>> f.seek(71*188)
