@@ -395,7 +395,20 @@ a 0x47 at the start of the data it is asked to read):
     Traceback (most recent call last):
     ...
     TSToolsException: Error getting next TS packet from file ../data/ed24p_11.ts
-    >>> f.close()
+   >>> f.close()
+
+Python 2.6 introduces the ``bytearray`` (an immutable array of bytes), which
+is clearly what we'd prefer to be using to communicate with TS packets,
+instead of strings.
+
+Until then, it's possible to convert a data "string" to an array using:
+
+    >>> import array
+    >>> data = array.array('B',p.data())
+    >>> data[0:15]
+    array('B', [71, 64, 50, 0, 0, 0, 1, 189, 6, 18, 132, 128, 15, 33, 12])
+
+Not very efficient, perhaps.
 
 
 // Local Variables:
