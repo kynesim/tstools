@@ -45,6 +45,7 @@ typedef struct audio_frame *audio_frame_p;
 #define AUDIO_UNKNOWN   0               // which is a reserved value
 #define AUDIO_ADTS      ADTS_AUDIO_STREAM_TYPE
 #define AUDIO_L2        MPEG2_AUDIO_STREAM_TYPE
+#define AUDIO_AC3       ATSC_DOLBY_AUDIO_STREAM_TYPE
 
 #define AUDIO_ADTS_MPEG2 0x100
 #define AUDIO_ADTS_MPEG4 0x101
@@ -54,6 +55,7 @@ typedef struct audio_frame *audio_frame_p;
                          (x)==AUDIO_ADTS_MPEG2?"ADTS-MPEG2": \
                          (x)==AUDIO_ADTS_MPEG4?"ADTS-MPEG4": \
                          (x)==AUDIO_L2        ?"MPEG2":      \
+                         (x)==AUDIO_AC3       ?"ATSC-AC3":   \
                          "???")
 
 

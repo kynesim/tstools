@@ -35,6 +35,7 @@
 #include "audio_fns.h"
 #include "adts_fns.h"
 #include "l2audio_fns.h"
+#include "ac3_fns.h"
 
 /*
  * Build a new generic audio frame datastructure
@@ -106,6 +107,8 @@ extern int read_next_audio_frame(int            file,
     return read_next_adts_frame(file,frame,0);
   case AUDIO_L2:
     return read_next_l2audio_frame(file,frame);
+  case AUDIO_AC3:
+    return read_next_ac3_frame(file, frame);
   default:
     fprintf(stderr,"### Unrecognised audio type %d - cannot get next audio frame\n",
             audio_type);

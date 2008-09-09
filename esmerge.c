@@ -55,6 +55,8 @@
 #define ADTS_SAMPLES_PER_FRAME  1024
 // For MPEG-1 audio layer 2, this is 1152
 #define L2_SAMPLES_PER_FRAME    1152
+// For AC-3 this is 256 * 6
+#define AC3_SAMPLES_PER_FRAME   (256 * 6)
 
 // ------------------------------------------------------------
 #define TEST_PTS_DTS 0
@@ -185,6 +187,9 @@ static int merge_with_avs(avs_context_p  video_context,
     break;
   case AUDIO_L2:
     prog_type[1] = MPEG2_AUDIO_STREAM_TYPE;
+    break;
+  case AUDIO_AC3:
+    prog_type[1] = ATSC_DOLBY_AUDIO_STREAM_TYPE;
     break;
   default:              // what else can we do?
     prog_type[1] = ADTS_AUDIO_STREAM_TYPE;
@@ -419,6 +424,9 @@ static int merge_with_h264(access_unit_context_p  video_context,
   case AUDIO_L2:
     prog_type[1] = MPEG2_AUDIO_STREAM_TYPE;
     break;
+  case AUDIO_AC3:
+    prog_type[1] = ATSC_DOLBY_AUDIO_STREAM_TYPE;
+    break;
   default:              // what else can we do?
     prog_type[1] = ADTS_AUDIO_STREAM_TYPE;
     break;
@@ -610,6 +618,7 @@ static void print_usage()
     "  -l2               The audio stream is MPEG layer 2 audio\n"
     "  -mp2adts          The audio stream is MPEG-2 style ADTS regardless of ID bit\n"
     "  -mp4adts          The audio stream is MPEG-4 style ADTS regardless of ID bit\n"
+    "  -ac3              The audio stream is Dolby AC-3 in ATSC\n"
     "\n"
     "  -patpmtfreq <f>    PAT and PMT will be inserted every <f> video frames. \n"
     "                     by default, f = 0 and PAT/PMT are inserted only at  \n"
@@ -618,8 +627,8 @@ static void print_usage()
     "Limitations\n"
     "===========\n"
     "For the moment, the video input must be H.264 or AVS, and the audio input\n"
-    "ADTS or MPEG layer 2. Also, the audio is assumed to have a constant\n"
-    "number of samples per frame.\n"
+    "ADTS, AC-3 ATSC or MPEG layer 2. Also, the audio is assumed to have a\n"
+    "constant number of samples per frame.\n"
     );
 }
 
@@ -711,6 +720,10 @@ int main(int argc, char **argv)
       else if (!strcmp("-l2",argv[ii]))
       {
         audio_type = AUDIO_L2;
+      }
+      else if (!strcmp("-ac3", argv[ii]))
+      {
+        audio_type = AUDIO_AC3;
       }
       else if (!strcmp("-h264",argv[ii]))
       {
@@ -850,6 +863,9 @@ int main(int argc, char **argv)
     break;
   case AUDIO_L2:
     audio_samples_per_frame = L2_SAMPLES_PER_FRAME;
+    break;
+  case AUDIO_AC3:
+    audio_samples_per_frame = AC3_SAMPLES_PER_FRAME;
     break;
   default:              // hmm - or we could give up...
     audio_samples_per_frame = ADTS_SAMPLES_PER_FRAME;

@@ -90,6 +90,7 @@ BINDIR = bin
 # All of our non-program source files
 SRCS = \
  accessunit.c \
+ ac3.c \
  adts.c \
  avs.c \
  bitdata.c \
@@ -111,6 +112,7 @@ SRCS = \
 OBJS = \
  accessunit.o \
  avs.o \
+ ac3.o \
  adts.o \
  bitdata.o \
  es.o \
@@ -149,6 +151,7 @@ PROG_OBJS = \
   $(OBJDIR)/tsreport.o \
   $(OBJDIR)/tsserve.o \
   $(OBJDIR)/ts_packet_insert.o \
+  $(OBJDIR)/m2ts2ts.o
   $(OBJDIR)/pcapreport.o 
 #\
 #  $(OBJDIR)/test_ps.o
@@ -183,6 +186,7 @@ PROGS = \
   $(BINDIR)/tsplay \
   $(BINDIR)/tsserve \
   $(BINDIR)/ts_packet_insert \
+  $(BINDIR)/m2ts2ts
   $(BINDIR)/pcapreport 
 #\
 #  $(BINDIR)/test_ps
@@ -266,6 +270,8 @@ $(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(LIB)
 $(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(LIB)
 		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LDFLAGS) $(LIBOPTS)
 
+$(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(LIB)
+		$(CC) $< -o $(BINDIR)/m2ts2ts $(LDFLAGS) $(LIBOPTS)
 $(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(LIB)
 		$(CC) $< -o $(BINDIR)/pcapreport $(LDFLAGS) $(LIBOPTS)
 
@@ -295,7 +301,7 @@ H262_H = h262_fns.h h262_defns.h
 TSWRITE_H = tswrite_fns.h tswrite_defns.h
 REVERSE_H = reverse_fns.h reverse_defns.h
 FILTER_H = filter_fns.h filter_defns.h $(REVERSE_H)
-AUDIO_H = adts_fns.h l2audio_fns.h audio_fns.h audio_defns.h adts_defns.h
+AUDIO_H = adts_fns.h l2audio_fns.h ac3_fns.h audio_fns.h audio_defns.h adts_defns.h
 
 # Everyone depends upon the basic configuration file
 $(LIB)($(OBJS)) $(TEST_OBJS) $(PROG_OBJS): compat.h
@@ -343,6 +349,8 @@ $(OBJDIR)/ts_packet_insert.o:     ts_packet_insert.c
 $(OBJDIR)/tsplay.o:       tsplay.c $(TS_H) misc_fns.h $(PS_H) $(PES_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tswrite.o:      tswrite.c misc_fns.h version.h
+	$(CC) -c $< -o $@ $(CFLAGS)
+$(OBJDIR)/m2ts2ts.o:	  m2ts2ts.c $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/pcapreport.o:      pcapreport.c pcap.h version.h misc_fns.h
 	$(CC) -c $< -o $@ $(CFLAGS)

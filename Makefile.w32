@@ -74,6 +74,7 @@ PROGS = \
     $(EXEDIR)\ts2es.exe       \
     $(EXEDIR)\es2ts.exe       \
     $(EXEDIR)\esreverse.exe   \
+    $(EXEDIR)\m2ts2ts.exe     \
     $(EXEDIR)\ps2ts.exe       \
     $(EXEDIR)\psreport.exe    \
     $(EXEDIR)\stream_type.exe \
@@ -85,6 +86,7 @@ PROGS = \
 # Object files for the library
 LIB_OBJS = \
  $(OBJDIR)\accessunit.obj \
+ $(OBJDIR)\ac3.obj \
  $(OBJDIR)\adts.obj \
  $(OBJDIR)\avs.obj \
  $(OBJDIR)\audio.obj \
@@ -111,6 +113,7 @@ PROG_OBJS = \
   $(OBJDIR)/esmerge.obj \
   $(OBJDIR)/esreport.obj \
   $(OBJDIR)/esreverse.obj \
+  $(OBJDIR)/m2ts2ts.obj \
   $(OBJDIR)/ps2ts.obj \
   $(OBJDIR)/psreport.obj \
   $(OBJDIR)/stream_type.obj \
@@ -151,6 +154,9 @@ $(EXEDIR)\esreport.exe: $(OBJDIR)\esreport.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\esreverse.exe: $(OBJDIR)\esreverse.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\m2ts2ts.exe: $(OBJDIR)\m2ts2ts.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\stream_type.exe: $(OBJDIR)\stream_type.obj $(LIBFILE)
