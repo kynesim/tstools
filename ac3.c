@@ -142,7 +142,7 @@ int read_next_ac3_frame(int            file,
                    &data[SYNCINFO_SIZE]);
   if (err)
   {
-    if (err = EOF)
+    if (err == EOF)
       fprintf(stderr, "### Unexpected EOF reading rest of AC3 frame\n");
     else
       fprintf(stderr, "### Error reading rest of AC3 frame\n");

@@ -1214,13 +1214,13 @@ extern int build_TS_reader(int           file,
 }
 
 
-/* Build a TS packet reader using the given functions as
- *  read() and seek().
+/*
+ * Build a TS packet reader using the given functions as read() and seek().
  *
  * Returns 0 on success, 1 on failure.
  */
 extern int build_TS_reader_with_fns(void *handle,
-                                    int (*read_fn)(void *, char *, size_t),
+                                    int (*read_fn)(void *, byte *, size_t),
                                     int (*seek_fn)(void *, offset_t), 
                                     TS_reader_p *tsreader)
 {
@@ -1378,17 +1378,13 @@ static int read_next_TS_packets(TS_reader_p  tsreader,
     while (total < TS_READ_AHEAD_BYTES)
     {
       if (tsreader->read_fn)
-        {
-          length = tsreader->read_fn(tsreader->handle,
-                                     &(tsreader->read_ahead[total]),
-                                     TS_READ_AHEAD_BYTES-total);
-        }
+        length = tsreader->read_fn(tsreader->handle,
+                                   &(tsreader->read_ahead[total]),
+                                   TS_READ_AHEAD_BYTES-total);
       else
-        {
-          length = read(tsreader->file,
-                    &(tsreader->read_ahead[total]),
-                    TS_READ_AHEAD_BYTES - total);
-        }
+        length = read(tsreader->file,
+                      &(tsreader->read_ahead[total]),
+                      TS_READ_AHEAD_BYTES - total);
       if (length == 0)  // EOF - no more data to read
         break;
       else if (length == -1)

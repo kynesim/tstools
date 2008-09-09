@@ -151,7 +151,7 @@ PROG_OBJS = \
   $(OBJDIR)/tsreport.o \
   $(OBJDIR)/tsserve.o \
   $(OBJDIR)/ts_packet_insert.o \
-  $(OBJDIR)/m2ts2ts.o
+  $(OBJDIR)/m2ts2ts.o \
   $(OBJDIR)/pcapreport.o 
 #\
 #  $(OBJDIR)/test_ps.o
@@ -186,7 +186,7 @@ PROGS = \
   $(BINDIR)/tsplay \
   $(BINDIR)/tsserve \
   $(BINDIR)/ts_packet_insert \
-  $(BINDIR)/m2ts2ts
+  $(BINDIR)/m2ts2ts \
   $(BINDIR)/pcapreport 
 #\
 #  $(BINDIR)/test_ps

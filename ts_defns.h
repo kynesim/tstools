@@ -55,10 +55,9 @@ struct _ts_reader
   void *handle;             // handle to pass to read_fn and seek_fn.
 
 
-  /* Reader and seek functions. If these are non-NULL we call them
-   *  when we would call read().
-   */
-  int (*read_fn)(void *, char *, size_t);
+  // Reader and seek functions. If these are non-NULL we call them
+  //  when we would call read() or seek().
+  int (*read_fn)(void *, byte *, size_t);
   int (*seek_fn)(void *, offset_t);
 
   byte     read_ahead[TS_READ_AHEAD_COUNT*TS_PACKET_SIZE];
