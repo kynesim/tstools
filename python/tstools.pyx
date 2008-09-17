@@ -10,27 +10,29 @@ I can test most easily!
 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License Version
 # 1.1 (the "License"); you may not use this file except in compliance with
 # the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-# 
+#
 # The Original Code is the MPEG TS, PS and ES tools.
-# 
+#
 # The Initial Developer of the Original Code is Amino Communications Ltd.
 # Portions created by the Initial Developer are Copyright (C) 2008
 # the Initial Developer. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   Tibs (tibs@berlios.de)
-# 
+#
 # ***** END LICENSE BLOCK *****
+
+import array
 
 # If we're going to use definitions like this in more than one pyx file, we'll
 # need to define the shared types in a .pxd file and use cimport to import
@@ -80,6 +82,16 @@ cdef extern from "Python.h":
     # encoding of string and operates on that. If string is not a string object
     # at all, PyString_AsStringAndSize() returns -1 and raises TypeError.
     int PyString_AsStringAndSize(object obj, char **buffer, Py_ssize_t* length) except -1
+
+    # Returns a pointer to a read-only memory location containing arbitrary
+    # data. The obj argument must support the single-segment readable buffer
+    # interface. On success, returns 0, sets buffer to the memory location and
+    # buffer_len to the buffer length. Returns -1 and sets a TypeError on
+    # error.
+    int PyObject_AsReadBuffer(object obj, void **buffer, Py_ssize_t *buffer_len) except -1
+    # Unfortunately, that second argument is declared "const void **", which
+    # seems to mean ending up with grumbles from gcc when we can't declare a
+    # const void ** item...
 
 cdef FILE *convert_python_file(object file):
     """Given a Python file object, return an equivalent stream.
@@ -513,111 +525,107 @@ cdef class TSPacket:
     """A convenient representation of a (dissected) TS packet.
     """
 
+    cdef readonly object    data
     cdef readonly PID       pid
-    cdef readonly int       pusi        # payload unit start indicator
-    cdef readonly object    adapt
-    cdef readonly object    payload
 
-    def __cinit__(self,pid=None,pusi=None,adapt=None,payload=None,
-                  data=None,*args,**kwargs):
-        cdef char       *buffer
-        cdef Py_ssize_t  length
-        cdef char       *adapt_buf
-        cdef int         adapt_len
-        cdef char       *payload_buf
-        cdef int         payload_len
-        if data:
-            if len(data) != TS_PACKET_LEN:
-                raise TSToolsException,\
-                        'TSPacket data must be %d bytes long, not %d'%(TS_PACKET_LEN,len(data))
-            PyString_AsStringAndSize(data, &buffer, &length)
-            retval = split_TS_packet(<byte *>buffer,&self.pid,&self.pusi,
-                                     <byte **>&adapt_buf,&adapt_len,
-                                     <byte **>&payload_buf,&payload_len)
-            if retval < 0:
-                raise TSToolsException,'Error splitting TS packet data from Python string'
-            if adapt_len == 0:
-                self.adapt = None
-            else:
-                self.adapt = PyString_FromStringAndSize(adapt_buf,adapt_len)
-            if payload_len == 0:
-                self.payload = None
-            else:
-                self.payload = PyString_FromStringAndSize(payload_buf,payload_len)
-        else:
-            self.pid = pid
-            self.pusi = pusi
-            self.adapt = adapt
-            self.payload = payload
+    # The following are lazily calculated if necessary
+    cdef  byte      _already_split
+    cdef  int       _pusi        # payload unit start indicator
+    cdef  object    _adapt
+    cdef  object    _payload
+
+    def __cinit__(self,buffer,*args,**kwargs):
+        """The buffer *must* be 188 bytes long, by definition.
+        """
+        # An array is easier to access than a string, can can be initialised
+        # from any sensible sequence. This may not be the most efficient thing
+        # to do, though, so later on we might want to consider ways of iterating
+        # over TS entries in a file without needing to create TS packets...
+        self.data = array.array('B',buffer)
+        # We *really* believe that the first character had better be 0x47...
+        if self.data[0] != 0x47:
+            raise TSToolsException,\
+                    'First byte of TS packet is %#02x, not 0x47'%(ord(buffer[0]))
+        # And the length is, well, defined
+        if len(self.data) != TS_PACKET_LEN:
+            raise TSToolsException,\
+                    'TS packet is %d bytes long, not %d'%(len(self.data)) 
+        # The PID is useful to know early on, and fairly easy to work out
+        self.pid = ((ord(buffer[1]) & 0x1F) << 8) | ord(buffer[2])
 
     def __init__(self,pid=None,pusi=None,adapt=None,payload=None,data=None):
         pass
 
-    def __dealoc__(self):
+    def __dealloc__(self):
         pass
 
     def is_padding(self):
         return self.pid == 0x1fff
 
-    def data(self):
-        cdef byte buf[TS_PACKET_LEN]
-        buf[0] = 0x47
-        buf[1] = (self.pid & 0xFF00) >> 8
-        if self.pusi:
-            buf[1] |= 0x40
-        buf[2] = self.pid & 0xFF
-
-        if self.adapt:
-            buf[3] = len(self.adapt)
-            for 0 < ii < len(self.adapt):
-                buf[4+ii] = ord(self.adapt[ii])
-            pstart = 4+len(self.adapt)
-        else:
-            buf[3] = 0
-            pstart = 4
-
-        if self.payload:
-            for 0 < ii < len(self.payload):
-                buf[pstart+ii] = ord(self.payload[ii])
-            buf_len = pstart + len(self.payload)
-        else:
-            buf_len = pstart
-
-        return PyString_FromStringAndSize(<char *>buf,buf_len)
-
     def __repr__(self):
-        text = 'TS packet PID %04x'%self.pid
+        self._split()
+        text = 'TS packet PID %04x '%self.pid
         if self.pusi:
-            text += ' [pusi]'
+            text += '[pusi] '
         if self.adapt and self.payload:
-            text += ' A+P'
+            text += 'A+P '
         elif self.adapt:
-            text += ' A'
+            text += 'A '
         elif self.payload:
-            text += ' P'
-        data = self.data()[3:]
-        for ch in data[:8]:
-            text += ' %02x'%ord(ch)
-        if len(data) == 9:
-            text += ' %02x'%ord(ch)
-        elif len(data) > 8:
-            text += '...'
+            text += 'P '
+        data = self.data[3:11]
+        words = []
+        for val in data:
+            words.append('%02x'%val)
+        text += ' '.join(words) + '...'
         return text
 
     def __richcmp__(self,other,op):
         if op == 2:     # ==
-            return (self.pid == other.pid and
-                    self.pusi == other.pusi and
-                    self.adapt == other.adapt and
-                    self.payload == other.payload)
+            return self.data == other.data
         elif op == 3:   # !=
-            return (self.pid != other.pid or
-                    self.pusi != other.pusi or
-                    self.adapt != other.adapt or
-                    self.payload != other.payload)
+            return self.data != other.data
         else:
             #return NotImplemented
             raise TypeError, 'TSPacket only supports == and != comparisons'
+
+    def _split(self):
+        """Split the packet up when requested to do so.
+        """
+        cdef void       *buffer
+        cdef Py_ssize_t  length
+        cdef PID         pid
+        cdef char       *adapt_buf
+        cdef int         adapt_len
+        cdef char       *payload_buf
+        cdef int         payload_len
+        if not self._already_split:
+            PyObject_AsReadBuffer(self.data, &buffer, &length)
+            retval = split_TS_packet(<byte *>buffer,&pid,&self._pusi,
+                                     <byte **>&adapt_buf,&adapt_len,
+                                     <byte **>&payload_buf,&payload_len)
+            if retval < 0:
+                raise TSToolsException,'Error splitting TS packet data'
+            if adapt_len == 0:
+                self._adapt = None
+            else:
+                self._adapt = PyString_FromStringAndSize(adapt_buf,adapt_len)
+            if payload_len == 0:
+                self._payload = None
+            else:
+                self._payload = PyString_FromStringAndSize(payload_buf,payload_len)
+            self._already_split = True
+
+    def __getattr__(self,name):
+        self._split()
+        if name == 'pusi':
+            return self._pusi
+        elif name == 'adapt':
+            return self._adapt
+        elif name == 'payload':
+            return self._payload
+        else:
+            raise AttributeError
 
 # Not a method, honest
 # (__dealloc__ is not allowed to call Python methods, just in case,
@@ -631,30 +639,23 @@ cdef _TSFile_close_for_read(TS_reader_p *tsreader):
                     " %s"%(self.name,strerror(errno))
 
 cdef TSPacket _next_TSPacket(TS_reader_p tsreader, filename):
-    cdef PID   pid
-    cdef int   pusi
-    cdef byte *adapt_buf
-    cdef int   adapt_len
-    cdef byte *payload_buf
-    cdef int   payload_len
+    cdef byte *buffer
     if tsreader == NULL:
         raise TSToolsException,'No TS stream to read'
-    retval = get_next_TS_packet(tsreader,
-                                &pid,&pusi,&adapt_buf,&adapt_len,
-                                &payload_buf,&payload_len);
+    retval = read_next_TS_packet(tsreader, &buffer)
     if retval == EOF:
         raise StopIteration
     elif retval == 1:
         raise TSToolsException,'Error getting next TS packet from file %s'%filename
-    if adapt_len == 0:
-        adapt = None
-    else:
-        adapt = PyString_FromStringAndSize(<char *>adapt_buf,adapt_len)
-    if payload_len == 0:
-        payload = None
-    else:
-        payload = PyString_FromStringAndSize(<char *>payload_buf,payload_len)
-    return TSPacket(pid,pusi,adapt,payload)
+    # Remember the buffer we get handed a pointer to is transient
+    # so we need to take a copy of it (which we might as well keep in
+    # a Python object...)
+    buffer_str = PyString_FromStringAndSize(<char *>buffer, TS_PACKET_LEN)
+    try:
+        return TSPacket(buffer_str)
+    except TSToolsException, what:
+        raise TSToolsException,\
+                'Error getting next TS packet from file %s (%s)'%(filename,what)
 
 cdef class TSFile:
     """A Python class representing a TS file.
@@ -748,7 +749,7 @@ cdef class TSFile:
             raise EOFError
 
     def write(self, TSPacket tspacket):
-        """Write an TS packet to this stream.
+        """Write a TS packet to this stream.
         """
         pass
 

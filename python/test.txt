@@ -329,6 +329,11 @@ With that information, we should be able to do the following:
     71
     >>> print p.pid
     50
+
+The PID is calculated when a TS packet is created, but otherwise the
+adaptation array and/or payload (and the PUSI flag) are split out lazily, as
+needed:
+
     >>> print p.pusi
     1
     >>> print p.adapt
@@ -343,12 +348,10 @@ its length:
 and the short representation of the TS packet:
 
     >>> print repr(p)
-    TS packet PID 0032 [pusi] P 00 00 00 01 bd 06 12 84...
-    >>> text = ''
-    >>> for ch in p.data():
-    ...    text += ' %02x'%ord(ch)
+    TS packet PID 0032 [pusi] P 14 00 00 01 bd 06 12 84...
+    >>> text = ' '.join(['%02x'%x for x in p.data])
     >>> print text
-     47 40 32 00 00 00 01 bd 06 12 84 80 0f 21 0c f5 8d 6b ff ff ff ff ff ff ff ff ff ff 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75 dd 6f 87 ae 95 2c ee dc cf ae 95 5b b2 31 13 8c 56 fd 32 a5 4f a1 43 5e 95 f3 ea 6f 9e d7 75 0a 93 f5 4b 9f 4e 73 0d f2 a7 b4 df 53 54 82 1b e7 68 1f d2 7e 99 2a 97 ee 9e bf 7c a9 25 78 62 4e 7f 4a 2b a4 b4 dc d8 56 9d 31 18 4f a9 bf 7c a6 d5 c8 6a 95 3e 54 be 15 34 ca 61 42 7d 0d f2 a7 af 6c 3f 7c 43 5b e7 d5 ab b6 74 e5 fa 57 ce 9d a4 af 49 53 f4 a9 60 25 9c 95 fa 97 b7 12 99 6f 55 22 40 77 17 b2 e9 54 24 ad 59 e4 5d 2f 61 c4 36 ee
+    47 40 32 14 00 00 01 bd 06 12 84 80 0f 21 0c f5 8d 6b ff ff ff ff ff ff ff ff ff ff 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75 dd 6f 87 ae 95 2c ee dc cf ae 95 5b b2 31 13 8c 56 fd 32 a5 4f a1 43 5e 95 f3 ea 6f 9e d7 75 0a 93 f5 4b 9f 4e 73 0d f2 a7 b4 df 53 54 82 1b e7 68 1f d2 7e 99 2a 97 ee 9e bf 7c a9 25 78 62 4e 7f 4a 2b a4 b4 dc d8 56 9d 31 18 4f a9 bf 7c a6 d5 c8 6a 95 3e 54 be 15 34 ca 61 42 7d 0d f2 a7 af 6c 3f 7c 43 5b e7 d5 ab b6 74 e5 fa 57 ce 9d a4 af 49 53 f4 a9 60 25 9c 95 fa 97 b7 12 99 6f 55 22 40 77 17 b2 e9 54 24 ad 59 e4 5d 2f 61 c4 36 ee
 
 Let's remember that packet:
 
@@ -379,10 +382,10 @@ Normal iteration works as well:
     ...    print 'There are %d padding TS packets at the start'%count
     ...    print 'The first non-padding packet is:',repr(packet)
     There are 72 padding TS packets at the start
-    The first non-padding packet is: TS packet PID 0032 [pusi] P 00 ff 00 01 bd 06 12 84...
+    The first non-padding packet is: TS packet PID 0032 [pusi] P 14 00 00 01 bd 06 12 84...
 
 We should be able to seek, although only multiples of 188 are likely to be
-useful (the read after the seek to offset 27 will fail becuse it doesn't find
+useful (the read after the seek to offset 27 will fail because it doesn't find
 a 0x47 at the start of the data it is asked to read):
 
     >>> f = TSFile(test_ts_file)
@@ -394,21 +397,18 @@ a 0x47 at the start of the data it is asked to read):
     >>> f.read()
     Traceback (most recent call last):
     ...
-    TSToolsException: Error getting next TS packet from file ../data/ed24p_11.ts
+    TSToolsException: Error getting next TS packet from file ../data/ed24p_11.ts (First byte of TS packet is 0xff, not 0x47)
    >>> f.close()
+
+Note that the value returned as out data is actually an ``array`` of unsigned
+bytes:
+
+    >>> p.data[:15]
+    array('B', [71, 64, 50, 20, 0, 0, 1, 189, 6, 18, 132, 128, 15, 33, 12])
 
 Python 2.6 introduces the ``bytearray`` (an immutable array of bytes), which
 is clearly what we'd prefer to be using to communicate with TS packets,
-instead of strings.
-
-Until then, it's possible to convert a data "string" to an array using:
-
-    >>> import array
-    >>> data = array.array('B',p.data())
-    >>> data[0:15]
-    array('B', [71, 64, 50, 0, 0, 0, 1, 189, 6, 18, 132, 128, 15, 33, 12])
-
-Not very efficient, perhaps.
+instead of strings and ``array.array``.
 
 
 // Local Variables:
