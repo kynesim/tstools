@@ -1,0 +1,37 @@
+YUV2: A YUV viewer.
+------------------
+
+YUV2 is a cross-platform Java YUV file viewer intended for video
+codec engineers. It includes pseudo-video playback, macroblock
+and pixel value viewers for both frame and field mode.
+
+It'll get extended as we need more features - do feel free to jump
+in and help.
+
+This initial release is for Linux only (because that's what I've
+got on my desktop). To get things working on Windows you will need
+to translate the GNU makefile into a Windows NMAKE file or (more 
+likely) a batch script and use the Windows SWT.
+
+You will need SWT, available from <http://www.eclipse.org/swt/>.
+
+This code was originally written for SJ Consulting and originally
+released by Amino Communications Ltd in March 2008 - I've only just
+got around to tidying it up enough that it deserves a public release.
+
+TO BUILD YUV2
+-------------
+
+Set JAVA_HOME to where your Java is - e.g. /usr/local/jdk1.6.0_07 .
+Set SWTDIR to wherever your swt.jar is.
+Type 'make'.
+Copy yuv2.jar to somewhere convenient (default is /usr/local/lib)
+Edit bin/yuv2 to reflect the directory where you put yuv2.
+Copy bin/yuv2 to somewhere on your PATH.
+Report (or better still, fix) the bugs!
+
+
+
+Richard Watts
+<rrw@kynesim.co.uk> 
+2008-09-15

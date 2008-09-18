@@ -1,0 +1,5 @@
+#! /bin/sh
+
+YUV2DIR=/usr/local/lib
+exec java -jar $YUV2DIR/yuv2.jar $*
+

@@ -22,7 +22,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Kynesim Ltd, Cambridge UK
+ *   Kynesim, Cambridge UK
  *
  * ***** END LICENSE BLOCK *****
  */
