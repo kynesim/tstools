@@ -2019,9 +2019,22 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
   filter_context  fcontext[MAX_INPUT_FILES];
   filter_context  scontext[MAX_INPUT_FILES];
 
-    printf("tsserve[5]\n");
   if (!quiet)
     printf("\nSetting up environment\n");
+
+  // Request that packets be written out to the TS writer as a "side effect" of
+  // reading them in. The default is to write PES packets (just for the video
+  // and audio data), but the alternative is to write all TS packets (if the
+  // data *is* TS)
+  for (ii = 0; ii < MAX_INPUT_FILES; ii++)
+  {
+    if (reader[ii] != NULL)
+    {
+      set_server_output(reader[ii],tswriter,!context->tsdirect,
+                        context->repeat_program_every);
+      set_server_padding(reader[ii],context->pes_padding);
+    }
+  }
 
   for (ii = 0; ii < MAX_INPUT_FILES; ii++)
   {
@@ -2033,13 +2046,21 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     // it doesn't matter much, as both the H.262 and H.264 "destroy"
     // functions for streams and filter contexts sensibly do nothing
     // with a NULL value - so we might as well just say the same for all...
-    stream[ii].is_h262 = fcontext[ii].is_h262 =
-      scontext[ii].is_h262 = FALSE;
-
-    stream[ii].u.h262 = NULL;
-    fcontext[ii].u.h262 = scontext[ii].u.h262 = NULL;
+    stream[ii].is_h262 = fcontext[ii].is_h262 = scontext[ii].is_h262 = FALSE;
+    stream[ii].u.h262  = NULL;
+    fcontext[ii].u.h262  = scontext[ii].u.h262  = NULL;
   }
 
+  // Start off our output with some null packets - this is in case the
+  // reader needs some time to work out its byte alignment before it starts
+  // looking for 0x47 bytes
+  for (ii=0; ii<context->pad_start; ii++)
+  {
+    err = write_TS_null_packet(tswriter);
+    if (err) return 1;
+  }
+
+  // And sort out our stack-of-streams atop each input file
   for (ii = 0; ii < MAX_INPUT_FILES; ii++)
   {
     if (reader[ii] == NULL)
@@ -2048,19 +2069,14 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     if (!quiet)
       printf("Setting up stream %d\n",ii);
     
-    // Request that PES packets be written out to the TS writer as
-    // a "side effect" of reading them in
-    // 
-    // This needs to be done early because build_elementary_stream_PES
-    //  does some readahead which may otherwise consume the first
-    //  bit of the stream - rrw 2008/07/23
-    //
-    set_server_output(reader[ii],tswriter,!context->tsdirect,
-                      context->repeat_program_every);
-
-    set_server_padding(reader[ii],context->pes_padding);
 
     // Wrap our PES stream up as an ES stream
+    // Note that this has the side-effect of reading the first packet
+    // from the file (so that the ES reader can prime its 3-byte buffer).
+    // This means that we will have read in the first PES packet, and
+    // thus (for TS data) potentially quite a few TS packets, which
+    // may also have included PAT/PMT. Luckily, we rely upon our caller
+    // to have aleady set up PES or TS mirroring.
     err = build_elementary_stream_PES(reader[ii],&es[ii]);
     if (err)
     {
@@ -2108,16 +2124,6 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
       fprintf(stderr,"### Unable to build strip context for stream %d\n",ii);
       goto tidy_up;
     }
-    
-  }
-  
-  // Start off our output with some null packets - this is in case the
-  // reader needs some time to work out its byte alignment before it starts
-  // looking for 0x47 bytes
-  for (ii=0; ii<context->pad_start; ii++)
-  {
-    err = write_TS_null_packet(tswriter);
-    if (err) return 1;
   }
 
   // And, at last, do what we came for
@@ -2500,21 +2506,22 @@ static int test_skip(PES_reader_p    reader,
  *
  * Returns 0 if all went well, 1 if an error occurred.
  */
-static int test_play_pes_packets(PES_reader_p   reader,
-                                 TS_writer_p    tswriter,
-                                 int            pad_start,
-                                 int            video_only,
-                                 int            verbose,
-                                 int            quiet,
-                                 int            tsdirect,
-                                 int            num_normal,
-                                 int            num_fast,
-                                 int            num_faster,
-                                 int            num_reverse,
-                                 int            ffrequency,
-                                 int            rfrequency,
-                                 int            skiptest,
-                                 int            with_seq_hdrs)
+static int test_play_pes_packets(PES_reader_p       reader,
+                                 TS_writer_p        tswriter,
+                                 tsserve_context_p  context,
+                                 int                pad_start,
+                                 int                video_only,
+                                 int                verbose,
+                                 int                quiet,
+                                 int                tsdirect,
+                                 int                num_normal,
+                                 int                num_fast,
+                                 int                num_faster,
+                                 int                num_reverse,
+                                 int                ffrequency,
+                                 int                rfrequency,
+                                 int                skiptest,
+                                 int                with_seq_hdrs)
 {
   int  err;
   int  ii;
@@ -2523,6 +2530,7 @@ static int test_play_pes_packets(PES_reader_p   reader,
   stream_context  stream;
   filter_context  fcontext;
   filter_context  scontext;
+
 
   // Start off our output with some null packets - this is in case the
   // reader needs some time to work out its byte alignment before it starts
@@ -2539,6 +2547,12 @@ static int test_play_pes_packets(PES_reader_p   reader,
   err = write_program_data(reader,tswriter);
   if (err) return err;
 #endif
+
+  // Request that PES packets be written out to the TS writer as
+  // a "side effect" of reading them in
+  set_server_output(reader,tswriter,!context->tsdirect,
+                    context->repeat_program_every);
+  set_server_padding(reader,context->pes_padding);
 
   // Wrap our PES stream up as an ES stream
   err = build_elementary_stream_PES(reader,&es);
@@ -3146,15 +3160,8 @@ static int test_reader(tsserve_context_p  context,
     return 1;
   }
 
-  // Actually read the input and write the output...
-  // Request that PES packets be written out to the TS writer as
-  // a "side effect" of reading them in
-  set_server_output(reader,tswriter,!context->tsdirect,
-                    context->repeat_program_every);
-  set_server_padding(reader,context->pes_padding);
-
   // And play...
-  err = test_play_pes_packets(reader,tswriter,
+  err = test_play_pes_packets(reader,tswriter,context,
                               context->pad_start,context->video_only,
                               verbose,quiet,tsdirect,
                               num_normal,num_fast,num_faster,num_reverse,
@@ -3260,18 +3267,6 @@ static int command_reader(tsserve_context_p  context,
     (void) tswrite_close(tswriter,TRUE);
     return 1;
   }
-
-  // Request that packets be written out to the TS writer as a "side effect" of
-  // reading them in. The default is to write PES packets (just for the video
-  // and audio data), but the alternative is to write all TS packets (if the
-  // data *is* TS)
-  for (ii = 0; ii < MAX_INPUT_FILES; ii++)
-    if (reader[ii] != NULL)
-    {
-      set_server_output(reader[ii],tswriter,!context->tsdirect,
-                        context->repeat_program_every);
-      set_server_padding(reader[ii],context->pes_padding);
-    }
 
   // And play...
   err = play_pes_packets(reader,tswriter,context,verbose,quiet);
