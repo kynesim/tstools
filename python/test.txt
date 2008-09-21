@@ -263,8 +263,8 @@ The "with" syntax should also work:
     ES unit: start code 03, len   16: 00 00 01 03 0a b0 10 07...
     ES unit: start code 04, len   15: 00 00 01 04 0a b0 10 02...
 
-Transport streams -- basic functionality
-----------------------------------------
+Transport streams -- basic functionality - reading
+--------------------------------------------------
 Still using sample data, we can read from TS files:
 
     >>> test_ts_file = '../data/ed24p_11.ts'
@@ -409,6 +409,32 @@ bytes:
 Python 2.6 introduces the ``bytearray`` (an immutable array of bytes), which
 is clearly what we'd prefer to be using to communicate with TS packets,
 instead of strings and ``array.array``.
+
+Program data
+------------
+A PAT is a wrapper around a lightly hidden dictionary of program number versus
+PMT PID. So:
+
+    >>> from tstools import PAT
+    >>> pat = PAT()
+    >>> len(pat)
+    0
+    >>> pat[0] = 0x68
+    >>> pat[1] = 0x69
+    >>> pat[1] = 0xFFFF
+    Traceback (most recent call last):
+    ...
+    ValueError: PID must be 0..0x1fff, not 0xffff
+    >>> pat[-1] = 0x69
+    Traceback (most recent call last):
+    ...
+    ValueError: Program number must be 0..65535, not -1
+    >>> pat[1]
+    105
+    >>> items = [item for item in pat]
+    >>> items.sort()
+    >>> print items
+    [(0, 104), (1, 105)]
 
 
 // Local Variables:

@@ -110,6 +110,7 @@ cdef FILE *convert_python_file(object file):
 
 cdef extern from "stdint.h":
     ctypedef int uint8_t        # !!! *some* sort of int..
+    ctypedef int uint16_t       # !!! *some* sort of int..
     ctypedef int uint32_t       # !!! *some* sort of int..
 
 # PIDs are too long for 16 bits, short enough to fit in 32
@@ -506,6 +507,93 @@ cdef extern from "ts_defns.h":
     ctypedef _ts_reader      TS_reader
     ctypedef _ts_reader     *TS_reader_p
 
+cdef extern from "pidint_defns.h":
+    struct _pidint_list:
+        int      *number
+        uint32_t *pid
+        int       length
+        int       size
+    ctypedef _pidint_list    pidint_list
+    ctypedef _pidint_list   *pidint_list_p
+    struct _pmt_stream:
+        byte         stream_type
+        uint32_t     elementary_PID
+        uint16_t     ES_info_length
+        byte        *ES_info
+    ctypedef _pmt_stream    pmt_stream
+    ctypedef _pmt_stream   *pmt_stream_p
+    struct _pmt:
+        uint16_t     program_number
+        byte         version_number
+        uint32_t     PCR_pid
+        uint16_t     program_info_length
+        byte        *program_info
+        int          streams_size
+        int          num_streams
+        pmt_stream_p streams
+    ctypedef _pmt    pmt
+    ctypedef _pmt   *pmt_p
+
+class PAT(object):
+    """A Program Association Table.
+
+    Always has PID 0x0000.
+
+    Data is:
+
+        * <to be defined>
+        * dictionary of {program_number : pid}
+
+    where the 'pid' is the relevant PMT pid.
+    """
+
+    def __init__(self, data=None):
+        """Initialise the PAT, optionally with its dictionary.
+        """
+        self._data = {}
+        if data:
+            # Let our own setattr method check the items make sense
+            for key,value in data.items():
+                self[key] = value
+
+    def __getitem__(self,key):
+        return self._data[key]
+
+    def __setitem__(self,key,value):
+        if not (0 <= key <= 0xFFFF):
+            raise ValueError,"Program number must be 0..65535, not %d"%key
+        if not (0 <= value <= 0x1FFF):
+            raise ValueError,"PID must be 0..0x1fff, not %#04x"%value
+        self._data[key] = value
+
+    def __delitem__(self,key):
+        del self._data[key]
+
+    def __len__(self):
+        return len(self._data)
+
+    def __contains__(self,key):
+        return key in self._data
+
+    def __eq__(self,other):
+        return self._data == other._data
+
+    def __iter__(self):
+        return self._data.iteritems()
+
+class PMT(object):
+    """A Program Map Table.
+
+    Data is:
+
+        * program_number, version_number, PCR_pid
+        * program_info (bytes, as a "string")
+        * a dictionary of the streams in this program, as:
+
+            * key:   elementary_PID
+            * value: (stream_type, ES_info) 
+    """
+    pass
 cdef extern from "ts_fns.h":
     int open_file_for_TS_read(char *filename, TS_reader_p *tsreader)
     int close_TS_reader(TS_reader_p *tsreader)
@@ -514,10 +602,14 @@ cdef extern from "ts_fns.h":
     int split_TS_packet(byte *buf, PID *pid, int *payload_unit_start_indicator,
                         byte **adapt, int *adapt_len,
                         byte **payload, int *payload_len)
-    int get_next_TS_packet(TS_reader_p tsreader,
-                           PID *pid, int *payload_unit_start_indicator,
-                           byte **adapt, int *adapt_len,
-                           byte **payload, int *payload_len)
+    int find_pat(TS_reader_p tsreader, int max, int verbose, int quiet,
+                 int *num_read, pidint_list_p *prog_list)
+    int find_next_pmt(TS_reader_p tsreader, uint32_t pmt_pid,
+                      int max, int verbose, int quiet,
+                      int *num_read, pmt_p *pmt)
+    int find_pmt(TS_reader_p tsreader, int max, int verbose, int quiet,
+                 int *num_read, pmt_p *pmt)
+
 
 DEF TS_PACKET_LEN = 188
 
