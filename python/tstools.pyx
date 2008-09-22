@@ -212,10 +212,15 @@ cdef class ESOffset:
     def __init__(self, infile=0, inpacket=0):
         pass
 
-    def __repr__(self):
+    def __str__(self):
         """Return a fairly compact and (relatively) self-explanatory format
         """
         return '%d+%d'%(self.infile,self.inpacket)
+
+    def __repr__(self):
+        """Return something we could be recreated from.
+        """
+        return 'ESOffset(infile=%d,inpacket=%d)'%(self.infile,self.inpacket)
 
     def formatted(self):
         """Return a representation that is similar to that returned by the C tools.
@@ -255,6 +260,7 @@ cdef class ESUnit:
     """A Python class representing an ES unit.
     """
 
+    # XXX Or would I be better of with an array.array (or, eventually, bytearray)?
     cdef ES_unit_p unit
 
     # It appears to be recommended to make __cinit__ expand to take more
@@ -283,7 +289,7 @@ cdef class ESUnit:
     def __dealloc__(self):
         free_ES_unit(&self.unit)
 
-    def __repr__(self):
+    def __str__(self):
         text = 'ES unit: start code %02x, len %4d:'%(self.unit.start_code,
                                                     self.unit.data_len)
         for 0 <= ii < min(self.unit.data_len,8):
@@ -294,6 +300,12 @@ cdef class ESUnit:
         elif self.unit.data_len > 9:
             text += '...'
         return text
+
+    def __repr__(self):
+        words = []
+        for 0 <= ii < self.unit.data_len:
+            words.append('\\x%02x'%self.unit.data[ii])
+        return 'ESUnit("%s")'%(''.join(words))
 
     cdef __set_es_unit(self, ES_unit_p unit):
         if self.unit == NULL:
@@ -407,6 +419,15 @@ cdef class ESFile:
 
     def __iter__(self):
         return self
+
+    def __repr__(self):
+        if self.name:
+            if self.is_readable:
+                return "<ESFile '%s' open for read>"%self.name
+            else:
+                return "<ESFile '%s' open for write>"%self.name
+        else:
+            return "<ESFile, closed>"
 
     def is_readable(self):
         """This is a convenience method, whilst reading and writing are exclusive.
@@ -654,7 +675,7 @@ cdef class TSPacket:
     def is_padding(self):
         return self.pid == 0x1fff
 
-    def __repr__(self):
+    def __str__(self):
         self._split()
         text = 'TS packet PID %04x '%self.pid
         if self.pusi:
@@ -671,6 +692,12 @@ cdef class TSPacket:
             words.append('%02x'%val)
         text += ' '.join(words) + '...'
         return text
+
+    def __repr__(self):
+        words = []
+        for val in self.data:
+            words.append('\\x%02x'%val)
+        return 'TSPacket("%s")'%(''.join(words))
 
     def __richcmp__(self,other,op):
         if op == 2:     # ==
@@ -802,6 +829,15 @@ cdef class TSFile:
 
     def __iter__(self):
         return self
+
+    def __repr__(self):
+        if self.name:
+            if self.is_readable:
+                return "<TSFile '%s' open for read>"%self.name
+            else:
+                return "<TSFile '%s' open for write>"%self.name
+        else:
+            return "<TSFile, closed>"
 
     def is_readable(self):
         """This is a convenience method, whilst reading and writing are exclusive.

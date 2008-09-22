@@ -68,7 +68,7 @@ And close it:
 We can ask an ES unit about itself:
 
     >>> unit = es_unit_list[0]
-    >>> unit.start_posn
+    >>> print unit.start_posn
     0+0
     >>> unit.start_code
     0
@@ -88,6 +88,8 @@ We can ask an ES unit about itself:
     Traceback (most recent call last):
     ...
     AttributeError
+    >>> print repr(unit)
+    ESUnit("\x00\x00\x01\x00\x01\xdf\xff\xfb\xb8")
 
 ES units can be compared for equality (but not order):
 
@@ -107,15 +109,21 @@ ES units can be compared for equality (but not order):
 We can create an ES unit from a Python 'string':
 
     >>> from tstools import ESUnit
-    >>> print 'old ',repr(es_unit_list[0])
+    >>> print 'old ',es_unit_list[0]
     old  ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
     >>> new = ESUnit(es_unit_list[0].data)
-    >>> print 'new ',repr(new)
+    >>> print 'new ',new
     new  ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
-    >>> print 'old ',repr(es_unit_list[0])
+    >>> print 'old ',es_unit_list[0]
     old  ES unit: start code 00, len    9: 00 00 01 00 01 df ff fb b8
     >>> new == es_unit_list[0]
     True
+
+or even:
+
+    >>> exec 'u = ' + repr(unit)
+    >>> u == unit
+    1
 
 And write another file...
 
@@ -152,12 +160,14 @@ identical to those we wrote.
 
 We already saw an ESOffset being returned:
 
-    >>> es_unit_list[0].start_posn
+    >>> print es_unit_list[0].start_posn
     0+0
-    >>> es_unit_list[1].start_posn
+    >>> print es_unit_list[1].start_posn
     9+0
     >>> es_unit_list[1].start_posn.report()
     Offset 0 in packet at offset 9 in file
+    >>> print repr(es_unit_list[1].start_posn)
+    ESOffset(infile=9,inpacket=0)
 
 Output more like that produced by the C report tools can also be obtained:
 
@@ -211,21 +221,21 @@ be overkill, but all seemed sensible at the time):
 
     >>> f = ESFile(test_es_file)
     >>> o = ESOffset(10,20)
-    >>> f.seek(o)
+    >>> print f.seek(o)
     10+20
-    >>> f.seek(20)
+    >>> print f.seek(20)
     20+0
-    >>> f.seek(30,40)
+    >>> print f.seek(30,40)
     30+40
-    >>> f.seek(10,20,30)
+    >>> print f.seek(10,20,30)
     Traceback (most recent call last):
     ...
     TypeError: Seek argument must be one integer, two integers or an ESOffset
-    >>> f.seek('fred')
+    >>> print f.seek('fred')
     Traceback (most recent call last):
     ...
     TypeError: Seek argument must be one integer, two integers or an ESOffset
-    >>> f.seek(-1)
+    >>> print f.seek(-1)
     Traceback (most recent call last):
     ...
     TSToolsException: Error seeking to (-1,) in file '../data/ed24p_11.video.es'
@@ -347,11 +357,13 @@ its length:
 
 and the short representation of the TS packet:
 
-    >>> print repr(p)
+    >>> print p
     TS packet PID 0032 [pusi] P 14 00 00 01 bd 06 12 84...
     >>> text = ' '.join(['%02x'%x for x in p.data])
     >>> print text
     47 40 32 14 00 00 01 bd 06 12 84 80 0f 21 0c f5 8d 6b ff ff ff ff ff ff ff ff ff ff 0b 77 0d 73 1c 20 43 fe 21 06 a2 b8 60 75 dd 6f 87 ae 95 2c ee dc cf ae 95 5b b2 31 13 8c 56 fd 32 a5 4f a1 43 5e 95 f3 ea 6f 9e d7 75 0a 93 f5 4b 9f 4e 73 0d f2 a7 b4 df 53 54 82 1b e7 68 1f d2 7e 99 2a 97 ee 9e bf 7c a9 25 78 62 4e 7f 4a 2b a4 b4 dc d8 56 9d 31 18 4f a9 bf 7c a6 d5 c8 6a 95 3e 54 be 15 34 ca 61 42 7d 0d f2 a7 af 6c 3f 7c 43 5b e7 d5 ab b6 74 e5 fa 57 ce 9d a4 af 49 53 f4 a9 60 25 9c 95 fa 97 b7 12 99 6f 55 22 40 77 17 b2 e9 54 24 ad 59 e4 5d 2f 61 c4 36 ee
+    >>> print repr(p)
+    TSPacket("\x47\x40\x32\x14\x00\x00\x01\xbd\x06\x12\x84\x80\x0f\x21\x0c\xf5\x8d\x6b\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x0b\x77\x0d\x73\x1c\x20\x43\xfe\x21\x06\xa2\xb8\x60\x75\xdd\x6f\x87\xae\x95\x2c\xee\xdc\xcf\xae\x95\x5b\xb2\x31\x13\x8c\x56\xfd\x32\xa5\x4f\xa1\x43\x5e\x95\xf3\xea\x6f\x9e\xd7\x75\x0a\x93\xf5\x4b\x9f\x4e\x73\x0d\xf2\xa7\xb4\xdf\x53\x54\x82\x1b\xe7\x68\x1f\xd2\x7e\x99\x2a\x97\xee\x9e\xbf\x7c\xa9\x25\x78\x62\x4e\x7f\x4a\x2b\xa4\xb4\xdc\xd8\x56\x9d\x31\x18\x4f\xa9\xbf\x7c\xa6\xd5\xc8\x6a\x95\x3e\x54\xbe\x15\x34\xca\x61\x42\x7d\x0d\xf2\xa7\xaf\x6c\x3f\x7c\x43\x5b\xe7\xd5\xab\xb6\x74\xe5\xfa\x57\xce\x9d\xa4\xaf\x49\x53\xf4\xa9\x60\x25\x9c\x95\xfa\x97\xb7\x12\x99\x6f\x55\x22\x40\x77\x17\xb2\xe9\x54\x24\xad\x59\xe4\x5d\x2f\x61\xc4\x36\xee")
 
 Let's remember that packet:
 
@@ -380,9 +392,23 @@ Normal iteration works as well:
     ...        if not packet.is_padding():
     ...            break
     ...    print 'There are %d padding TS packets at the start'%count
-    ...    print 'The first non-padding packet is:',repr(packet)
+    ...    print 'The first non-padding packet is:',packet
     There are 72 padding TS packets at the start
     The first non-padding packet is: TS packet PID 0032 [pusi] P 14 00 00 01 bd 06 12 84...
+
+And we should be able to create our own:
+
+    >>> from tstools import TSPacket
+    >>> tscopy = TSPacket(p0.data.tostring())
+    >>> tscopy == p0
+    1
+    >>> x = TSPacket('fred')
+    Traceback (most recent call last):
+    ...
+    TSToolsException: First byte of TS packet is 0x66, not 0x47
+
+(XXX That ``p0.data.tostring()`` is unforgivably clumsy -- I really should
+make that work more naturally.)
 
 We should be able to seek, although only multiples of 188 are likely to be
 useful (the read after the seek to offset 27 will fail because it doesn't find
