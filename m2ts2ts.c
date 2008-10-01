@@ -275,7 +275,7 @@ static int extract_packets(int input, FILE * output,
 
 static void print_usage(void)
 {
-  printf("Usage: ts2es [switches] [<infile>] [<outfile>]\n"
+  printf("Usage: m2ts2es [switches] [<infile>] [<outfile>]\n"
 	 "\n");
   REPORT_VERSION("m2ts2ts");
   printf("\n"
