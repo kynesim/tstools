@@ -50,10 +50,10 @@ static int write_program_data_A(PES_reader_p  reader,
 {
   // We know we support at most two program streams for output
   int      num_progs = 0;
-  u_int32  prog_pids[2];
+  uint32_t prog_pids[2];
   byte     prog_type[2];
   int      err;
-  u_int32  pcr_pid, pmt_pid;
+  uint32_t pcr_pid, pmt_pid;
 
   if (reader->is_TS)
   {
@@ -204,7 +204,7 @@ static int test1(PES_reader_p  reader,
   int      ii;
   int      err;
   byte    *old_data;
-  u_int32  old_data_len;
+  uint32_t old_data_len;
 
   if (verbose)
     printf("-------------------------- Test 1 --------------------------\n");

@@ -50,7 +50,7 @@ struct _m2ts_packet_buffer
 {
   struct _m2ts_packet_buffer * next;
   struct _m2ts_packet_buffer * prev;
-  u_int32  timestamp;
+  uint32_t timestamp;
   byte   * ts_packet;
   byte     m2ts_packet[M2TS_PACKET_SIZE];
 };
@@ -67,10 +67,10 @@ typedef struct _m2ts_packet_buffer *m2ts_packet_buffer_p;
 static void parse_m2ts_packet(m2ts_packet_buffer_p packet_buffer)
 {
   packet_buffer->timestamp =
-    (((u_int32)(packet_buffer->m2ts_packet[0])) << 24) |
-    (((u_int32)(packet_buffer->m2ts_packet[1])) << 16) |
-    (((u_int32)(packet_buffer->m2ts_packet[2])) << 8) |
-    ((u_int32)(packet_buffer->m2ts_packet[3]));
+    (((uint32_t)(packet_buffer->m2ts_packet[0])) << 24) |
+    (((uint32_t)(packet_buffer->m2ts_packet[1])) << 16) |
+    (((uint32_t)(packet_buffer->m2ts_packet[2])) << 8) |
+    ((uint32_t)(packet_buffer->m2ts_packet[3]));
   packet_buffer->ts_packet = packet_buffer->m2ts_packet + 4;
   packet_buffer->next = NULL;
   packet_buffer->prev = NULL;

@@ -134,7 +134,7 @@ const unsigned int aud_frame_rate_n[16] =
  * Returns the frame length deduced therefrom, or -1 if it finds something
  * wrong with the header data.
  */
-static int peek_frame_header(const u_int32 header)
+static int peek_frame_header(const uint32_t header)
 {
   unsigned int	version, layer, padding;
 //  byte 		protected, private;

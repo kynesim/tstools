@@ -67,12 +67,12 @@
 struct program_data
 {
   // Information supplied by the user
-  u_int32  transport_stream_id;
-  u_int32  program_number;
-  u_int32  pmt_pid;      // PID to use for the PMT
-  u_int32  pcr_pid;      // PID to use for the PCR
-  u_int32  video_pid;    // PID to use for our single stream of video
-  u_int32  audio_pid;    // PID to use for our single stream of audio
+  uint32_t transport_stream_id;
+  uint32_t program_number;
+  uint32_t pmt_pid;      // PID to use for the PMT
+  uint32_t pcr_pid;      // PID to use for the PCR
+  uint32_t video_pid;    // PID to use for our single stream of video
+  uint32_t audio_pid;    // PID to use for our single stream of audio
   int      video_stream; // Which stream id our video is (-1 means use first)
   int      audio_stream; // Which stream id our audio is (-1 means use first)
   int      want_ac3;     // True means audio_stream is private_1/AC3 substream
@@ -512,7 +512,7 @@ extern void print_stream_id(FILE  *stream,
  */
 extern int find_PS_packet_start(PS_reader_p ps,
                                 int         verbose,
-                                u_int32     max,
+                                uint32_t    max,
                                 offset_t   *posn,
                                 byte       *stream_id)
 {
@@ -520,7 +520,7 @@ extern int find_PS_packet_start(PS_reader_p ps,
   byte     prev1 = 0xff;
   byte     prev2 = 0xff;
   byte     prev3 = 0xff;
-  u_int32  count = 0;
+  uint32_t count = 0;
 
   *stream_id = 0;
   for (;;)
@@ -589,7 +589,7 @@ extern int find_PS_packet_start(PS_reader_p ps,
  */
 extern int find_PS_pack_header_start(PS_reader_p ps,
                                      int         verbose,
-                                     u_int32     max,
+                                     uint32_t    max,
                                      offset_t   *posn)
 {
   int   err;
@@ -750,15 +750,15 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
 #endif
     hdr->pack_stuffing_length = 0;          // since it doesn't exist
     hdr->scr =
-      (((u_int64)(hdr->data[0] & 0x09)) << 29) |
-      (((u_int64) hdr->data[1]        ) << 22) |
-      (((u_int64)(hdr->data[2] & 0xFE)) << 14) |
-      (((u_int64) hdr->data[3]        ) <<  7) |
-      (((u_int64)(hdr->data[4] & 0xFE)) >>  1);
+      (((uint64_t)(hdr->data[0] & 0x09)) << 29) |
+      (((uint64_t) hdr->data[1]        ) << 22) |
+      (((uint64_t)(hdr->data[2] & 0xFE)) << 14) |
+      (((uint64_t) hdr->data[3]        ) <<  7) |
+      (((uint64_t)(hdr->data[4] & 0xFE)) >>  1);
     hdr->program_mux_rate =
-      (((u_int32)(hdr->data[5] & 0x7F)) << 15) |
-      (((u_int32) hdr->data[6]        ) <<  7) |
-      (((u_int32)(hdr->data[7] & 0xFE)) >>  1);
+      (((uint32_t)(hdr->data[5] & 0x7F)) << 15) |
+      (((uint32_t) hdr->data[6]        ) <<  7) |
+      (((uint32_t)(hdr->data[7] & 0xFE)) >>  1);
     // In MPEG-1,   SCR = NINT(SysClockFreq * t[i]) % 2**33
     //              where SysClockFreq = 90,000 Hz
     //
@@ -787,21 +787,21 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
     print_data(stdout,"Pack header",hdr->data,10,10);
 #endif
     hdr->scr_base  =
-      (((u_int64)(hdr->data[0] & 0x38)) << 27) |
-      (((u_int64)(hdr->data[0] & 0x03)) << 28) |
-      (((u_int64) hdr->data[1]        ) << 20) |
-      (((u_int64)(hdr->data[2] & 0xF8)) << 12) |
-      (((u_int64)(hdr->data[2] & 0x03)) << 13) |
-      (((u_int64) hdr->data[3]        ) <<  5) |
-      (((u_int64)(hdr->data[4] & 0xF8)) >>  3);
+      (((uint64_t)(hdr->data[0] & 0x38)) << 27) |
+      (((uint64_t)(hdr->data[0] & 0x03)) << 28) |
+      (((uint64_t) hdr->data[1]        ) << 20) |
+      (((uint64_t)(hdr->data[2] & 0xF8)) << 12) |
+      (((uint64_t)(hdr->data[2] & 0x03)) << 13) |
+      (((uint64_t) hdr->data[3]        ) <<  5) |
+      (((uint64_t)(hdr->data[4] & 0xF8)) >>  3);
     hdr->scr_extn =
-      (((u_int32)(hdr->data[4] & 0x03)) << 7) |
-      (((u_int32) hdr->data[5]        ) >> 1);
+      (((uint32_t)(hdr->data[4] & 0x03)) << 7) |
+      (((uint32_t) hdr->data[5]        ) >> 1);
     hdr->scr = hdr->scr_base * 300 + hdr->scr_extn;
     hdr->program_mux_rate =
-      (((u_int32)hdr->data[6] << 14)) |
-      (((u_int32)hdr->data[7] <<  6)) |
-      (((u_int32)hdr->data[8] >>  2));
+      (((uint32_t)hdr->data[6] << 14)) |
+      (((uint32_t)hdr->data[7] <<  6)) |
+      (((uint32_t)hdr->data[8] >>  2));
     hdr->pack_stuffing_length = hdr->data[9] & 0x07;
   }
 
@@ -1287,7 +1287,7 @@ static int write_DVD_AC3_data(TS_writer_p          output,
   // If there is no PTS in this packet, do we need to split, even
   // if the offset is > 1? I'll assume not...
   int     got_pts;
-  u_int64 pts;
+  uint64_t pts;
   int     PES_packet_length = (packet->data[4] << 8) | packet->data[5];
 
   int err = find_PTS_in_PES(packet->data,packet->data_len,&got_pts,&pts);
@@ -1461,8 +1461,8 @@ static int write_audio(TS_writer_p            output,
       if (!quiet)
       {
 #define MAX_IGNORED_NON_AC3  10 // report the first 10 substreams we're ignoring
-        static u_int32 ignored_non_AC3[MAX_IGNORED_NON_AC3] = {0};
-        u_int32 lookfor = (what << 16) | substream_index;
+        static uint32_t ignored_non_AC3[MAX_IGNORED_NON_AC3] = {0};
+        uint32_t lookfor = (what << 16) | substream_index;
         int ii;
         for (ii = 0; ii < MAX_IGNORED_NON_AC3; ii++)
         {
@@ -1894,11 +1894,11 @@ extern int ps_to_ts(PS_reader_p  ps,
                     int          audio_stream,
                     int          want_ac3_audio,
                     int          output_dolby_as_dvb,
-                    u_int32      pmt_pid,
-                    u_int32      pcr_pid,
-                    u_int32      video_pid,
+                    uint32_t     pmt_pid,
+                    uint32_t     pcr_pid,
+                    uint32_t     video_pid,
                     int          keep_audio,
-                    u_int32      audio_pid,
+                    uint32_t     audio_pid,
                     int          max,
                     int          verbose,
                     int          quiet)

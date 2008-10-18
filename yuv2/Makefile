@@ -18,7 +18,7 @@ LOCATED_SRC=$(SRC_FILES:%.java=$(SRC_DIR)/%.java)
 
 all:
 	if [ ! -d obj ]; then mkdir obj; fi
-	$$JAVA_HOME/bin/javac -cp $$SWTDIR/swt.jar -d obj -s bin $(LOCATED_SRC)
+	$$JAVA_HOME/bin/javac -cp $$SWTDIR/swt.jar -d obj -sourcepath bin $(LOCATED_SRC)
 	(cd obj; $$JAVA_HOME/bin/jar -xf $$SWTDIR/swt.jar)
 	(cd obj; $$JAVA_HOME/bin/jar -cmf ../src/Manifest-Extras.txt ../yuv2.jar *)
 

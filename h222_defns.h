@@ -228,8 +228,8 @@
 // Timing info (used in reporting on packets). Initialise to all zeroes...
 struct timing
 {
-  u_int64   first_pcr;
-  u_int64   last_pcr;
+  uint64_t  first_pcr;
+  uint64_t  last_pcr;
   int       first_pcr_packet;
   int       last_pcr_packet;
   int       had_first_pcr;   // FALSE until we've started

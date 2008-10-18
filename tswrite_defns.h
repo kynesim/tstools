@@ -81,7 +81,7 @@ typedef int SOCKET;    // for compatibility with Windows
 //
 struct circular_buffer_item
 {
-  u_int32  time;              // when we would like this data output
+  uint32_t time;              // when we would like this data output
   int      discontinuity;     // TRUE if our timeline has "broken"
   int      length;            // number of bytes of data in the array
 };
@@ -132,9 +132,9 @@ typedef struct circular_buffer *circular_buffer_p;
 struct TS_packet_info
 {
   int                index;
-  u_int32            pid;       // do we need the PIDs?
+  uint32_t           pid;       // do we need the PIDs?
   int                got_pcr;
-  u_int64            pcr;
+  uint64_t           pcr;
 };
 typedef struct TS_packet_info *TS_packet_info_p;
 #define SIZEOF_TS_PACKET_INFO sizeof(struct TS_packet_info);
@@ -160,7 +160,7 @@ struct buffered_TS_output
   struct TS_packet_info  packet[MAX_TS_PACKETS_IN_ITEM];
 
   // `rate` is the rate (in bytes per second) we would like to output data at
-  u_int32            rate;
+  uint32_t           rate;
 
   // `pcr_scale` is a multiplier for PCRs - each PCR found gets its value
   // multiplied by this

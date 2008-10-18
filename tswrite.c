@@ -542,33 +542,33 @@ static int set_buffer_item_time_pcr(buffered_TS_output_p writer)
   int  ii;
   circular_buffer_p  circular = writer->buffer;
 
-  static int32  available_bytes = 0;
-  static double available_time  = 0;
+  static int32_t available_bytes = 0;
+  static double  available_time  = 0;
 
-  static int     last_pcr_index = -1;
-  static u_int64 last_pcr;
-  static double  pcr_rate = 0;
-  static u_int32 last_timestamp_near_PCR = 0;
+  static int      last_pcr_index = -1;
+  static uint64_t last_pcr;
+  static double   pcr_rate = 0;
+  static uint32_t last_timestamp_near_PCR = 0;
 
-  static u_int32 last_timestamp = 0;
+  static uint32_t last_timestamp = 0;
 
   static int had_first_pcr  = FALSE;  // Did we *have* a previous PCR?
   static int had_second_pcr = FALSE;  // And the second PCR is special, too
 
   // Remember our initial "priming" so we can replace it with a better
   // estimate later on
-  static double initial_prime_time  = 0;
-  static int32  initial_prime_bytes = 0;
+  static double  initial_prime_time  = 0;
+  static int32_t initial_prime_bytes = 0;
 
   // Some simple statistics
-  static int64   total_available_bytes = 0;
-  static double  total_available_time = 0.0;
-  static int     num_availables = 0;
+  static int64_t  total_available_bytes = 0;
+  static double   total_available_time = 0.0;
+  static int      num_availables = 0;
   
-  int     found_pcr = FALSE;
-  int     num_bytes;
-  double  num_microseconds;
-  u_int32 timestamp;
+  int      found_pcr = FALSE;
+  int      num_bytes;
+  double   num_microseconds;
+  uint32_t timestamp;
 
   // A silly rate just means we haven't started yet...
   if (pcr_rate < 1.0)
@@ -615,7 +615,7 @@ static int set_buffer_item_time_pcr(buffered_TS_output_p writer)
   // Output our bytes using the prevailing conditions
   num_bytes = TS_PACKET_SIZE*writer->num_packets;
   num_microseconds = ((double)num_bytes / available_bytes) * available_time;
-  timestamp = (u_int32) (last_timestamp + num_microseconds);
+  timestamp = (uint32_t) (last_timestamp + num_microseconds);
   
   available_bytes -= num_bytes;
   available_time -= num_microseconds;
@@ -652,7 +652,7 @@ static int set_buffer_item_time_pcr(buffered_TS_output_p writer)
     else
     {
       // This is our second or later PCR - we can calculate interesting things
-      u_int64 delta_pcr   = writer->packet[ii].pcr - last_pcr;
+      uint64_t delta_pcr   = writer->packet[ii].pcr - last_pcr;
       int     delta_bytes = (writer->packet[ii].index-last_pcr_index)*TS_PACKET_SIZE;
       int     extra_bytes;
       double  extra_time;
@@ -722,10 +722,10 @@ static int set_buffer_item_time_pcr(buffered_TS_output_p writer)
  */
 static int set_buffer_item_time_plain(buffered_TS_output_p writer)
 {
-  static u_int32 last_time = 0;      // The last circular buffer time stamp
+  static uint32_t last_time = 0;      // The last circular buffer time stamp
   circular_buffer_p  circular = writer->buffer;
   int num_bytes = writer->num_packets * TS_PACKET_SIZE;// Bytes since last time
-  u_int32 elapsed_time = (u_int32) (num_bytes * 1000000.0 / writer->rate);
+  uint32_t elapsed_time = (uint32_t) (num_bytes * 1000000.0 / writer->rate);
   last_time += elapsed_time;
   circular->item[writer->which].time = last_time;
   return 0;
@@ -876,9 +876,9 @@ static int write_EOF_to_buffered_TS_output(buffered_TS_output_p  writer)
 static int write_to_buffered_TS_output(buffered_TS_output_p  writer,
                                        byte                  packet[TS_PACKET_SIZE],
                                        int                   count,
-                                       u_int32               pid,
+                                       uint32_t              pid,
                                        int                   got_pcr,
-                                       u_int64               pcr)
+                                       uint64_t              pcr)
 {
   int  err;
   circular_buffer_p circular =   writer->buffer;
@@ -911,9 +911,9 @@ static int write_to_buffered_TS_output(buffered_TS_output_p  writer,
   {
 #if 0
     printf("@@ PCR %10" LLU_FORMAT_STUMP " * %g",pcr,writer->pcr_scale);
-    printf(" => %10" LLU_FORMAT_STUMP "\n", (u_int64)(pcr*writer->pcr_scale));
+    printf(" => %10" LLU_FORMAT_STUMP "\n", (uint64_t)(pcr*writer->pcr_scale));
 #endif
-    pcr = (u_int64)((double)pcr * writer->pcr_scale);
+    pcr = (uint64_t)((double)pcr * writer->pcr_scale);
   }
   else
     pcr = 0;
@@ -954,7 +954,7 @@ static void wait_microseconds(int  microseconds)
 #else // _WIN32
   struct  timespec   time = {0};
   struct  timespec   remaining;
-  u_int32 nanoseconds = microseconds * 1000;
+  uint32_t nanoseconds = microseconds * 1000;
   int     err = 0;
 
   time.tv_sec = 0;
@@ -1568,11 +1568,11 @@ static int received_EOF(circular_buffer_p  circular)
 /*
  * Calculate a value to perturb time by. Returns a number of microseconds.
  */
-static int32 perturb_time_by(void)
+static int32_t perturb_time_by(void)
 {
   static int  first_time = TRUE;
   unsigned    double_range;
-  int32       result;
+  int32_t     result;
 
   if (first_time)
   {
@@ -1630,9 +1630,9 @@ static int write_from_circular(SOCKET             output,
   // (in microseconds since some arbitrary start time) at which it would
   // like it to be displayed. For a constant rate bitstream, these "ticks"
   // will be evenly spaced.
-         u_int32 this_packet_time;     // time stamp for this packet
-  static u_int32 last_packet_time = 0; // time stamp for last packet
-  int32 packet_time_gap;  // the difference between the two, in microseconds
+         uint32_t this_packet_time;     // time stamp for this packet
+  static uint32_t last_packet_time = 0; // time stamp for last packet
+  int32_t packet_time_gap;  // the difference between the two, in microseconds
 
   // Monitor time as seen by us
   // We have to deduce both an arbitrary start time from which to measure
@@ -1641,10 +1641,10 @@ static int write_from_circular(SOCKET             output,
   // as near to the correct tick as possible.
   struct timeval now;
   static struct timeval start = {0,0};  // our arbitrary start time
-  u_int32 our_time_now;    // our time, relative to our start time
-  static int32   delta_start;  // difference between our time and the parent's
-  u_int32 adjusted_now;   // our time, adjusted by delta_start
-  int32 waitfor; // how long we think we need to wait to adjust
+  uint32_t our_time_now;    // our time, relative to our start time
+  static int32_t  delta_start;  // difference between our time and the parent's
+  uint32_t adjusted_now;   // our time, adjusted by delta_start
+  int32_t  waitfor; // how long we think we need to wait to adjust
 
   // How many items have we sent without *any* delay?
   // (not used if maxnowait is off)
@@ -2595,9 +2595,9 @@ extern int tswrite_close(TS_writer_p  tswriter,
  */
 extern int tswrite_write(TS_writer_p  tswriter,
                          byte         packet[TS_PACKET_SIZE],
-                         u_int32      pid,
+                         uint32_t     pid,
                          int          got_pcr,
-                         u_int64      pcr)
+                         uint64_t     pcr)
 {
   int err;
 

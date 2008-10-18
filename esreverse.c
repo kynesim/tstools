@@ -69,7 +69,7 @@ extern int write_packet_data(WRITER   output,
                              int      as_TS,
                              byte     data[],
                              int      data_len,
-                             u_int32  pid,
+                             uint32_t pid,
                              byte     stream_id);
 
 /*
@@ -171,7 +171,7 @@ static int reverse_h262(ES_p    es,
 
   if (!err && !quiet)
   {
-    u_int32 final_index = reverse_data->index[reverse_data->first_written];
+    uint32_t final_index = reverse_data->index[reverse_data->first_written];
     printf("\n");
     printf("Summary\n");
     printf("=======\n");
@@ -212,7 +212,7 @@ static int output_parameter_sets(WRITER                 output,
   for (ii = 0; ii < seq_param_dict->length; ii++)
   {
     ES_offset  posn = seq_param_dict->posns[ii];
-    u_int32    length = seq_param_dict->data_lens[ii];
+    uint32_t   length = seq_param_dict->data_lens[ii];
     byte      *data = NULL;
     if (!quiet)
       printf("Writing out sequence parameter set %d\n",
@@ -240,7 +240,7 @@ static int output_parameter_sets(WRITER                 output,
   for (ii = 0; ii < pic_param_dict->length; ii++)
   {
     ES_offset  posn = pic_param_dict->posns[ii];
-    u_int32    length = pic_param_dict->data_lens[ii];
+    uint32_t   length = pic_param_dict->data_lens[ii];
     byte      *data = NULL;
     if (!quiet)
       printf("Writing out picture parameter set %d\n",
@@ -360,7 +360,7 @@ static int reverse_access_units(ES_p   es,
                                   -1,0,reverse_data);
   if (!err && !quiet)
   {
-    u_int32 final_index = reverse_data->index[reverse_data->first_written];
+    uint32_t final_index = reverse_data->index[reverse_data->first_written];
     printf("\n");
     printf("Summary\n");
     printf("=======\n");

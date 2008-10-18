@@ -121,7 +121,7 @@ extern int write_NAL_unit_as_ES(FILE       *output,
  */
 extern int write_NAL_unit_as_TS(TS_writer_p tswriter,
                                 nal_unit_p  nal,
-                                u_int32     video_pid);
+                                uint32_t    video_pid);
 
 /*
  * Create a new "dictionary" for remembering picture or sequence
@@ -158,7 +158,7 @@ extern void free_param_dict(param_dict_p  *param_dict);
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remember_param_data(param_dict_p  param_dict,
-                               u_int32       param_id,
+                               uint32_t      param_id,
                                nal_unit_p    nal);
 
 /*
@@ -177,7 +177,7 @@ extern int remember_param_data(param_dict_p  param_dict,
  * Returns 0 if it succeeds, 1 if the id is not recognised.
  */
 extern int get_pic_param_data(param_dict_p pic_param_dict,
-                              u_int32      pic_param_id,
+                              uint32_t     pic_param_id,
                               nal_pic_param_data_p *pic_param_data);
 
 /*
@@ -196,7 +196,7 @@ extern int get_pic_param_data(param_dict_p pic_param_dict,
  * Returns 0 if it succeeds, 1 if the id is not recognised.
  */
 extern int get_seq_param_data(param_dict_p seq_param_dict,
-                              u_int32      seq_param_id,
+                              uint32_t     seq_param_id,
                               nal_seq_param_data_p *seq_param_data);
 
 /*

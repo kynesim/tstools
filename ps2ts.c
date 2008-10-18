@@ -172,10 +172,10 @@ int main(int argc, char **argv)
   int     verbose = FALSE;
   int     quiet = FALSE;
   int     max = 0;
-  u_int32 pmt_pid = 0x66;
-  u_int32 video_pid = 0x68;
-  u_int32 pcr_pid = video_pid;  // Use PCRs from the video stream
-  u_int32 audio_pid = 0x67;
+  uint32_t pmt_pid = 0x66;
+  uint32_t video_pid = 0x68;
+  uint32_t pcr_pid = video_pid;  // Use PCRs from the video stream
+  uint32_t audio_pid = 0x67;
   int     keep_audio = TRUE;
   int     repeat_program_every = 100;
   int     pad_start = 8;

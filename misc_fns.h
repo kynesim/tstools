@@ -47,7 +47,7 @@
  *        else return value from previous call (not sure if that
  *        needs complementing before being passed back in).
  */
-extern u_int32 crc32_block(u_int32 crc, byte *pData, int blk_len);
+extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len);
 
 /*
  * Print out the bottom N bits from a byte on the given stream
@@ -263,7 +263,7 @@ extern int unsigned_value(char      *prefix,
                           char      *cmd,
                           char      *arg,
                           int        base,
-                          u_int32   *value);
+                          uint32_t  *value);
 /*
  * Read in an integer value, checking for extraneous characters.
  *

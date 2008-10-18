@@ -74,22 +74,22 @@ static void report_avs_frames(ES_p    es,
   int  num_sequence_headers = 0;
   int  num_sequence_ends = 0;
 
-  u_int32 min_frame_size = 1000000;
-  u_int32 max_frame_size = 0;
-  u_int32 sum_frame_size = 0;
+  uint32_t min_frame_size = 1000000;
+  uint32_t max_frame_size = 0;
+  uint32_t sum_frame_size = 0;
 
   // I, P, B = 0, 1, 2 (we "make up" picture coding type 0 for I frames)
-  u_int32 min_x_frame_size[3] = {1000000,1000000,1000000};
-  u_int32 max_x_frame_size[3] = {0,0,0};
-  u_int32 sum_x_frame_size[3] = {0,0,0};
+  uint32_t min_x_frame_size[3] = {1000000,1000000,1000000};
+  uint32_t max_x_frame_size[3] = {0,0,0};
+  uint32_t sum_x_frame_size[3] = {0,0,0};
   int     num_x_frames[3] = {0,0,0};
 
-  u_int32 min_seq_hdr_size = 1000000;
-  u_int32 max_seq_hdr_size = 0;
-  u_int32 sum_seq_hdr_size = 0;
+  uint32_t min_seq_hdr_size = 1000000;
+  uint32_t max_seq_hdr_size = 0;
+  uint32_t sum_seq_hdr_size = 0;
 
   ES_offset  start;
-  u_int32    length;
+  uint32_t   length;
   
   avs_context_p  avs;
 
@@ -357,23 +357,23 @@ static void report_h262_frames(ES_p    es,
   int  num_sequence_headers = 0;
   int  num_sequence_ends = 0;
 
-  u_int32 min_frame_size = 1000000;
-  u_int32 max_frame_size = 0;
-  u_int32 sum_frame_size = 0;
+  uint32_t min_frame_size = 1000000;
+  uint32_t max_frame_size = 0;
+  uint32_t sum_frame_size = 0;
 
   // I=1, P=2, B=3, D=4 -- so subtract one before using the picture coding type
   // as an index into the arrays...
-  u_int32 min_x_frame_size[4] = {1000000,1000000,1000000,1000000};
-  u_int32 max_x_frame_size[4] = {0,0,0,0};
-  u_int32 sum_x_frame_size[4] = {0,0,0,0};
+  uint32_t min_x_frame_size[4] = {1000000,1000000,1000000,1000000};
+  uint32_t max_x_frame_size[4] = {0,0,0,0};
+  uint32_t sum_x_frame_size[4] = {0,0,0,0};
   int     num_x_frames[4] = {0,0,0,0};
 
-  u_int32 min_seq_hdr_size = 1000000;
-  u_int32 max_seq_hdr_size = 0;
-  u_int32 sum_seq_hdr_size = 0;
+  uint32_t min_seq_hdr_size = 1000000;
+  uint32_t max_seq_hdr_size = 0;
+  uint32_t sum_seq_hdr_size = 0;
 
   ES_offset  start;
-  u_int32    length;
+  uint32_t   length;
   
   h262_context_p  h262;
 
@@ -726,7 +726,7 @@ static void find_h264_fields(ES_p    es,
   int  num_fields = 0;
   int  num_frames = 0;
   access_unit_context_p  context;
-  u_int32 num_with_PTS = 0;
+  uint32_t num_with_PTS = 0;
 
   err = build_access_unit_context(es,&context);
   if (err) return;
@@ -789,11 +789,11 @@ static void report_h264_frames(ES_p  es,
   int access_unit_count = 0;
   access_unit_context_p  context;
 
-  u_int32 min_frame_size = 1000000;
-  u_int32 max_frame_size = 0;
-  u_int32 sum_frame_size = 0;
+  uint32_t min_frame_size = 1000000;
+  uint32_t max_frame_size = 0;
+  uint32_t sum_frame_size = 0;
 
-  u_int32 num_with_PTS = 0;
+  uint32_t num_with_PTS = 0;
 
 #define I_NON_REF     0
 #define I_REF_IDR     1
@@ -803,11 +803,11 @@ static void report_h264_frames(ES_p  es,
 #define I_SLICE_P     1
 #define I_SLICE_B     2
 #define I_SLICE_MIX   3
-  u_int32 slice_types[3][4] = {{0},{0}};
-  u_int32 slice_categories[4] = {0};
+  uint32_t slice_types[3][4] = {{0},{0}};
+  uint32_t slice_categories[4] = {0};
 
   ES_offset  start;
-  u_int32    length;
+  uint32_t   length;
 
   err = build_access_unit_context(es,&context);
   if (err) return;

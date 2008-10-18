@@ -56,12 +56,12 @@ struct reverse_data
   // for H.262 data, and FALSE for H.264 (MPEG-4/AVC)
   int        length;      // Number of items in our arrays
   int        size;        // How big our arrays are
-  u_int32    num_pictures;   // How many pictures we have
+  uint32_t   num_pictures;   // How many pictures we have
   // Four useful arrays (although the last is not used for H.264 data)
-  u_int32   *index;       // Which picture this is, counted from the start
+  uint32_t  *index;       // Which picture this is, counted from the start
   offset_t  *start_file;  // The start offset of an item in the input file
-  int32     *start_pkt;   // and then within the PES packet (if needed)
-  int32     *data_len;    // Its length in bytes
+  int32_t   *start_pkt;   // and then within the PES packet (if needed)
+  int32_t   *data_len;    // Its length in bytes
 
   byte      *seq_offset;  // For MPEG-2, the offset backwards in the arrays
                           // to the nearest earlier sequence header, or 0
@@ -94,7 +94,7 @@ struct reverse_data
   // like the highwater mark for what we've played forwards since we last
   // started playing forwards again, but I can't think of anything startlingly
   // illustrative, so this name will stay for now.)
-  u_int32    last_posn_added;
+  uint32_t   last_posn_added;
 
   // Do we want to output sequence headers or not, when reversing H.262?
   int        output_sequence_headers;
@@ -102,7 +102,7 @@ struct reverse_data
   // If we're outputting TS packets, we need to know the PID and stream id
   // to use. We *could* pass that down to each reverse call, but it's easier
   // to set it once and for all.
-  u_int32    pid;
+  uint32_t   pid;
   byte       stream_id;
   
   // When a function (output_in_reverse_as_XX) is called to output

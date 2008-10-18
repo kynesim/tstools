@@ -111,7 +111,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
     return 1;
   }
 
-  new->start_pkt = malloc(newsize*sizeof(int32));
+  new->start_pkt = malloc(newsize*sizeof(int32_t));
   if (new->start_pkt == NULL)
   {
     fprintf(stderr,"### Unable to allocate reverse data array (start_pkt)\n");
@@ -120,7 +120,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
     return 1;
   }
 
-  new->index = malloc(newsize*sizeof(u_int32));
+  new->index = malloc(newsize*sizeof(uint32_t));
   if (new->index == NULL)
   {
     fprintf(stderr,"### Unable to allocate reverse data array (index)\n");
@@ -129,7 +129,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
     free(new);
     return 1;
   }
-  new->data_len = malloc(newsize*sizeof(int32));
+  new->data_len = malloc(newsize*sizeof(int32_t));
   if (new->data_len == NULL)
   {
     fprintf(stderr,"### Unable to allocate reverse data array (data_len)\n");
@@ -200,7 +200,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
  * DEFAULT_VIDEO_STREAM_ID) are not correct.
  */
 extern void set_reverse_pid(reverse_data_p  reverse_data,
-                            u_int32         pid,
+                            uint32_t        pid,
                             byte            stream_id)
 {
   reverse_data->pid = pid;
@@ -288,7 +288,7 @@ extern void free_reverse_data(reverse_data_p  *reverse_data)
  */
 static inline int cmp_offsets(ES_offset  offset1,
                               offset_t   file_posn2,
-                              int32      pkt_posn2)
+                              int32_t    pkt_posn2)
 {
   if (offset1.infile < file_posn2)
     return -1;
@@ -303,9 +303,9 @@ static inline int cmp_offsets(ES_offset  offset1,
 }
 
 static void debug_reverse_data_problem(reverse_data_p    reverse_data,
-                                       u_int32           index,
+                                       uint32_t          index,
                                        ES_offset         start_posn,
-                                       u_int32           idx)
+                                       uint32_t          idx)
 {
   FILE  *tempfile;
   char  *tempfilename = "tsserve_reverse_problem.txt";
@@ -373,14 +373,14 @@ static void debug_reverse_data_problem(reverse_data_p    reverse_data,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
-                                      u_int32           index,
+                                      uint32_t          index,
                                       ES_offset         start_posn,
-                                      u_int32           length,
+                                      uint32_t          length,
                                       byte              seq_offset,
                                       byte              afd)
 {
   if (reverse_data->length > 0 &&
-      (reverse_data->last_posn_added + 1) < (u_int32)reverse_data->length)
+      (reverse_data->last_posn_added + 1) < (uint32_t)reverse_data->length)
   {
     // We're repeating an entry we previously added - check it hasn't
     // changed (since the only obvious way for this to have happened
@@ -416,7 +416,7 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
   {
     int newsize = reverse_data->size + REVERSE_ARRAY_INCREMENT_SIZE;
     reverse_data->index = realloc(reverse_data->index,
-                                  newsize*sizeof(u_int32));
+                                  newsize*sizeof(uint32_t));
     if (reverse_data->index == NULL)
     {
       fprintf(stderr,"### Unable to extend reverse data array (index)\n");
@@ -430,14 +430,14 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
       return 1;
     }
     reverse_data->start_pkt = realloc(reverse_data->start_pkt,
-                                      newsize*sizeof(int32));
+                                      newsize*sizeof(int32_t));
     if (reverse_data->start_pkt == NULL)
     {
       fprintf(stderr,"### Unable to extend reverse data array (start_pkt)\n");
       return 1;
     }
     reverse_data->data_len = realloc(reverse_data->data_len,
-                                     newsize*sizeof(int32));
+                                     newsize*sizeof(int32_t));
     if (reverse_data->data_len == NULL)
     {
       fprintf(stderr,"### Unable to extend reverse data array (length)\n");
@@ -502,12 +502,12 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
-                                      u_int32           index,
+                                      uint32_t          index,
                                       ES_offset         start_posn,
-                                      u_int32           length)
+                                      uint32_t          length)
 {
   if (reverse_data->length > 0 &&
-      (reverse_data->last_posn_added + 1) < (u_int32)reverse_data->length)
+      (reverse_data->last_posn_added + 1) < (uint32_t)reverse_data->length)
   {
     // We're repeating an entry we previously added - check it hasn't
     // changed (since the only obvious way for this to have happened
@@ -543,7 +543,7 @@ extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
   {
     int newsize = reverse_data->size + REVERSE_ARRAY_INCREMENT_SIZE;
     reverse_data->index = realloc(reverse_data->index,
-                                  newsize*sizeof(u_int32));
+                                  newsize*sizeof(uint32_t));
     if (reverse_data->index == NULL)
     {
       fprintf(stderr,"### Unable to extend reverse data array (index)\n");
@@ -557,14 +557,14 @@ extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
       return 1;
     }
     reverse_data->start_pkt = realloc(reverse_data->start_pkt,
-                                      newsize*sizeof(int32));
+                                      newsize*sizeof(int32_t));
     if (reverse_data->start_pkt == NULL)
     {
       fprintf(stderr,"### Unable to extend reverse data array (start_pkt)\n");
       return 1;
     }
     reverse_data->data_len = realloc(reverse_data->data_len,
-                                     newsize*sizeof(int32));
+                                     newsize*sizeof(int32_t));
     if (reverse_data->data_len == NULL)
     {
       fprintf(stderr,"### Unable to extend reverse data array (length)\n");
@@ -617,9 +617,9 @@ extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
  */
 extern int get_reverse_data(reverse_data_p    reverse_data,
                             int               which,
-                            u_int32          *index,
+                            uint32_t         *index,
                             ES_offset        *start_posn,
-                            u_int32          *length,
+                            uint32_t         *length,
                             byte             *seq_offset,
                             byte             *afd)
 {
@@ -797,7 +797,7 @@ extern int write_packet_data(WRITER   output,
                              int      as_TS,
                              byte     data[],
                              int      data_len,
-                             u_int32  pid,
+                             uint32_t pid,
                              byte     stream_id)
 {
   int  err;
@@ -838,7 +838,7 @@ extern int write_packet_data(WRITER   output,
 static int write_picture_data(WRITER          output,
                               int             as_TS,
                               h262_picture_p  picture,
-                              u_int32         pid)
+                              uint32_t        pid)
 {
   int  err;
   if (as_TS)
@@ -928,12 +928,12 @@ static int output_sequence_header(ES_p            es,
                                   WRITER          output,
                                   int             as_TS,
                                   int             verbose,
-                                  u_int16         seq_index,
+                                  uint16_t        seq_index,
                                   reverse_data_p  reverse_data)
 {
   int       err;
   ES_offset seq_posn;
-  u_int32   seq_len;
+  uint32_t  seq_len;
   byte     *seq_data = NULL;
   err = get_reverse_data(reverse_data,seq_index,NULL,&seq_posn,&seq_len,
                          NULL,NULL);
@@ -993,20 +993,20 @@ static int output_from_reverse_data(ES_p            es,
                                     int             as_TS,
                                     int             verbose,
                                     int             quiet,
-                                    u_int32         offset,
+                                    uint32_t        offset,
                                     reverse_data_p  reverse_data)
 {
   int       with_sequence_headers = (!reverse_data->is_h264 &&
                                      reverse_data->output_sequence_headers);
-  u_int32   which = reverse_data->length - 1; // the maximum picture index
+  uint32_t  which = reverse_data->length - 1; // the maximum picture index
   int       is_h262 = !reverse_data->is_h264;
   int       err;
-  u_int32   index;
+  uint32_t  index;
   ES_offset start_posn;
-  u_int32   num_bytes;
+  uint32_t  num_bytes;
   byte      seq_offset;
   byte      afd;
-  u_int32   uu;
+  uint32_t  uu;
 
   if (verbose)
     printf("\nGOING BACK: offset %u, max pic index %u\n",offset,which);
@@ -1048,7 +1048,7 @@ static int output_from_reverse_data(ES_p            es,
   if (with_sequence_headers)
   {
     // Make sure we've output its sequence header
-    err = output_sequence_header(es,output,as_TS,verbose,(u_int16)(which - seq_offset),
+    err = output_sequence_header(es,output,as_TS,verbose,(uint16_t)(which - seq_offset),
                                  reverse_data);
     if (err)
     {
@@ -1082,7 +1082,7 @@ static int output_from_reverse_data(ES_p            es,
   else
   {
     byte     *data = NULL;
-    u_int32   data_len = 0;
+    uint32_t  data_len = 0;
     err = read_ES_data(es,start_posn,num_bytes,&data_len,&data);
     if (err)
     {
@@ -1143,7 +1143,7 @@ extern int output_from_reverse_data_as_TS(ES_p            es,
                                           TS_writer_p     tswriter,
                                           int             verbose,
                                           int             quiet,
-                                          u_int32         offset,
+                                          uint32_t        offset,
                                           reverse_data_p  reverse_data)
 {
   WRITER  writer;
@@ -1178,7 +1178,7 @@ extern int output_from_reverse_data_as_ES(ES_p            es,
                                           FILE           *output,
                                           int             verbose,
                                           int             quiet,
-                                          u_int32         offset,
+                                          uint32_t        offset,
                                           reverse_data_p  reverse_data)
 {
   WRITER  writer;
@@ -1218,25 +1218,25 @@ static int output_in_reverse(ES_p            es,
                              int             frequency,
                              int             verbose,
                              int             quiet,
-                             int32           start_with,
+                             int32_t         start_with,
                              int             max,
                              reverse_data_p  reverse_data)
 {
   int       ii;
   int       with_sequence_headers = reverse_data->output_sequence_headers;
   byte     *data = NULL;   // picture data, as a "chunk"
-  u_int32   data_len = 0;  // the current size of `data`
+  uint32_t  data_len = 0;  // the current size of `data`
   h262_picture_p  picture = NULL;  // H.262 picture data as a "picture"
-  u_int32   last_seq_index = reverse_data->length; // impossible value
+  uint32_t  last_seq_index = reverse_data->length; // impossible value
   int       max_pic_index = reverse_data->length-1;
   int       first_actual_picture_index = 0;  // the first *actual* picture
   int       is_h262 = !reverse_data->is_h264;
 
-  u_int32 start_index;
-  u_int32 final_index;
-  u_int32 last_index;
+  uint32_t start_index;
+  uint32_t final_index;
+  uint32_t last_index;
 
-  u_int32 last_num_bytes = 0;  // Number of bytes of last picture written
+  uint32_t last_num_bytes = 0;  // Number of bytes of last picture written
   
   reverse_data->pictures_written = 0;
   reverse_data->pictures_kept = 0;
@@ -1271,7 +1271,7 @@ static int output_in_reverse(ES_p            es,
     start_index --;
 
   // If that means there's nothing to output, then so be it
-  if (start_index < (u_int32)first_actual_picture_index)
+  if (start_index < (uint32_t)first_actual_picture_index)
     return 0;
   
   // Remember the index of the latest picture we're interested in
@@ -1300,12 +1300,12 @@ static int output_in_reverse(ES_p            es,
   {
     int       err;
     int       keep = FALSE;
-    u_int32   index;
+    uint32_t  index;
     ES_offset start_posn;
-    u_int32   num_bytes;
+    uint32_t  num_bytes;
     byte      seq_offset;
     byte      afd;
-    u_int32   seq_index;
+    uint32_t  seq_index;
 
     if (as_TS && tswrite_command_changed(output.ts_output))
     {
@@ -1411,7 +1411,7 @@ static int output_in_reverse(ES_p            es,
         seq_index = ii - seq_offset;
         if (seq_index != last_seq_index)
         {
-          err = output_sequence_header(es,output,as_TS,verbose,(u_int16)seq_index,
+          err = output_sequence_header(es,output,as_TS,verbose,(uint16_t)seq_index,
                                        reverse_data);
           if (err)
           {
@@ -1540,7 +1540,7 @@ extern int output_in_reverse_as_TS(ES_p            es,
                                    int             frequency,
                                    int             verbose,
                                    int             quiet,
-                                   int32           start_with,
+                                   int32_t         start_with,
                                    int             max,
                                    reverse_data_p  reverse_data)
 {
@@ -1581,7 +1581,7 @@ extern int output_in_reverse_as_ES(ES_p            es,
                                    int             frequency,
                                    int             verbose,
                                    int             quiet,
-                                   int32           start_with,
+                                   int32_t         start_with,
                                    int             max,
                                    reverse_data_p  reverse_data)
 {

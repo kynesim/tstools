@@ -54,7 +54,7 @@ typedef char TCHAR;
 #define FMTX_TS_DISPLAY_ms              0x30
 #define FMTX_TS_DISPLAY_HMS             0x40
 
-const TCHAR * fmtx_timestamp(int64 n, unsigned int flags);
+const TCHAR * fmtx_timestamp(int64_t n, unsigned int flags);
 int fmtx_str_to_timestamp_flags(const TCHAR * arg_str);
 
 // Local Variables:

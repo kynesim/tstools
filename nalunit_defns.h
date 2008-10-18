@@ -94,20 +94,20 @@ enum NAL_UNIT_TYPE
 // Data for a slice NAL unit
 struct nal_slice_data
 {
-  u_int32  seq_param_set_pic_order_cnt_type;  // from the seq param set
-  u_int32  first_mb_in_slice;
-  u_int32  slice_type;
-  u_int32  pic_parameter_set_id;
-  u_int32  frame_num;
+  uint32_t seq_param_set_pic_order_cnt_type;  // from the seq param set
+  uint32_t first_mb_in_slice;
+  uint32_t slice_type;
+  uint32_t pic_parameter_set_id;
+  uint32_t frame_num;
   // From here onwards, the fields are not necessarily all present
   byte     field_pic_flag;     // frame or field? 0 if absent
   byte     bottom_field_flag;  // 0 if absent
   int      bottom_field_flag_present;
-  u_int32  idr_pic_id;
-  u_int32  pic_order_cnt_lsb;
-  int32    delta_pic_order_cnt_bottom;
-  int32    delta_pic_order_cnt[2];
-  u_int32  redundant_pic_cnt;
+  uint32_t idr_pic_id;
+  uint32_t pic_order_cnt_lsb;
+  int32_t  delta_pic_order_cnt_bottom;
+  int32_t  delta_pic_order_cnt[2];
+  uint32_t redundant_pic_cnt;
   int      redundant_pic_cnt_present;
 };
 typedef struct nal_slice_data *nal_slice_data_p;
@@ -122,10 +122,10 @@ struct nal_seq_param_data
   byte     constraint_set1_flag;
   byte     constraint_set2_flag;
   byte     level_idc;
-  u_int32  seq_parameter_set_id;   // our own id (0..31)
-  u_int32  log2_max_frame_num;
-  u_int32  pic_order_cnt_type;
-  u_int32  log2_max_pic_order_cnt_lsb;
+  uint32_t seq_parameter_set_id;   // our own id (0..31)
+  uint32_t log2_max_frame_num;
+  uint32_t pic_order_cnt_type;
+  uint32_t log2_max_pic_order_cnt_lsb;
   byte     delta_pic_order_always_zero_flag;
   byte     frame_mbs_only_flag;
 };
@@ -140,8 +140,8 @@ struct nal_pic_param_data
   int      seq_parameter_set_id;               // we use this
   byte     entropy_coding_mode_flag;
   byte     pic_order_present_flag;             // we use this
-  u_int32  num_slice_groups;
-  u_int32  slice_group_map_type;
+  uint32_t num_slice_groups;
+  uint32_t slice_group_map_type;
   // lots of ignored things
   byte     redundant_pic_cnt_present_flag;     // this is mildly interesting
 };
@@ -158,7 +158,7 @@ struct nal_SEI_recovery_data
   int      recovery_frame_cnt;
   byte     exact_match_flag;
   byte     broken_link_flag;
-  u_int32  changing_slice_group_idc;
+  uint32_t changing_slice_group_idc;
 };
 typedef struct nal_SEI_recovery_data *nal_SEI_recovery_data_p;
 #define SIZEOF_NAL_SEI_RECOVERY_DATA sizeof(struct nal_SEI_recovery_data)
@@ -187,7 +187,7 @@ struct param_dict
   int      *ids;       // The ids for...
   union nal_innards *params;    // ...the data
   ES_offset         *posns;     // Where each was read from...
-  u_int32           *data_lens; // ...and its size
+  uint32_t          *data_lens; // ...and its size
   int      size, length; // of the arrays and their content
 };
 typedef struct param_dict *param_dict_p;

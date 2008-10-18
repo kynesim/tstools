@@ -46,7 +46,7 @@ struct ps_reader
 
   byte      data[PS_READ_AHEAD_SIZE];
   offset_t  data_posn;         // location of this data in the file
-  int32     data_len;          // actual number of bytes in the buffer
+  int32_t   data_len;          // actual number of bytes in the buffer
   byte     *data_end;          // off the end of `data`
   byte     *data_ptr;          // which byte we're interested in (next)
 };
@@ -59,10 +59,10 @@ struct PS_pack_header
 {
   int       id;            // A number to identify this packet
   byte      data[10];      // The data excluding the leading 00 00 01 BA
-  u_int64   scr;           // Formed from scr_base and scr_ext
-  u_int64   scr_base;
-  u_int32   scr_extn;
-  u_int32   program_mux_rate;
+  uint64_t  scr;           // Formed from scr_base and scr_ext
+  uint64_t  scr_base;
+  uint32_t  scr_extn;
+  uint32_t  program_mux_rate;
   int       pack_stuffing_length;
 };
 typedef struct PS_pack_header *PS_pack_header_p;

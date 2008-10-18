@@ -247,7 +247,7 @@ static int init_peslist(peslist_p  list)
     fprintf(stderr,"### Unable to allocate PES array in PID/PES data array");
     return 1;
   }
-  list->pid = malloc(sizeof(u_int32)*PESLIST_START_SIZE);
+  list->pid = malloc(sizeof(uint32_t)*PESLIST_START_SIZE);
   if (list->pid == NULL)
   {
     free(list->data);
@@ -323,7 +323,7 @@ static void free_peslist(peslist_p  *peslist)
  * Returns its index (0 or more) if the PID is in the list, -1 if it is not.
  */
 static inline int pid_index_in_peslist(peslist_p  list,
-                                       u_int32    pid)
+                                       uint32_t   pid)
 {
   int ii;
   if (list == NULL)
@@ -344,7 +344,7 @@ static inline int pid_index_in_peslist(peslist_p  list,
  * Returns TRUE if the PID is in the list, FALSE if it is not.
  */
 static inline int pid_in_peslist(peslist_p  list,
-                                 u_int32    pid)
+                                 uint32_t   pid)
 {
   return pid_index_in_peslist(list,pid) != -1;
 }
@@ -358,7 +358,7 @@ static inline int pid_in_peslist(peslist_p  list,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 static int start_packet_in_peslist(PES_reader_p       reader,
-                                   u_int32            pid,
+                                   uint32_t           pid,
                                    int                is_video,
                                    PES_packet_data_p *data)
 {
@@ -413,7 +413,7 @@ static int start_packet_in_peslist(PES_reader_p       reader,
       free_PES_packet_data(data);
       return 1;
     }
-    list->pid = realloc(list->pid,newsize*sizeof(u_int32));
+    list->pid = realloc(list->pid,newsize*sizeof(uint32_t));
     if (list->pid == NULL)
     {
       fprintf(stderr,"### Unable to extend PID/PES data array\n");
@@ -436,7 +436,7 @@ static int start_packet_in_peslist(PES_reader_p       reader,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 static inline int find_packet_in_peslist(peslist_p          list,
-                                         u_int32            pid,
+                                         uint32_t           pid,
                                          PES_packet_data_p *data)
 {
   int index = pid_index_in_peslist(list,pid);
@@ -455,7 +455,7 @@ static inline int find_packet_in_peslist(peslist_p          list,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 static int clear_packet_in_peslist(peslist_p  list,
-                                   u_int32    pid)
+                                   uint32_t   pid)
 {
   int index;
 
@@ -846,7 +846,7 @@ static int refine_TS_program_info(PES_reader_p   reader,
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
 static int extract_and_refine_TS_program_info(PES_reader_p   reader,
-                                              u_int32        pmt_pid,
+                                              uint32_t       pmt_pid,
                                               byte           pmt_data[],
                                               int            pmt_data_len)
 {
@@ -1065,7 +1065,7 @@ static int determine_TS_program_info(PES_reader_p   reader)
  * Returns 0 if all went well, 1 if something went wrong
  */
 static int start_new_PES_packet(PES_reader_p       reader,
-                                u_int32            pid,
+                                uint32_t           pid,
                                 byte               payload[],
                                 int                payload_len,
                                 PES_packet_data_p *finished)
@@ -1220,7 +1220,7 @@ static int start_new_PES_packet(PES_reader_p       reader,
  * Returns 0 if all went well, 1 if something went wrong
  */
 static int continue_PES_packet(PES_reader_p       reader,
-                               u_int32            pid,
+                               uint32_t           pid,
                                byte               payload[],
                                int                payload_len,
                                PES_packet_data_p *finished)
@@ -1375,7 +1375,7 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
     byte   *payload;
     int     payload_len;
 
-    u_int32  pid;
+    uint32_t pid;
 
     // Remember the position of the packet we're going to read
     reader->posn = reader->tsreader->posn;
@@ -1793,7 +1793,7 @@ extern int build_PS_PES_reader(PS_reader_p    ps,
 extern int build_TS_PES_reader(TS_reader_p    tsreader,
                                int            give_info,
                                int            give_warnings,
-                               u_int16        program_number,
+                               uint16_t       program_number,
                                PES_reader_p  *reader)
 {
   int  err;
@@ -1839,7 +1839,7 @@ extern int build_PES_reader(int            input,
                             int            is_TS,
                             int            give_info,
                             int            give_warnings,
-                            u_int16        program_number,
+                            uint16_t       program_number,
                             PES_reader_p  *reader)
 {
   int  err;
@@ -1903,7 +1903,7 @@ extern int build_PES_reader(int            input,
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
 extern int open_PES_reader_for_TS(char          *filename,
-                                  u_int16        program_number,
+                                  uint16_t       program_number,
                                   int            give_info,
                                   int            give_warnings,
                                   PES_reader_p  *reader)
@@ -2103,11 +2103,11 @@ extern void set_PES_reader_audio_private1(PES_reader_p  reader)
  *   be the same as the `video_pid`
  */
 extern void set_PES_reader_program_data(PES_reader_p  reader,
-                                        u_int16       program_number,
-                                        u_int32       pmt_pid,
-                                        u_int32       video_pid,
-                                        u_int32       audio_pid,
-                                        u_int32       pcr_pid)
+                                        uint16_t      program_number,
+                                        uint32_t      pmt_pid,
+                                        uint32_t      video_pid,
+                                        uint32_t      audio_pid,
+                                        uint32_t      pcr_pid)
 {
   if (program_number == 0)
     program_number = 1;
@@ -2329,7 +2329,7 @@ extern int read_next_PES_packet(PES_reader_p  reader)
         !reader->dont_write_current_packet)
     {
       // Aha - we need to output the previous PES packet
-      u_int32 pid;
+      uint32_t pid;
       byte    stream_id;
       if (reader->program_index == 0)
       {
@@ -2604,9 +2604,9 @@ extern int read_next_PES_ES_packet(PES_reader_p       reader)
  */
 extern int decode_pts_dts(byte     data[],
                           int      required_guard,
-                          u_int64 *value)
+                          uint64_t *value)
 {
-  u_int64       pts1,pts2,pts3;
+  uint64_t      pts1,pts2,pts3;
   int           marker;
   char         *what;
   int           guard = (data[0] & 0xF0) >> 4;
@@ -2672,7 +2672,7 @@ extern int decode_pts_dts(byte     data[],
  */
 extern void encode_pts_dts(byte    data[],
                            int     guard_bits,
-                           u_int64 value)
+                           uint64_t value)
 {
   int   pts1,pts2,pts3;
 
@@ -2681,7 +2681,7 @@ extern void encode_pts_dts(byte    data[],
   if (value > MAX_PTS_VALUE)
   {
     char        *what;
-    u_int64      temp = value;
+    uint64_t     temp = value;
     while (temp > MAX_PTS_VALUE)
       temp -= MAX_PTS_VALUE;
     switch (guard_bits)
@@ -2811,7 +2811,7 @@ extern int report_PES_data_array(char   *prefix,
   byte *bytes;
 
   int err;
-  u_int64 pts, dts;
+  uint64_t pts, dts;
   
   int got_pts = FALSE;  // pessimistic
   int got_dts = FALSE;  // pessimistic
@@ -3033,7 +3033,7 @@ extern void report_PES_data_array2(int         stream_type,
   int      err;
   int      with_pts = FALSE;
   int      with_dts = FALSE;
-  u_int64  pts, dts;
+  uint64_t pts, dts;
   int      PES_packet_length;
   byte    *data = NULL;
   int      data_len = 0;
@@ -3231,9 +3231,9 @@ extern void report_PES_data_array2(int         stream_type,
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_PTS_in_PES(byte      data[],
-                           int32     data_len,
+                           int32_t   data_len,
                            int      *got_pts,
-                           u_int64  *pts)
+                           uint64_t *pts)
 {
   byte  stream_id;
   int   packet_length;
@@ -3324,9 +3324,9 @@ extern int find_PTS_in_PES(byte      data[],
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_DTS_in_PES(byte      data[],
-                           int32     data_len,
+                           int32_t   data_len,
                            int      *got_dts,
-                           u_int64  *dts)
+                           uint64_t *dts)
 {
   byte  stream_id;
   int   packet_length;
@@ -3418,11 +3418,11 @@ extern int find_DTS_in_PES(byte      data[],
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_PTS_DTS_in_PES(byte      data[],
-                               int32     data_len,
+                               int32_t   data_len,
                                int      *got_pts,
-                               u_int64  *pts,
+                               uint64_t *pts,
                                int      *got_dts,
-                               u_int64  *dts)
+                               uint64_t *dts)
 {
   byte  stream_id;
   int   packet_length;
@@ -3534,9 +3534,9 @@ extern int find_PTS_DTS_in_PES(byte      data[],
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_ESCR_in_PES(byte      data[],
-                            int32     data_len,
+                            int32_t   data_len,
                             int      *got_escr,
-                            u_int64  *escr)
+                            uint64_t *escr)
 {
   byte  stream_id;
   int   packet_length;
@@ -3582,8 +3582,8 @@ extern int find_ESCR_in_PES(byte      data[],
     *got_escr = (bytes[1] & 0x20) == 0x20;
     if (*got_escr)
     {
-      u_int64   ESCR_base;
-      u_int32   ESCR_extn;
+      uint64_t  ESCR_base;
+      uint32_t  ESCR_extn;
       int PTS_DTS_flags = (bytes[1] & 0xC0) >> 6;
       int offset;
       if (PTS_DTS_flags == 2)
@@ -3597,8 +3597,8 @@ extern int find_ESCR_in_PES(byte      data[],
         (bytes[offset+3] <<  5) |
         (bytes[offset+2] << 13) |
         (bytes[offset+1] << 20) |
-        ((((u_int64)bytes[offset]) & 0x03) << 28) |
-        ((((u_int64)bytes[offset]) & 0x38) << 27);
+        ((((uint64_t)bytes[offset]) & 0x03) << 28) |
+        ((((uint64_t)bytes[offset]) & 0x38) << 27);
       ESCR_extn =
         (bytes[offset+5] >> 1) |
         (bytes[offset+4] << 7);
@@ -3709,10 +3709,10 @@ extern int write_program_data(PES_reader_p  reader,
 {
   // We know we support at most two program streams for output
   int      num_progs = 0;
-  u_int32  prog_pids[2];
+  uint32_t prog_pids[2];
   byte     prog_type[2];
   int      err;
-  u_int32  pcr_pid;
+  uint32_t pcr_pid;
 
   // If we are writing out TS data as a side effect of reading TS when
   // assembling our PES packets, we should not write out any program

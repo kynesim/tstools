@@ -131,7 +131,7 @@ extern int get_next_avs_frame(avs_context_p  context,
  */
 extern int write_avs_frame_as_TS(TS_writer_p     tswriter,
                                  avs_frame_p     frame,
-                                 u_int32         pid);
+                                 uint32_t        pid);
 /*
  * Write out an AVS frame as TS, with PTS timing in the first PES packet
  * (and PCR timing in the first TS of the frame).
@@ -151,11 +151,11 @@ extern int write_avs_frame_as_TS(TS_writer_p     tswriter,
  */
 extern int write_avs_frame_as_TS_with_pts_dts(avs_frame_p          frame,
                                               TS_writer_p          tswriter,
-                                              u_int32              video_pid,
+                                              uint32_t             video_pid,
                                               int                  got_pts,
-                                              u_int64              pts,
+                                              uint64_t             pts,
                                               int                  got_dts,
-                                              u_int64              dts);
+                                              uint64_t             dts);
 /*
  * Write out an AVS frame as TS, with PCR timing in the first TS of the
  * frame.
@@ -169,9 +169,9 @@ extern int write_avs_frame_as_TS_with_pts_dts(avs_frame_p          frame,
  */
 extern int write_avs_frame_as_TS_with_PCR(avs_frame_p   frame,
                                           TS_writer_p   tswriter,
-                                          u_int32       video_pid,
-                                          u_int64       pcr_base,
-                                          u_int32       pcr_extn);
+                                          uint32_t      video_pid,
+                                          uint64_t      pcr_base,
+                                          uint32_t      pcr_extn);
 /*
  * Write out a frame (as stored in an ES unit list) as ES
  *

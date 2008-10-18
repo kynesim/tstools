@@ -50,7 +50,7 @@ extern int build_pidint_list(pidint_list_p  *list);
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int append_to_pidint_list(pidint_list_p  list,
-                                 u_int32         pid,
+                                 uint32_t        pid,
                                  int             program);
 /*
  * Remove a pid/integer pair from the list
@@ -58,7 +58,7 @@ extern int append_to_pidint_list(pidint_list_p  list,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remove_from_pidint_list(pidint_list_p  list,
-                                   u_int32        pid);
+                                   uint32_t       pid);
 /*
  * Tidy up and free a pid/int list datastructure after we've finished with it
  *
@@ -80,7 +80,7 @@ extern void report_pidint_list(pidint_list_p  list,
  * Returns 0 if the PID is in the list, -1 if it is not.
  */
 extern int pid_int_in_pidint_list(pidint_list_p  list,
-                                  u_int32         pid,
+                                  uint32_t        pid,
                                   int            *number);
 /*
  * Lookup a PID to find its index in a pid/int list.
@@ -92,7 +92,7 @@ extern int pid_int_in_pidint_list(pidint_list_p  list,
  * Returns its index (0 or more) if the PID is in the list, -1 if it is not.
  */
 extern int pid_index_in_pidint_list(pidint_list_p  list,
-                                    u_int32         pid);
+                                    uint32_t        pid);
 /*
  * Lookup a PID to see if it is in a pid/int list.
  *
@@ -103,7 +103,7 @@ extern int pid_index_in_pidint_list(pidint_list_p  list,
  * Returns TRUE if the PID is in the list, FALSE if it is not.
  */
 extern int pid_in_pidint_list(pidint_list_p  list,
-                              u_int32         pid);
+                              uint32_t        pid);
 /*
  * Check if two pid/int lists have the same content.
  *
@@ -143,8 +143,8 @@ extern void report_stream_list(pidint_list_p  list,
  * Returns (a pointer to) the new PMT datastructure, or NULL if some error
  * occurs.
  */
-extern pmt_p build_pmt(u_int16 program_number, byte version_number,
-                       u_int32 PCR_pid);
+extern pmt_p build_pmt(uint16_t program_number, byte version_number,
+                       uint32_t PCR_pid);
 /*
  * Set the descriptor data on a PMT. Specifically, 'program info',
  * the descriptor data in the PMT "as a whole".
@@ -156,7 +156,7 @@ extern pmt_p build_pmt(u_int16 program_number, byte version_number,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int set_pmt_program_info(pmt_p    pmt,
-                                u_int16  program_info_length,
+                                uint16_t program_info_length,
                                 byte    *program_info);
 /*
  * Add a program stream to a PMT datastructure
@@ -166,9 +166,9 @@ extern int set_pmt_program_info(pmt_p    pmt,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int add_stream_to_pmt(pmt_p      pmt,
-                             u_int32    elementary_PID,
+                             uint32_t   elementary_PID,
                              byte       stream_type,
-                             u_int16    ES_info_length,
+                             uint16_t   ES_info_length,
                              byte      *ES_info);
 /*
  * Remove a program stream from a PMT.
@@ -176,7 +176,7 @@ extern int add_stream_to_pmt(pmt_p      pmt,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remove_stream_from_pmt(pmt_p         pmt,
-                                  u_int32       pid);
+                                  uint32_t      pid);
 /*
  * Tidy up and free a PMT datastructure after we've finished with it
  *
@@ -193,7 +193,7 @@ extern void free_pmt(pmt_p  *pmt);
  * Returns its index (0 or more) if the PID is in the list, -1 if it is not.
  */
 extern int pid_index_in_pmt(pmt_p     pmt,
-                            u_int32   pid);
+                            uint32_t  pid);
 /*
  * Lookup a PID to find the corresponding program stream information.
  *
@@ -201,7 +201,7 @@ extern int pid_index_in_pmt(pmt_p     pmt,
  * NULL if it is not.
  */
 extern pmt_stream_p pid_stream_in_pmt(pmt_p          pmt,
-                                      u_int32        pid);
+                                      uint32_t       pid);
 /*
  * Lookup a PID to see if it is in a PMT datastructure.
  *
@@ -210,7 +210,7 @@ extern pmt_stream_p pid_stream_in_pmt(pmt_p          pmt,
  * Returns TRUE if the PID is in the PMT's stream list, FALSE if it is not.
  */
 extern int pid_in_pmt(pmt_p     pmt,
-                      u_int32   pid);
+                      uint32_t  pid);
 /*
  * Check if two PMT datastructures have the same content.
  *

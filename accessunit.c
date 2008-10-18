@@ -45,7 +45,7 @@
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 static inline int build_access_unit(access_unit_p  *acc_unit,
-                                    u_int32         index)
+                                    uint32_t        index)
 {
   int err;
 
@@ -167,7 +167,7 @@ static inline int num_slices(access_unit_p  access_unit)
  */
 extern int get_access_unit_bounds(access_unit_p     access_unit,
                                   ES_offset        *start,
-                                  u_int32          *length)
+                                  uint32_t         *length)
 {
   int ii;
   if (access_unit->primary_start == NULL)
@@ -467,7 +467,7 @@ extern int write_access_unit_as_ES(access_unit_p           access_unit,
  */
 static int write_access_unit_trailer_as_TS(access_unit_context_p  context,
                                            TS_writer_p            tswriter,
-                                           u_int32                video_pid)
+                                           uint32_t               video_pid)
 {
   int err;
 
@@ -519,7 +519,7 @@ static int write_access_unit_trailer_as_TS(access_unit_context_p  context,
 extern int write_access_unit_as_TS(access_unit_p          access_unit,
                                    access_unit_context_p  context,
                                    TS_writer_p            tswriter,
-                                   u_int32                video_pid)
+                                   uint32_t               video_pid)
 {
   int ii, err;
   
@@ -566,11 +566,11 @@ extern int write_access_unit_as_TS(access_unit_p          access_unit,
 extern int write_access_unit_as_TS_with_pts_dts(access_unit_p          access_unit,
                                                 access_unit_context_p  context,
                                                 TS_writer_p            tswriter,
-                                                u_int32                video_pid,
+                                                uint32_t               video_pid,
                                                 int                    got_pts,
-                                                u_int64                pts,
+                                                uint64_t               pts,
                                                 int                    got_dts,
-                                                u_int64                dts)
+                                                uint64_t               dts)
 {
   int ii, err;
   
@@ -621,9 +621,9 @@ extern int write_access_unit_as_TS_with_pts_dts(access_unit_p          access_un
 extern int write_access_unit_as_TS_with_PCR(access_unit_p          access_unit,
                                             access_unit_context_p  context,
                                             TS_writer_p            tswriter,
-                                            u_int32                video_pid,
-                                            u_int64                pcr_base,
-                                            u_int32                pcr_extn)
+                                            uint32_t               video_pid,
+                                            uint64_t               pcr_base,
+                                            uint32_t               pcr_extn)
 {
   int ii, err;
   
@@ -890,7 +890,7 @@ static int maybe_remember_access_unit(reverse_data_p  reverse_data,
        all_slices_I(access_unit)))
   {
     ES_offset  start_posn = {0,0};
-    u_int32    num_bytes = 0;
+    uint32_t   num_bytes = 0;
     int err = get_access_unit_bounds(access_unit,&start_posn,&num_bytes);
     if (err)
     {

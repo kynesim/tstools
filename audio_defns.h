@@ -35,7 +35,7 @@
 struct audio_frame
 {
   byte    *data;  // The frame data, including the syncword at the start
-  u_int32  data_len;
+  uint32_t data_len;
 };
 typedef struct audio_frame *audio_frame_p;
 #define SIZEOF_AUDIO_FRAME sizeof(struct audio_frame)

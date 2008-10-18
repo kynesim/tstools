@@ -71,7 +71,7 @@ struct _h262_picture
   // field "picture".
   byte      picture_coding_type;  // I, P or B
   byte      picture_structure;    // top/bottom field or frame
-  u_int16   temporal_reference;   // presentation order within a group
+  uint16_t  temporal_reference;   // presentation order within a group
   byte      afd;                  // its "Active Format Description" value
                                   // (NB: with 0xF0 bits set at top of byte)
   byte      is_real_afd;          // was it a *real* AFD?
@@ -200,7 +200,7 @@ struct h262_context
   // The index of the first picture read is 1, and this value is
   // incremented by each call of `get_next_h262_picture` (note that
   // for this purpose, sequence headers are *not* considered pictures)
-  u_int32        picture_index;  // The index of the last picture read
+  uint32_t       picture_index;  // The index of the last picture read
   
   // We detect the end of an H.262 picture (or sequence header) by
   // reading the first item that cannot be part of it. We then need

@@ -113,7 +113,7 @@ struct avs_context
   // The index of the first frame read is 1, and this value is
   // incremented by each call of `get_next_avs_frame` (note that
   // for this purpose, sequence headers are *not* considered frames)
-  u_int32        frame_index;  // The index of the last frame read
+  uint32_t       frame_index;  // The index of the last frame read
   
   // We detect the end of an AVS frame (or sequence header) by
   // reading the first item that cannot be part of it. We then need

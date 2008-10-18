@@ -40,8 +40,8 @@
 struct PES_packet_data
 {
   byte    *data;      // The actual packet data
-  int32    data_len;  // The length of the `data` array [1]
-  int32    length;    // Its length
+  int32_t  data_len;  // The length of the `data` array [1]
+  int32_t  length;    // Its length
   offset_t posn;      // The offset of its start in the file [2]
   int      is_video;  // Is this video data? (as opposed to audio)
 
@@ -49,7 +49,7 @@ struct PES_packet_data
   // "payload" (i.e., the ES data) as if it were a separate array. This
   // is, of course, just an offset into `data`
   byte    *es_data;
-  int32    es_data_len;
+  int32_t  es_data_len;
   // The PES packet *does* tell us if its data starts with an ES packet
   // (i.e., if the 00 00 01 bytes come as the first bytes in the data),
   // so that's worth remembering
@@ -72,7 +72,7 @@ typedef struct PES_packet_data *PES_packet_data_p;
 // An expandable list of PID vs. PES packet data
 struct peslist
 {
-  u_int32           *pid;     // An array of the PIDs
+  uint32_t          *pid;     // An array of the PIDs
   PES_packet_data_p *data;    // An array of the corresponding PES data
   int                length;  // How many there are
   int                size;    // How big the arrays are
@@ -121,11 +121,11 @@ struct PES_reader
   int      got_program_data;   // Do we know our program data yet?
   pmt_p    program_map;        // The content of the (current/last) PMT
   // And from that, we can work out our video and audio (if any) pids, etc.
-  u_int32  video_pid;          // Zero if not yet known
-  u_int32  audio_pid;          // Ditto
-  u_int32  pcr_pid;            // A copy of the value from the PMT
-  u_int16  program_number;     // Which program are we reading? (0=first)
-  u_int32  pmt_pid;            // What's the PMT PID?
+  uint32_t video_pid;          // Zero if not yet known
+  uint32_t audio_pid;          // Ditto
+  uint32_t pcr_pid;            // A copy of the value from the PMT
+  uint16_t program_number;     // Which program are we reading? (0=first)
+  uint32_t pmt_pid;            // What's the PMT PID?
 
   // PMTs may be split over several TS packets, so we need a buffer
   // to build them in
@@ -143,11 +143,11 @@ struct PES_reader
   // and use the values given by the user instead.
   int      override_program_data;
   // Regardless, the following are the values to use when writing TS data out:
-  u_int32  output_video_pid;
-  u_int32  output_audio_pid;
-  u_int32  output_pcr_pid;
-  u_int16  output_program_number;
-  u_int32  output_pmt_pid;
+  uint32_t output_video_pid;
+  uint32_t output_audio_pid;
+  uint32_t output_pcr_pid;
+  uint16_t output_program_number;
+  uint32_t output_pmt_pid;
 
   // If we're reading Dolby (AC-3) audio, then there are two choices for the
   // stream type. DVB uses stream type 0x06, and ATSC uses stream type 0x81.

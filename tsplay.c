@@ -79,15 +79,15 @@
  * false and either EOF was read, or `max` TS packets were read.
  */
 static int read_TS_packet(TS_reader_p  tsreader,
-                          u_int32     *count,
+                          uint32_t    *count,
                           byte        *data[TS_PACKET_SIZE],
-                          u_int32     *pid,
+                          uint32_t    *pid,
                           int         *got_pcr,
-                          u_int64     *pcr,
+                          uint64_t    *pcr,
                           int          max,
                           int          loop,
                           offset_t     start_posn,
-                          u_int32      start_count,
+                          uint32_t     start_count,
                           int          quiet)
 {
   int     err;
@@ -97,7 +97,7 @@ static int read_TS_packet(TS_reader_p  tsreader,
   byte   *payload;
   int     payload_len;
 
-  if (max > 0 && (*count) >= (u_int32)max)
+  if (max > 0 && (*count) >= (uint32_t)max)
   {
     if (loop)
     {
@@ -169,15 +169,15 @@ static int read_TS_packet(TS_reader_p  tsreader,
  */
 static int find_PCR_PID(TS_reader_p  tsreader,
                         TS_writer_p  tswriter,
-                        u_int32     *pcr_pid,
-                        u_int32     *num_read,
+                        uint32_t    *pcr_pid,
+                        uint32_t    *num_read,
                         int          max,
                         int          quiet)
 {
   int     err;
   int     count = 0;
   byte   *data;
-  u_int32 pid;
+  uint32_t pid;
   int     payload_unit_start_indicator;
   byte   *adapt;
   int     adapt_len;
@@ -187,7 +187,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
 
   pidint_list_p  prog_list = NULL;
   pmt_p          pmt = NULL;
-  u_int32        pmt_pid = 0;  // safe initial value
+  uint32_t       pmt_pid = 0;  // safe initial value
 
   byte  *pat_data = NULL;
   int    pat_data_len = 0;
@@ -375,7 +375,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
  */
 static int play_buffered_TS_packets(TS_reader_p  tsreader,
                                     TS_writer_p  tswriter,
-                                    u_int32      pid_to_ignore,
+                                    uint32_t     pid_to_ignore,
                                     int          max,
                                     int          loop,
                                     int          quiet,
@@ -383,9 +383,9 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
 {
   int  err;
   int  total = 0;
-  u_int32 count = 0;
-  u_int32 pcr_pid;
-  u_int32    start_count = 0;  // which TS packet to loop from
+  uint32_t count = 0;
+  uint32_t pcr_pid;
+  uint32_t   start_count = 0;  // which TS packet to loop from
   offset_t   start_posn = 0;
 
   // These are only used in the loop below, but the compiler grumbles if
@@ -395,8 +395,8 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
   // *will* be set by the function, so I don't want them reinitialised
   // every time round the loop. So hoist them back up to here...
   byte    *data = NULL;
-  u_int32  pid = 0;
-  u_int64  pcr = 0;
+  uint32_t pid = 0;
+  uint64_t pcr = 0;
 
   // Before we can use PCRs for timing, we need to read a PMT which tells us
   // what our video stream is (so we can get our PCRs therefrom).
@@ -429,7 +429,7 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
       if (tsreader->file != STDIN_FILENO)
       {
         fprintf(stderr,"### Last TS packet read was at " LLU_FORMAT "\n",
-                (u_int64)count * TS_PACKET_SIZE);
+                (uint64_t)count * TS_PACKET_SIZE);
       }
       return 1;
     }
@@ -481,7 +481,7 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
  */
 static int play_TS_packets(TS_reader_p  tsreader,
                            TS_writer_p  tswriter,
-                           u_int32      pid_to_ignore,
+                           uint32_t     pid_to_ignore,
                            int          max,
                            int          loop,
                            int          quiet,
@@ -489,11 +489,11 @@ static int play_TS_packets(TS_reader_p  tsreader,
 {
   int  err;
   int  total = 0;
-  u_int32 count = 0;
+  uint32_t count = 0;
   int  pcrs_used = 0;
   int  pcrs_ignored = 0;
-  u_int32 pcr_pid;
-  u_int32    start_count = 0;  // which TS packet to loop from
+  uint32_t pcr_pid;
+  uint32_t   start_count = 0;  // which TS packet to loop from
   offset_t   start_posn = 0;
 
   // Before we can use PCRs for timing, we need to read a PMT which tells us
@@ -518,9 +518,9 @@ static int play_TS_packets(TS_reader_p  tsreader,
   for (;;)
   {
     byte    *data;
-    u_int32  pid;
+    uint32_t pid;
     int      got_pcr;
-    u_int64  pcr;
+    uint64_t pcr;
 
     err = read_TS_packet(tsreader,&count,&data,&pid,&got_pcr,&pcr,
                          max,loop,start_posn,start_count,quiet);
@@ -531,7 +531,7 @@ static int play_TS_packets(TS_reader_p  tsreader,
       if (tsreader->file != STDIN_FILENO)
       {
         fprintf(stderr,"### Last TS packet read was at " LLU_FORMAT "\n",
-                (u_int64)count * TS_PACKET_SIZE);
+                (uint64_t)count * TS_PACKET_SIZE);
       }
       return 1;
     }
@@ -611,7 +611,7 @@ static int play_TS_packets(TS_reader_p  tsreader,
  */
 static int play_TS_stream(int         input,
                           TS_writer_p tswriter,
-                          u_int32     pid_to_ignore,
+                          uint32_t    pid_to_ignore,
                           int         scan_for_PCRs,
                           int         max,
                           int         loop,
@@ -696,11 +696,11 @@ static int play_PS_stream(int          input,
                           int          audio_stream,
                           int          want_ac3_audio,
                           int          want_dolby_as_dvb,
-                          u_int32      pmt_pid,
-                          u_int32      pcr_pid,
-                          u_int32      video_pid,
+                          uint32_t     pmt_pid,
+                          uint32_t     pcr_pid,
+                          uint32_t     video_pid,
                           int          keep_audio,
-                          u_int32      audio_pid,
+                          uint32_t     audio_pid,
                           int          max,
                           int          loop,
                           int          verbose,
@@ -1063,13 +1063,13 @@ int main(int argc, char **argv)
   char *multicast_if = NULL;                   // IP address of multicast i/f
 
   int       scan_for_PCRs = TRUE;
-  u_int32   pid_to_ignore = 0;
+  uint32_t  pid_to_ignore = 0;
 
   // Program Stream specific options
-  u_int32 pmt_pid = 0x66;
-  u_int32 video_pid = 0x68;
-  u_int32 pcr_pid = video_pid;  // Use PCRs from the video stream
-  u_int32 audio_pid = 0x67;
+  uint32_t pmt_pid = 0x66;
+  uint32_t video_pid = 0x68;
+  uint32_t pcr_pid = video_pid;  // Use PCRs from the video stream
+  uint32_t audio_pid = 0x67;
   int     repeat_program_every = 100;
   int     pad_start = 8;
   int     input_is_dvd = TRUE;

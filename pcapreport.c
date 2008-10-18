@@ -64,20 +64,20 @@ typedef struct pcapreport_ctx_struct
   pcap_hdr_t pcap_hdr;
   char *output_name;
   FILE *output_file;
-  u_int32 output_dest_addr;
-  u_int32 output_dest_port;
+  uint32_t output_dest_addr;
+  uint32_t output_dest_port;
 
   TS_reader_p ts_r;
 
   // The temporary read buffer used by our ts reader.
   byte    *tmp_buf;
-  u_int32 tmp_len;
+  uint32_t tmp_len;
 
   // ts packet counter for error reporting.
-  u_int32 ts_counter;
+  uint32_t ts_counter;
 
   // packet counter.
-  u_int32 pkt_counter;
+  uint32_t pkt_counter;
 
   // Last continuity counter.
   int last_cc;
@@ -137,7 +137,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
                         ipv4_header_t *ipv4_header, 
                         ipv4_udp_header_t *udp_header,
                         const byte *data,
-                        const u_int32 len)
+                        const uint32_t len)
 {
   int rv;
 
@@ -176,7 +176,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
 
     // Right. Split it ..
     {
-      u_int32 pid;
+      uint32_t pid;
       int pusi;
       byte *adapt;
       int adapt_len;
@@ -304,7 +304,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
 
 static int write_out_packet(pcapreport_ctx_t *ctx, 
                             const byte *data, 
-                            const u_int32 len)
+                            const uint32_t len)
 {
   int rv;
 
@@ -519,7 +519,7 @@ int main(int argc, char **argv)
     {
       pcaprec_hdr_t rec_hdr;
       byte *data = NULL;
-      u_int32 len = 0;
+      uint32_t len = 0;
       int sent_to_output = 0;
 
       err = pcap_read_next(ctx.pcreader, &rec_hdr, &data, &len);
@@ -547,7 +547,7 @@ int main(int argc, char **argv)
 
           {
             ethernet_packet_t epkt;
-            u_int32 out_st, out_len;
+            uint32_t out_st, out_len;
             int rv;
             ipv4_header_t ipv4_hdr;
             ipv4_udp_header_t udp_hdr;

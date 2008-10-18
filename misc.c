@@ -61,7 +61,7 @@
 // CRC calculation
 // ============================================================
 
-static u_int32 crc_table[256];
+static uint32_t crc_table[256];
 
 /*
  * Populate the (internal) CRC table. May safely be called more than once.
@@ -70,7 +70,7 @@ static void make_crc_table()
 {
   int i, j;
   int already_done = 0;
-  u_int32 crc;
+  uint32_t crc;
 
   if (already_done)
     return;
@@ -101,7 +101,7 @@ static void make_crc_table()
  *        else return value from previous call (not sure if that
  *        needs complementing before being passed back in).
  */
-extern u_int32 crc32_block(u_int32 crc, byte *pData, int blk_len)
+extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len)
 {
   static int table_made = FALSE;
   int i, j;
@@ -578,7 +578,7 @@ extern int unsigned_value(char      *prefix,
                           char      *cmd,
                           char      *arg,
                           int        base,
-                          u_int32   *value)
+                          uint32_t  *value)
 {
   char  *ptr;
   unsigned long val;

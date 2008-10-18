@@ -42,7 +42,7 @@ typedef struct access_unit_context *access_unit_context_p;
 // A single access unit
 struct access_unit
 {
-  u_int32     index;       // The (notional) index of this unit in the stream
+  uint32_t    index;       // The (notional) index of this unit in the stream
                            // (i.e., from the context's access_unit_index)
   int         started_primary_picture; // True if we have, indeed, done so
   nal_unit_p  primary_start;  // First NAL unit of our primary picture
@@ -64,7 +64,7 @@ struct access_unit
   // so these could actually just be derived from the `primary_start`,
   // but it's slightly easier to have them more available, and saves
   // the need to check if `primary_start` is defined before using them).
-  u_int32  frame_num;
+  uint32_t frame_num;
   byte     field_pic_flag;    // frame or field?
   byte     bottom_field_flag; // for a field (only), bottom or top?
   // (After merging two field access units into a single frame,
@@ -99,7 +99,7 @@ struct access_unit_context
   // (re)set this to a sensible value.
   // The index of the first access unit read is 1, and this value is
   // incremented by each call of `get_next_access_unit`
-  u_int32        access_unit_index;  // The index of the last access unit read
+  uint32_t       access_unit_index;  // The index of the last access unit read
 
   // If we are collecting reversing information, then we keep a reference
   // to the reverse data here

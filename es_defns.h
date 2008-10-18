@@ -41,7 +41,7 @@
 struct _ES_offset
 {
   offset_t  infile;   // as used by lseek
-  int32     inpacket;
+  int32_t   inpacket;
 };
 typedef struct _ES_offset  ES_offset;
 typedef struct _ES_offset *ES_offset_p;
@@ -64,7 +64,7 @@ struct elementary_stream
   // And maintain a buffer of "read ahead" bytes
   byte      read_ahead[ES_READ_AHEAD_SIZE];
   offset_t  read_ahead_posn;   // location of this data in the file
-  int32     read_ahead_len;    // actual number of bytes in the buffer
+  int32_t   read_ahead_len;    // actual number of bytes in the buffer
   
   // And the next byte to be read is specified by its offset in said
   // data stream. For "bare" ES data, the `infile` value is used to
@@ -84,7 +84,7 @@ struct elementary_stream
   byte      *data_ptr;           // And which byte we're interested in
 
   offset_t   last_packet_posn;   // Where the last PES packet was in the file
-  int32      last_packet_es_data_len;  // And its number of ES bytes
+  int32_t    last_packet_es_data_len;  // And its number of ES bytes
   
   // Regardless, our triple byte memory is the same
   byte      cur_byte;    // The current (last read) byte
@@ -111,8 +111,8 @@ struct ES_unit
 {
   ES_offset start_posn;   // The start of the current data unit
   byte     *data;         // Its data, including the leading 00 00 01
-  u_int32   data_len;     // Its length
-  u_int32   data_size;    // The total buffer size
+  uint32_t  data_len;     // Its length
+  uint32_t  data_size;    // The total buffer size
 
   byte      start_code;   // The byte after the 00 00 01 prefix
 

@@ -551,7 +551,7 @@ static int maybe_remember_this_picture(h262_context_p  h262,
 {
   int        err;
   ES_offset  start_posn = {0,0};
-  u_int32    num_bytes = 0;
+  uint32_t   num_bytes = 0;
   if (this_picture->is_picture)
   {
     if (this_picture->picture_coding_type == 1)
@@ -1081,7 +1081,7 @@ extern int get_next_h262_frame(h262_context_p  context,
  */
 extern int write_h262_picture_as_TS(TS_writer_p     tswriter,
                                     h262_picture_p  picture,
-                                    u_int32         pid)
+                                    uint32_t        pid)
 {
   int ii;
   ES_unit_list_p  list;

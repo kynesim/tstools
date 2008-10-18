@@ -164,7 +164,7 @@ extern void print_stream_id(FILE  *stream,
  */
 extern int find_PS_packet_start(PS_reader_p ps,
                                 int         verbose,
-                                u_int32     max,
+                                uint32_t    max,
                                 offset_t   *posn,
                                 byte       *stream_id);
 /*
@@ -192,7 +192,7 @@ extern int find_PS_packet_start(PS_reader_p ps,
  */
 extern int find_PS_pack_header_start(PS_reader_p ps,
                                      int         verbose,
-                                     u_int32     max,
+                                     uint32_t    max,
                                      offset_t   *posn);
 /*
  * Read in (the rest of) a PS packet according to its length.
@@ -339,11 +339,11 @@ extern int ps_to_ts(PS_reader_p  ps,
                     int          audio_stream,
                     int          want_ac3_audio,
                     int          dolby_is_dvb,
-                    u_int32      pmt_pid,
-                    u_int32      pcr_pid,
-                    u_int32      video_pid,
+                    uint32_t     pmt_pid,
+                    uint32_t     pcr_pid,
+                    uint32_t     video_pid,
                     int          keep_audio,
-                    u_int32      audio_pid,
+                    uint32_t     audio_pid,
                     int          max,
                     int          verbose,
                     int          quiet);

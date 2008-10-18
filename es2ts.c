@@ -53,7 +53,7 @@
  */
 static int write_ES_unit_as_TS(TS_writer_p output,
                                ES_unit_p   unit,
-                               u_int32     video_pid)
+                               uint32_t    video_pid)
 {
   int err = write_ES_as_TS_PES_packet(output,unit->data,unit->data_len,
                                       video_pid,DEFAULT_VIDEO_STREAM_ID);
@@ -68,8 +68,8 @@ static int write_ES_unit_as_TS(TS_writer_p output,
 
 static int transfer_data(ES_p        es,
                          TS_writer_p output,
-                         u_int32     pmt_pid,
-                         u_int32     video_pid,
+                         uint32_t    pmt_pid,
+                         uint32_t    video_pid,
                          byte        stream_type,
                          int         max,
                          int         verbose,
@@ -204,8 +204,8 @@ int main(int argc, char **argv)
   int     verbose = FALSE;
   int     quiet = FALSE;
   int     max = 0;
-  u_int32 video_pid = 0x68;
-  u_int32 pmt_pid = 0x66;
+  uint32_t video_pid = 0x68;
+  uint32_t pmt_pid = 0x66;
   int     err = 0;
   int     err2;
   int     ii = 1;

@@ -97,14 +97,14 @@ static int write_pack_header(FILE  *output)
  */
 static int write_PES_packet(FILE    *output,
                             byte    *data,
-                            u_int16  data_len,
+                            uint16_t data_len,
                             byte     stream_id)
 {
   static   byte header[] = {0x00, 0x00, 0x01,
                             0xFF, 0xFF, 0xFF,  // replace 3 bytes
                             0x80, 0x00, 0x00}; // flags and header data len
   size_t   count;
-  u_int16  PES_packet_length = data_len + 3;   // + 3 for the flags, etc.
+  uint16_t PES_packet_length = data_len + 3;   // + 3 for the flags, etc.
 
   header[3] = stream_id;
   header[4] = (PES_packet_length & 0xFF00) >> 8;
@@ -133,7 +133,7 @@ static int write_PES_packet(FILE    *output,
  */
 static int extract_data(int      input,
                         FILE    *output,
-                        u_int16  program_number,
+                        uint16_t program_number,
                         int      max,
                         int      verbose,
                         int      quiet)
@@ -176,8 +176,8 @@ static int extract_data(int      input,
     if (reader->packet->data[4] == 0 &&
         reader->packet->data[5] == 0)
     {
-      int32  PES_packet_length = reader->packet->data_len - 6;
-      byte  *start  = reader->packet->data;
+      int32_t PES_packet_length = reader->packet->data_len - 6;
+      byte   *start  = reader->packet->data;
       // Our maximum length is determined by the maximum length we can
       // indicate in the two bytes of the PES_packet_length. When we're
       // *writing* data, we also have to allow for writing the two flag
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
   int       max     = 0;     // The maximum number of TS packets to read (or 0)
   int       quiet   = FALSE; // True => be as quiet as possible
   int       verbose = FALSE; // True => output diagnostic/progress messages
-  u_int16   program_number = 0;
+  uint16_t  program_number = 0;
 
   int    err = 0;
   int    ii = 1;

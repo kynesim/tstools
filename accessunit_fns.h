@@ -97,7 +97,7 @@ extern void report_access_unit(FILE          *stream,
  */
 extern int get_access_unit_bounds(access_unit_p   access_unit,
                                   ES_offset      *start,
-                                  u_int32        *length);
+                                  uint32_t       *length);
 
 /*
  * Are all slices in this access unit I slices?
@@ -154,7 +154,7 @@ extern int write_access_unit_as_ES(access_unit_p           access_unit,
 extern int write_access_unit_as_TS(access_unit_p          access_unit,
                                    access_unit_context_p  context,
                                    TS_writer_p            tswriter,
-                                   u_int32                video_pid);
+                                   uint32_t               video_pid);
 /*
  * Write out an access unit as TS, with PTS timing in the first PES packet
  * (and PCR timing in the first TS of the frame).
@@ -175,11 +175,11 @@ extern int write_access_unit_as_TS(access_unit_p          access_unit,
 extern int write_access_unit_as_TS_with_pts_dts(access_unit_p          access_unit,
                                                 access_unit_context_p  context,
                                                 TS_writer_p            tswriter,
-                                                u_int32                video_pid,
+                                                uint32_t               video_pid,
                                                 int                    got_pts,
-                                                u_int64                pts,
+                                                uint64_t               pts,
                                                 int                    got_dts,
-                                                u_int64                dts);
+                                                uint64_t               dts);
 /*
  * Write out an access unit as TS, with PCR timing in the first TS of the
  * frame.
@@ -200,9 +200,9 @@ extern int write_access_unit_as_TS_with_pts_dts(access_unit_p          access_un
 extern int write_access_unit_as_TS_with_PCR(access_unit_p          access_unit,
                                             access_unit_context_p  context,
                                             TS_writer_p            tswriter,
-                                            u_int32                video_pid,
-                                            u_int64                pcr_base,
-                                            u_int32                pcr_extn);
+                                            uint32_t               video_pid,
+                                            uint64_t               pcr_base,
+                                            uint32_t               pcr_extn);
 /*
  * Retrieve the next access unit from the given elementary stream.
  *

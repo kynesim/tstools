@@ -148,7 +148,7 @@ static int extract_av_via_pes(char  *input_name,
  */
 static int extract_pid_packets(TS_reader_p  tsreader,
                                FILE        *output,
-                               u_int32      pid_wanted,
+                               uint32_t     pid_wanted,
                                int          max,
                                int          verbose,
                                int          quiet)
@@ -164,7 +164,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
   
   for (;;)
   {
-    u_int32  pid;
+    uint32_t pid;
     int      payload_unit_start_indicator;
     byte    *adapt, *payload;
     int      adapt_len, payload_len;
@@ -305,7 +305,7 @@ static int extract_av(int   input,
   int      err, ii;
   int      max_to_read = max;
   int      total_num_read = 0;
-  u_int32  pid = 0;
+  uint32_t pid = 0;
   TS_reader_p tsreader = NULL;
   pmt_p       pmt = NULL;
 
@@ -389,7 +389,7 @@ static int extract_av(int   input,
  */
 static int extract_pid(int          input,
                        FILE        *output,
-                       u_int32      pid_wanted,
+                       uint32_t     pid_wanted,
                        int          max,
                        int          verbose,
                        int          quiet)
@@ -460,7 +460,7 @@ int main(int argc, char **argv)
   int       input   = -1;    // Our input file descriptor
   FILE     *output  = NULL;  // The stream we're writing to (if any)
   int       max     = 0;     // The maximum number of TS packets to read (or 0)
-  u_int32   pid     = 0;     // The PID of the (single) stream to extract
+  uint32_t  pid     = 0;     // The PID of the (single) stream to extract
   int       quiet   = FALSE; // True => be as quiet as possible
   int       verbose = FALSE; // True => output diagnostic/progress messages
   int       use_pes = FALSE;

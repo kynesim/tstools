@@ -284,9 +284,9 @@ extern int wait_for_command(TS_writer_p  tswriter);
  */
 extern int tswrite_write(TS_writer_p  tswriter,
                          byte         packet[TS_PACKET_SIZE],
-                         u_int32      pid,
+                         uint32_t     pid,
                          int          got_pcr,
-                         u_int64      pcr);
+                         uint64_t     pcr);
 
 /*
  * Write a usage string (to standard output) describing the tuning

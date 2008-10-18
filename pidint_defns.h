@@ -41,10 +41,10 @@
 // An expandable list of PID vs. integer
 struct pidint_list
 {
-  int     *number;  // The integers
-  u_int32 *pid;     // The corresponding PIDs
-  int      length;  // How many there are
-  int      size;    // How big the arrays are
+  int      *number;  // The integers
+  uint32_t *pid;     // The corresponding PIDs
+  int       length;  // How many there are
+  int       size;    // How big the arrays are
 };
 typedef struct pidint_list *pidint_list_p;
 #define SIZEOF_PIDINT_LIST sizeof(struct pidint_list)
@@ -58,8 +58,8 @@ typedef struct pidint_list *pidint_list_p;
 struct _pmt_stream
 {
   byte          stream_type;
-  u_int32       elementary_PID;
-  u_int16       ES_info_length;
+  uint32_t      elementary_PID;
+  uint16_t      ES_info_length;
   byte         *ES_info;                // the descriptor data therefor
 };
 typedef struct _pmt_stream *pmt_stream_p;
@@ -67,10 +67,10 @@ typedef struct _pmt_stream *pmt_stream_p;
 
 struct _pmt
 {
-  u_int16       program_number;
+  uint16_t      program_number;
   byte          version_number;         // perhaps not strictly necessary
-  u_int32       PCR_pid;
-  u_int16       program_info_length;
+  uint32_t      PCR_pid;
+  uint16_t      program_info_length;
   byte         *program_info;           // the descriptor data therefor
   int           streams_size;           // the size of the `streams` array
   int           num_streams;            // the number of streams we know about

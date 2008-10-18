@@ -59,10 +59,10 @@
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_TS_program_data(TS_writer_p output,
-                                 u_int32     transport_stream_id,
-                                 u_int32     program_number,
-                                 u_int32     pmt_pid,
-                                 u_int32     pid,
+                                 uint32_t    transport_stream_id,
+                                 uint32_t    program_number,
+                                 uint32_t    pmt_pid,
+                                 uint32_t    pid,
                                  byte        stream_type);
 
 /*
@@ -82,12 +82,12 @@ extern int write_TS_program_data(TS_writer_p output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_TS_program_data2(TS_writer_p output,
-                                  u_int32     transport_stream_id,
-                                  u_int32     program_number,
-                                  u_int32     pmt_pid,
-                                  u_int32     pcr_pid,
+                                  uint32_t    transport_stream_id,
+                                  uint32_t    program_number,
+                                  uint32_t    pmt_pid,
+                                  uint32_t    pcr_pid,
                                   int         num_progs,
-                                  u_int32     prog_pid[],
+                                  uint32_t    prog_pid[],
                                   byte        prog_type[]);
 
 /*
@@ -100,7 +100,7 @@ extern int write_TS_program_data2(TS_writer_p output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_pat(TS_writer_p    output,
-		     u_int32        transport_stream_id,
+		     uint32_t       transport_stream_id,
 		     pidint_list_p  prog_list);
 /*
  * Write out a Transport Stream PMT, given a PMT datastructure
@@ -112,7 +112,7 @@ extern int write_pat(TS_writer_p    output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_pmt(TS_writer_p output,
-		     u_int32     pmt_pid,
+		     uint32_t    pmt_pid,
 		     pmt_p       pmt);
 /*
  * Write out a Transport Stream PAT and PMT, given the appropriate
@@ -127,9 +127,9 @@ extern int write_pmt(TS_writer_p output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_pat_and_pmt(TS_writer_p    output,
-                             u_int32        transport_stream_id,
+                             uint32_t       transport_stream_id,
                              pidint_list_p  prog_list,
-                             u_int32        pmt_pid,
+                             uint32_t       pmt_pid,
                              pmt_p          pmt);
 /*
  * Write out a Transport Stream PAT, for a single program.
@@ -142,9 +142,9 @@ extern int write_pat_and_pmt(TS_writer_p    output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_single_program_pat(TS_writer_p output,
-                                    u_int32     transport_stream_id,
-                                    u_int32     program_number,
-                                    u_int32     pmt_pid);
+                                    uint32_t    transport_stream_id,
+                                    uint32_t    program_number,
+                                    uint32_t    pmt_pid);
 /*
  * Write out our ES data as a Transport Stream PES packet.
  *
@@ -165,8 +165,8 @@ extern int write_single_program_pat(TS_writer_p output,
  */
 extern int write_ES_as_TS_PES_packet(TS_writer_p output,
                                      byte        data[],
-                                     u_int32     data_len,
-                                     u_int32     pid,
+                                     uint32_t    data_len,
+                                     uint32_t    pid,
                                      byte        stream_id);
 /*
  * Write out our ES data as a Transport Stream PES packet, with PTS and/or DTS
@@ -203,13 +203,13 @@ extern int write_ES_as_TS_PES_packet(TS_writer_p output,
  */
 extern int write_ES_as_TS_PES_packet_with_pts_dts(TS_writer_p output,
                                                   byte        data[],
-                                                  u_int32     data_len,
-                                                  u_int32     pid,
+                                                  uint32_t    data_len,
+                                                  uint32_t    pid,
                                                   byte        stream_id,
                                                   int         got_pts,
-                                                  u_int64     pts,
+                                                  uint64_t    pts,
                                                   int         got_dts,
-                                                  u_int64     dts);
+                                                  uint64_t    dts);
 /*
  * Write out our ES data as a Transport Stream PES packet, with PCR.
  *
@@ -231,11 +231,11 @@ extern int write_ES_as_TS_PES_packet_with_pts_dts(TS_writer_p output,
  */
 extern int write_ES_as_TS_PES_packet_with_pcr(TS_writer_p output,
                                               byte        data[],
-                                              u_int32     data_len,
-                                              u_int32     pid,
+                                              uint32_t    data_len,
+                                              uint32_t    pid,
                                               byte        stream_id,
-                                              u_int64     pcr_base,
-                                              u_int32     pcr_extn);
+                                              uint64_t    pcr_base,
+                                              uint32_t    pcr_extn);
 /*
  * Write out a PES packet's data as a Transport Stream PES packet.
  *
@@ -258,12 +258,12 @@ extern int write_ES_as_TS_PES_packet_with_pcr(TS_writer_p output,
  */
 extern int write_PES_as_TS_PES_packet(TS_writer_p output,
                                       byte        data[],
-                                      u_int32     data_len,
-                                      u_int32     pid,
+                                      uint32_t    data_len,
+                                      uint32_t    pid,
                                       byte        stream_id,
                                       int         got_pcr,
-                                      u_int64     pcr_base,
-                                      u_int32     pcr_extn);
+                                      uint64_t    pcr_base,
+                                      uint32_t    pcr_extn);
 /*
  * Write out a Transport Stream Null packet.
  *
@@ -408,12 +408,12 @@ extern int read_next_TS_packet(TS_reader_p  tsreader,
  * Returns 0 if all went well, 1 if something went wrong, EOF if EOF was read.
  */
 extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
-                                            u_int32      pcr_pid,
-                                            u_int32      start_count,
+                                            uint32_t     pcr_pid,
+                                            uint32_t     start_count,
                                             byte        *data[TS_PACKET_SIZE],
-                                            u_int32     *pid,
-                                            u_int64     *pcr,
-                                            u_int32     *count);
+                                            uint32_t    *pid,
+                                            uint64_t    *pcr,
+                                            uint32_t    *count);
 /* Retrieve the next TS packet from the PCR read-ahead buffer,
  * complete with its calculated PCR time.
  *
@@ -430,15 +430,15 @@ extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
  */
 extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
                                            byte        *data[TS_PACKET_SIZE],
-                                           u_int32     *pid,
-                                           u_int64     *pcr);
+                                           uint32_t    *pid,
+                                           uint64_t    *pcr);
 /* Let the "looping" buffered TS packet reader know what its PCR PID is
  *
  * Call this before the first call of read_buffered_TS_packet().
  *
  * - `pcr_pid` is the PID within which we should look for PCR entries
  */
-extern void prime_read_buffered_TS_packet(u_int32      pcr_pid);
+extern void prime_read_buffered_TS_packet(uint32_t     pcr_pid);
 /*
  * Read the next TS packet, coping with looping, etc.
  *
@@ -466,14 +466,14 @@ extern void prime_read_buffered_TS_packet(u_int32      pcr_pid);
  * false and either EOF was read, or `max` TS packets were read.
  */
 extern int read_buffered_TS_packet(TS_reader_p  tsreader,
-                                   u_int32     *count,
+                                   uint32_t    *count,
                                    byte        *data[TS_PACKET_SIZE],
-                                   u_int32     *pid,
-                                   u_int64     *pcr,
+                                   uint32_t    *pid,
+                                   uint64_t    *pcr,
                                    int          max,
                                    int          loop,
                                    offset_t     start_posn,
-                                   u_int32      start_count,
+                                   uint32_t     start_count,
                                    int          quiet);
 
 // ------------------------------------------------------------
@@ -487,10 +487,10 @@ extern int read_buffered_TS_packet(TS_reader_p  tsreader,
  * - `got_PCR` is TRUE if the adaptation field contains a PCR
  * - `pcr` is then the PCR value itself
  */
-extern void get_PCR_from_adaptation_field(byte     adapt[],
-                                          int      adapt_len,
-                                          int     *got_pcr,
-                                          u_int64 *pcr);
+extern void get_PCR_from_adaptation_field(byte      adapt[],
+                                          int       adapt_len,
+                                          int      *got_pcr,
+                                          uint64_t *pcr);
 /*
  * Report on the contents of this TS packet's adaptation field
  *
@@ -587,9 +587,9 @@ extern int extract_prog_list_from_pat(int            verbose,
 extern int extract_stream_list_from_pmt(int            verbose,
                                         byte           payload[MAX_TS_PAYLOAD_SIZE],
                                         int            payload_len,
-                                        u_int32        pid,
+                                        uint32_t       pid,
                                         int           *program_number,
-                                        u_int32       *pcr_pid,
+                                        uint32_t      *pcr_pid,
                                         pidint_list_p *stream_list);
 /*
  * Given a TS packet, extract the (next bit of) a PAT/PMT's data.
@@ -622,7 +622,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
 extern int build_psi_data(int            verbose,
                           byte           payload[MAX_TS_PAYLOAD_SIZE],
                           int            payload_len,
-                          u_int32        pid,
+                          uint32_t       pid,
                           byte         **data,
                           int           *data_len,
                           int           *data_used);
@@ -641,7 +641,7 @@ extern int build_psi_data(int            verbose,
 extern int extract_pmt(int            verbose,
                        byte           data[],
                        int            data_len,
-                       u_int32        pid,
+                       uint32_t       pid,
                        pmt_p         *pmt);
 /*
  * Split a TS packet into its main parts
@@ -664,7 +664,7 @@ extern int extract_pmt(int            verbose,
  * Returns 0 if all went well, 1 if something went wrong.
  */
 extern int split_TS_packet(byte      buf[TS_PACKET_SIZE],
-                           u_int32  *pid,
+                           uint32_t *pid,
                            int      *payload_unit_start_indicator,
                            byte     *adapt[],
                            int      *adapt_len,
@@ -698,7 +698,7 @@ extern int split_TS_packet(byte      buf[TS_PACKET_SIZE],
  * went wrong.
  */
 extern int get_next_TS_packet(TS_reader_p  tsreader,
-                              u_int32     *pid,
+                              uint32_t    *pid,
                               int         *payload_unit_start_indicator,
                               byte        *adapt[],
                               int         *adapt_len,
@@ -740,7 +740,7 @@ extern int find_pat(TS_reader_p     tsreader,
  * 1 if something else went wrong.
  */
 extern int find_next_pmt(TS_reader_p     tsreader,
-                         u_int32         pmt_pid,
+                         uint32_t        pmt_pid,
                          int             max,
                          int             verbose,int             quiet,
                          int            *num_read,

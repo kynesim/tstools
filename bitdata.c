@@ -138,10 +138,10 @@ extern int read_bit(bitdata_p  bitdata,
  */
 extern int read_bits(bitdata_p  bitdata,
                      int        count,
-                     u_int32   *bits)
+                     uint32_t  *bits)
 {
   int      index = 0;
-  u_int32  result = 0;
+  uint32_t result = 0;
 
   assert((count >=0 && count <= 32));
 
@@ -208,9 +208,9 @@ extern int count_zero_bits(bitdata_p  bitdata)
  * Returns 0 if all went well, 1 if there were not enough bits in the data.
  */
 extern int read_exp_golomb(bitdata_p   bitdata,
-                           u_int32    *result)
+                           uint32_t   *result)
 {
-  u_int32 next = 0;
+  uint32_t next = 0;
   int leading_zero_bits = count_zero_bits(bitdata);
   int err = read_bits(bitdata,leading_zero_bits,&next);
   if (err)
@@ -232,9 +232,9 @@ extern int read_exp_golomb(bitdata_p   bitdata,
  * Returns 0 if all went well, 1 if there were not enough bits in the data.
  */
 extern int read_signed_exp_golomb(bitdata_p   bitdata,
-                                  int32      *result)
+                                  int32_t    *result)
 {
-  u_int32 val = 0;
+  uint32_t val = 0;
   int err = read_exp_golomb(bitdata,&val);
   if (err)
   {

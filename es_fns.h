@@ -164,7 +164,7 @@ extern int build_ES_unit(ES_unit_p  *unit);
  */
 extern int build_ES_unit_from_data(ES_unit_p  *unit,
                                    byte       *data,
-                                   u_int32     data_len);
+                                   uint32_t    data_len);
 
 /*
  * Tidy up and free an ES unit datastructure after we've finished with it.
@@ -292,8 +292,8 @@ extern int seek_ES(ES_p       es,
  */
 extern int read_ES_data(ES_p       es,
                         ES_offset  start_posn,
-                        u_int32    num_bytes,
-                        u_int32   *data_len,
+                        uint32_t   num_bytes,
+                        uint32_t  *data_len,
                         byte     **data);
 
 
@@ -355,7 +355,7 @@ extern void report_ES_unit_list(FILE              *stream,
  */
 extern int get_ES_unit_list_bounds(ES_unit_list_p   list,
                                    ES_offset       *start,
-                                   u_int32         *length);
+                                   uint32_t        *length);
 /*
  * Compare two ES unit lists. The comparison does not include the start
  * position of the unit data, but just the actual data - i.e., two unit lists

@@ -67,7 +67,7 @@ static int report_streams(TS_reader_p tsreader,
   pmt_p          this_pmt = NULL;
   pmt_p          last_pmt = NULL;
 
-  u_int32        pmt_pid = 0;  // which will get "masked" by the PAT pid
+  uint32_t       pmt_pid = 0;  // which will get "masked" by the PAT pid
 
   byte  *pat_data = NULL;
   int    pat_data_len = 0;
@@ -84,7 +84,7 @@ static int report_streams(TS_reader_p tsreader,
 
   for (ii=0; ii<max; ii++)
   {
-    u_int32  pid;
+    uint32_t pid;
     int      payload_unit_start_indicator;
     byte    *adapt, *payload;
     int      adapt_len, payload_len;

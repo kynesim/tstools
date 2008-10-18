@@ -210,7 +210,7 @@ extern int get_next_h262_frame(h262_context_p  context,
  */
 extern int write_h262_picture_as_TS(TS_writer_p     tswriter,
                                     h262_picture_p  picture,
-                                    u_int32         pid);
+                                    uint32_t        pid);
 /*
  * Write out a picture (as stored in an ES unit list) as ES
  *

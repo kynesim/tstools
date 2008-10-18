@@ -64,11 +64,11 @@
 #if TEST_PTS_DTS
 #include "pes_fns.h"
 
-static int check(u_int64 value)
+static int check(uint64_t value)
 {
   int      err;
   byte     data[5];
-  u_int64  result;
+  uint64_t result;
 
   encode_pts_dts(data,2,value);
   err = decode_pts_dts(data,2,&result);
@@ -140,16 +140,16 @@ static int merge_with_avs(avs_context_p  video_context,
 {
   int  ii;
   int  err;
-  u_int32  prog_pids[2];
+  uint32_t prog_pids[2];
   byte     prog_type[2];
 
   int video_frame_count = 0;
   int audio_frame_count = 0;
 
-  u_int32 video_pts_increment = (u_int32)(90000.0 / video_frame_rate);
-  u_int32 audio_pts_increment = (90000 * audio_samples_per_frame) / audio_sample_rate;
-  u_int64 video_pts = 0;
-  u_int64 audio_pts = 0;
+  uint32_t video_pts_increment = (uint32_t)(90000.0 / video_frame_rate);
+  uint32_t audio_pts_increment = (90000 * audio_samples_per_frame) / audio_sample_rate;
+  uint64_t video_pts = 0;
+  uint64_t audio_pts = 0;
 
   // The "actual" times are just for information, so we aren't too worried
   // about accuracy - thus floating point should be OK.
@@ -342,8 +342,8 @@ static int merge_with_avs(avs_context_p  video_context,
 
   if (!quiet)
   {
-    u_int32 video_elapsed = (u_int32)((double)(100*video_frame_count)/video_frame_rate);
-    u_int32 audio_elapsed = 100*audio_frame_count*
+    uint32_t video_elapsed = (uint32_t)((double)(100*video_frame_count)/video_frame_rate);
+    uint32_t audio_elapsed = 100*audio_frame_count*
       audio_samples_per_frame/audio_sample_rate;
     printf("Read %d video frame%s, %.2fs elapsed (%dm %.2fs)\n",
            video_frame_count,(video_frame_count==1?"":"s"),
@@ -376,16 +376,16 @@ static int merge_with_h264(access_unit_context_p  video_context,
 {
   int  ii;
   int  err;
-  u_int32  prog_pids[2];
+  uint32_t prog_pids[2];
   byte     prog_type[2];
 
   int video_frame_count = 0;
   int audio_frame_count = 0;
 
-  u_int32 video_pts_increment = 90000 / video_frame_rate;
-  u_int32 audio_pts_increment = (90000 * audio_samples_per_frame) / audio_sample_rate;
-  u_int64 video_pts = 0;
-  u_int64 audio_pts = 0;
+  uint32_t video_pts_increment = 90000 / video_frame_rate;
+  uint32_t audio_pts_increment = (90000 * audio_samples_per_frame) / audio_sample_rate;
+  uint64_t video_pts = 0;
+  uint64_t audio_pts = 0;
 
   // The "actual" times are just for information, so we aren't too worried
   // about accuracy - thus floating point should be OK.
@@ -566,8 +566,8 @@ static int merge_with_h264(access_unit_context_p  video_context,
 
   if (!quiet)
   {
-    u_int32 video_elapsed = 100*video_frame_count/video_frame_rate;
-    u_int32 audio_elapsed = 100*audio_frame_count*
+    uint32_t video_elapsed = 100*video_frame_count/video_frame_rate;
+    uint32_t audio_elapsed = 100*audio_frame_count*
       audio_samples_per_frame/audio_sample_rate;
     printf("Read %d video frame%s, %.2fs elapsed (%dm %.2fs)\n",
            video_frame_count,(video_frame_count==1?"":"s"),

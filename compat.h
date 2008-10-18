@@ -39,17 +39,17 @@
 // Kill deprecation warnings
 #pragma warning( 4: 4996 )
 
-
-// I can't find a sensible location that defines "guaranteed" quantities
-// for these, so we'll have to be old-fashioned
+// Windows doesn't seem to supply <stdint.h>, so we shall have to try
+// for values we hope work
 typedef unsigned char    byte;
-typedef unsigned short   u_int16;
-typedef unsigned long    u_int32;
-typedef unsigned __int64 u_int64;
+typedef unsigned char    uint8_t;
+typedef unsigned short   uint16_t;
+typedef unsigned long    uint32_t;
+typedef unsigned __int64 uint64_t;
 
-typedef short   int16;
-typedef long    int32;
-typedef __int64 int64;
+typedef short   int16_t;
+typedef long    int32_t;
+typedef __int64 int64_t;
 
 // On BSD, lseek takes a 64-bit off_t value
 // On Linux, if the system supports long files, it does the same
@@ -91,20 +91,12 @@ typedef __int64 offset_t;
 #define snprintf _snprintf
 
 #else // _WIN32
-#include <sys/types.h>  // Posix standard primitive system data types
+// Other than on Windows, using the C99 integer definitions is what people
+// expect, so do so
+#include <stdint.h>
 
-// C99 also defines equivalent types in <stdint.h>, but the unsigned types
-// are spelt uint8_t, etc., instead of u_int8_t. Given the need to support
-// older compilers, go with the Posix standard.
-
-typedef u_int8_t  byte;
-typedef u_int16_t u_int16;
-typedef u_int32_t u_int32;
-typedef u_int64_t u_int64;
-
-typedef int16_t  int16;
-typedef int32_t  int32;
-typedef int64_t  int64;
+// Keep "byte" for historical/affectionate reasons
+typedef uint8_t  byte;
 
 // lseek on BSD/Linux uses an off_t quantity to specify the required
 // position. Where 64 bit file positions are supported, this is a 64 bit

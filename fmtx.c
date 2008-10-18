@@ -46,15 +46,15 @@ TCHAR *fmtx_alloc()
   return fmtx_buffers[n];
 }
 
-int frac_27MHz(int64 n)
+int frac_27MHz(int64_t n)
 {
   return (int)((n < 0 ? -n : n) % 300LL);
 }
 
-const TCHAR *fmtx_timestamp(int64 n, unsigned int flags)
+const TCHAR *fmtx_timestamp(int64_t n, unsigned int flags)
 {
   TCHAR *buf = fmtx_alloc();
-  int64 n27 = n * ((flags & FMTX_TS_N_27MHz) != 0 ? 1LL : 300LL);
+  int64_t n27 = n * ((flags & FMTX_TS_N_27MHz) != 0 ? 1LL : 300LL);
 
   switch (flags & FMTX_TS_DISPLAY_MASK)
   {
@@ -69,7 +69,7 @@ const TCHAR *fmtx_timestamp(int64 n, unsigned int flags)
 
   case FMTX_TS_DISPLAY_90kHz_32BIT:
     {
-      int64 n90 = n27 / 300LL;
+      int64_t n90 = n27 / 300LL;
       TCHAR * p = buf;
       if (n90 < 0)
         *p++ = _T('-');
@@ -85,7 +85,7 @@ const TCHAR *fmtx_timestamp(int64 n, unsigned int flags)
   case FMTX_TS_DISPLAY_HMS:
     {
       unsigned int h, m, s, f;
-      int64 a27 = n27 < 0 ? -n27 : n27;
+      int64_t a27 = n27 < 0 ? -n27 : n27;
       a27 /= I64K(27); //us
       f = (unsigned int)(a27 % I64K(1000000));
       a27 /= I64K(1000000);

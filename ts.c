@@ -68,9 +68,9 @@ static int continuity_counter[0x1fff+1] = {0};
 /*
  * Return the next value of continuity_counter for the given pid
  */
-static inline int next_continuity_count(u_int32 pid)
+static inline int next_continuity_count(uint32_t pid)
 {
-  u_int32 next = (continuity_counter[pid] + 1) & 0x0f;
+  uint32_t next = (continuity_counter[pid] + 1) & 0x0f;
   continuity_counter[pid] = next;
   return next;
 }
@@ -98,12 +98,12 @@ static inline int next_continuity_count(u_int32 pid)
  *   we're not yet outputting any timing information (PTS/DTS), and so
  *   can get away with a minimal PES header).
  */
-extern void PES_header(u_int32   data_len,
+extern void PES_header(uint32_t  data_len,
                        byte      stream_id,
                        int       with_PTS,
-                       u_int64   pts,
+                       uint64_t  pts,
                        int       with_DTS,
-                       u_int64   dts,
+                       uint64_t  dts,
                        byte     *PES_hdr,
                        int      *PES_hdr_len)
 {
@@ -229,9 +229,9 @@ static int write_TS_packet_parts(TS_writer_p output,
                                  int         pes_hdr_len,
                                  byte        data[],
                                  int         data_len,
-                                 u_int32     pid,
+                                 uint32_t    pid,
                                  int         got_pcr,
-                                 u_int64     pcr)
+                                 uint64_t    pcr)
 {
   int err;
   int total_len  = TS_hdr_len + pes_hdr_len + data_len;
@@ -289,23 +289,23 @@ static int write_some_TS_PES_packet(TS_writer_p  output,
                                     byte        *pes_hdr,
                                     int          pes_hdr_len,
                                     byte        *data,
-                                    u_int32      data_len,
+                                    uint32_t     data_len,
                                     int          start,
                                     int          set_pusi,
-                                    u_int32      pid,
+                                    uint32_t     pid,
                                     byte         stream_id,
                                     int          got_PCR,
-                                    u_int64      PCR_base,
-                                    u_int32      PCR_extn)
+                                    uint64_t     PCR_base,
+                                    uint32_t     PCR_extn)
 {
 #define DEBUG_THIS 0
   byte    TS_packet[TS_PACKET_SIZE];
   int     TS_hdr_len;
-  u_int32 controls = 0;
-  u_int32 pes_data_len = 0;
+  uint32_t controls = 0;
+  uint32_t pes_data_len = 0;
   int     err;
   int     got_adaptation_field = FALSE;
-  u_int32 space_left;  // Bytes available for payload, after the TS header
+  uint32_t space_left;  // Bytes available for payload, after the TS header
 
   if (pid < 0x0010 || pid > 0x1ffe)
   {
@@ -483,8 +483,8 @@ static int write_some_TS_PES_packet(TS_writer_p  output,
  */
 extern int write_ES_as_TS_PES_packet(TS_writer_p output,
                                      byte        data[],
-                                     u_int32     data_len,
-                                     u_int32     pid,
+                                     uint32_t    data_len,
+                                     uint32_t    pid,
                                      byte        stream_id)
 {
   byte    pes_hdr[TS_PACKET_SIZE];  // better be more than long enough!
@@ -536,13 +536,13 @@ extern int write_ES_as_TS_PES_packet(TS_writer_p output,
  */
 extern int write_ES_as_TS_PES_packet_with_pts_dts(TS_writer_p output,
                                                   byte        data[],
-                                                  u_int32     data_len,
-                                                  u_int32     pid,
+                                                  uint32_t    data_len,
+                                                  uint32_t    pid,
                                                   byte        stream_id,
                                                   int         got_pts,
-                                                  u_int64     pts,
+                                                  uint64_t    pts,
                                                   int         got_dts,
-                                                  u_int64     dts)
+                                                  uint64_t    dts)
 {
   byte    pes_hdr[TS_PACKET_SIZE];  // better be more than long enough!
   int     pes_hdr_len = 0;
@@ -579,11 +579,11 @@ extern int write_ES_as_TS_PES_packet_with_pts_dts(TS_writer_p output,
  */
 extern int write_ES_as_TS_PES_packet_with_pcr(TS_writer_p output,
                                               byte        data[],
-                                              u_int32     data_len,
-                                              u_int32     pid,
+                                              uint32_t    data_len,
+                                              uint32_t    pid,
                                               byte        stream_id,
-                                              u_int64     pcr_base,
-                                              u_int32     pcr_extn)
+                                              uint64_t    pcr_base,
+                                              uint32_t    pcr_extn)
 {
   byte    pes_hdr[TS_PACKET_SIZE];  // better be more than long enough!
   int     pes_hdr_len = 0;
@@ -621,12 +621,12 @@ extern int write_ES_as_TS_PES_packet_with_pcr(TS_writer_p output,
  */
 extern int write_PES_as_TS_PES_packet(TS_writer_p output,
                                       byte        data[],
-                                      u_int32     data_len,
-                                      u_int32     pid,
+                                      uint32_t    data_len,
+                                      uint32_t    pid,
                                       byte        stream_id,
                                       int         got_pcr,
-                                      u_int64     pcr_base,
-                                      u_int32     pcr_extn)
+                                      uint64_t    pcr_base,
+                                      uint32_t    pcr_extn)
 {
 // Should we write MPEG-1 packet data out as ES (wrapped in MPEG-2 PES in TS),
 // rather than writing the packets out directly in TS? (that latter doesn't
@@ -655,7 +655,7 @@ extern int write_PES_as_TS_PES_packet(TS_writer_p output,
   {
     // Write MPEG-1 data out as ES in (MPEG-2) PES
     int     got_pts, got_dts;
-    u_int64 pts, dts;
+    uint64_t pts, dts;
     int     offset = calc_mpeg1_pes_offset(data,data_len);
     int     err = find_PTS_DTS_in_PES(data,data_len,
                                       &got_pts,&pts,&got_dts,&dts);
@@ -689,12 +689,12 @@ extern int write_PES_as_TS_PES_packet(TS_writer_p output,
  *
  * Returns 0 if it worked, 1 if something went wrong.
  */
-static int TS_program_packet_hdr(u_int32  pid,
+static int TS_program_packet_hdr(uint32_t pid,
                                  int      data_len,
                                  byte     TS_hdr[TS_PACKET_SIZE],
                                  int     *TS_hdr_len)
 {
-  u_int32 controls = 0;
+  uint32_t controls = 0;
   int     pointer, ii;
 
   if (data_len > (TS_PACKET_SIZE - 5))  // i.e., 183
@@ -745,10 +745,10 @@ static int TS_program_packet_hdr(u_int32  pid,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_TS_program_data(TS_writer_p output,
-                                 u_int32     transport_stream_id,
-                                 u_int32     program_number,
-                                 u_int32     pmt_pid,
-                                 u_int32     pid,
+                                 uint32_t    transport_stream_id,
+                                 uint32_t    program_number,
+                                 uint32_t    pmt_pid,
+                                 uint32_t    pid,
                                  byte        stream_type)
 {
   int                   err;
@@ -765,7 +765,7 @@ extern int write_TS_program_data(TS_writer_p output,
     return 1;
   }
 
-  pmt = build_pmt((u_int16)program_number,0,pid);  // Use program stream PID as PCR PID
+  pmt = build_pmt((uint16_t)program_number,0,pid);  // Use program stream PID as PCR PID
   if (pmt == NULL)
   {
     free_pidint_list(&prog_list);
@@ -809,12 +809,12 @@ extern int write_TS_program_data(TS_writer_p output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_TS_program_data2(TS_writer_p output,
-                                  u_int32     transport_stream_id,
-                                  u_int32     program_number,
-                                  u_int32     pmt_pid,
-                                  u_int32     pcr_pid,
+                                  uint32_t    transport_stream_id,
+                                  uint32_t    program_number,
+                                  uint32_t    pmt_pid,
+                                  uint32_t    pcr_pid,
                                   int         num_progs,
-                                  u_int32     prog_pid[],
+                                  uint32_t    prog_pid[],
                                   byte        prog_type[])
 {
   int                   err;
@@ -832,7 +832,7 @@ extern int write_TS_program_data2(TS_writer_p output,
     return 1;
   }
 
-  pmt = build_pmt((u_int16)program_number,0,pcr_pid);
+  pmt = build_pmt((uint16_t)program_number,0,pcr_pid);
   if (pmt == NULL)
   {
     free_pidint_list(&prog_list);
@@ -872,7 +872,7 @@ extern int write_TS_program_data2(TS_writer_p output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_pat(TS_writer_p    output,
-		     u_int32        transport_stream_id,
+		     uint32_t       transport_stream_id,
 		     pidint_list_p  prog_list)
 {
   int      ii;
@@ -882,7 +882,7 @@ extern int write_pat(TS_writer_p    output,
   int      err;
   int      section_length;
   int      offset, data_length;
-  u_int32  crc32;
+  uint32_t crc32;
 
 #if DEBUG_WRITE_PACKETS
   printf("|| PAT pid 0\n");
@@ -968,7 +968,7 @@ extern int write_pat(TS_writer_p    output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_pmt(TS_writer_p output,
-		     u_int32     pmt_pid,
+		     uint32_t    pmt_pid,
 		     pmt_p       pmt)
 {
   int      ii;
@@ -978,7 +978,7 @@ extern int write_pmt(TS_writer_p output,
   int      err;
   int      section_length;
   int      offset, data_length;
-  u_int32  crc32;
+  uint32_t crc32;
 
 #if DEBUG_WRITE_PACKETS
   printf("|| PMT pid %x (%d)\n",pmt_pid,pmt_pid);
@@ -1028,8 +1028,8 @@ extern int write_pmt(TS_writer_p output,
 
   for (ii=0; ii < pmt->num_streams; ii++)
   {
-    u_int32 pid = pmt->streams[ii].elementary_PID;
-    u_int16 len = pmt->streams[ii].ES_info_length;
+    uint32_t pid = pmt->streams[ii].elementary_PID;
+    uint16_t len = pmt->streams[ii].ES_info_length;
     data[offset+0] = pmt->streams[ii].stream_type;
     data[offset+1] = (byte) (0xE0 | ((pid & 0x1F00) >> 8));
     data[offset+2] = (byte) (pid & 0x00FF);
@@ -1090,9 +1090,9 @@ extern int write_pmt(TS_writer_p output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_pat_and_pmt(TS_writer_p    output,
-                             u_int32        transport_stream_id,
+                             uint32_t       transport_stream_id,
                              pidint_list_p  prog_list,
-                             u_int32        pmt_pid,
+                             uint32_t       pmt_pid,
                              pmt_p          pmt)
 {
   int err;
@@ -1114,9 +1114,9 @@ extern int write_pat_and_pmt(TS_writer_p    output,
  * Returns 0 if it worked, 1 if something went wrong.
  */
 extern int write_single_program_pat(TS_writer_p output,
-                                    u_int32     transport_stream_id,
-                                    u_int32     program_number,
-                                    u_int32     pmt_pid)
+                                    uint32_t    transport_stream_id,
+                                    uint32_t    program_number,
+                                    uint32_t    pmt_pid)
 {
   int                   err;
   pidint_list_p         prog_list;
@@ -1178,7 +1178,7 @@ extern int write_TS_null_packet(TS_writer_p output)
 // Reading a Transport Stream
 // ============================================================
 
-static u_int64 TWENTY_SEVEN_MHZ = 27000000;
+static uint64_t TWENTY_SEVEN_MHZ = 27000000;
 
 
 // ------------------------------------------------------------
@@ -1503,21 +1503,21 @@ extern int read_next_TS_packet(TS_reader_p  tsreader,
 static byte     TS_buffer[PCR_READ_AHEAD_SIZE][TS_PACKET_SIZE];
 // For convenience (since we'll already have calculated this once),
 // remember each packets PID
-static u_int32  TS_buffer_pids[PCR_READ_AHEAD_SIZE];
+static uint32_t TS_buffer_pids[PCR_READ_AHEAD_SIZE];
 // And the PCR PID we're looking for (we have to assume that's fairly
 // static, or we couldn't do read-aheads and interpolations)
-static u_int32  TS_buffer_pcr_pid = 0;
+static uint32_t TS_buffer_pcr_pid = 0;
 // The number of TS entries we've got therein, the *last* of which
 // has a PCR
 static int      TS_buffer_len = 0;
 // Which TS packet we should read next...
 static int      TS_buffer_next = 0;
 // The PCR of that last entry
-static u_int64  TS_buffer_end_pcr = 0;
+static uint64_t TS_buffer_end_pcr = 0;
 // And the PCR of the *previous* last entry
-static u_int64  TS_buffer_prev_pcr = 0;
+static uint64_t TS_buffer_prev_pcr = 0;
 // From which, we can deduce the time per packet
-static u_int64  TS_buffer_time_per_TS = 0;
+static uint64_t TS_buffer_time_per_TS = 0;
 // For diagnostic purposes, the sequence number of TS_buffer[0]
 // (and thus, of the overall read-ahead buffer) in the overall file
 static int      TS_buffer_posn = 0;
@@ -1543,9 +1543,9 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
   for (ii=0; ii<PCR_READ_AHEAD_SIZE; ii++)
   {
     byte    *data;
-    u_int32  pid;
+    uint32_t pid;
     int      got_pcr;
-    u_int64  pcr;
+    uint64_t pcr;
     int      payload_unit_start_indicator;
     byte    *adapt;
     int      adapt_len;
@@ -1624,12 +1624,12 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
  * Returns 0 if all went well, 1 if something went wrong, EOF if EOF was read.
  */
 extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
-                                            u_int32      pcr_pid,
-                                            u_int32      start_count,
+                                            uint32_t     pcr_pid,
+                                            uint32_t     start_count,
                                             byte        *data[TS_PACKET_SIZE],
-                                            u_int32     *pid,
-                                            u_int64     *pcr,
-                                            u_int32     *count)
+                                            uint32_t    *pid,
+                                            uint64_t    *pcr,
+                                            uint32_t    *count)
 {
   int err;
 
@@ -1678,8 +1678,8 @@ extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
  */
 extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
                                            byte        *data[TS_PACKET_SIZE],
-                                           u_int32     *pid,
-                                           u_int64     *pcr)
+                                           uint32_t    *pid,
+                                           uint64_t    *pcr)
 {
   int err;
   if (TS_buffer_next == TS_buffer_len)
@@ -1732,7 +1732,7 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
  *
  * - `pcr_pid` is the PID within which we should look for PCR entries
  */
-extern void prime_read_buffered_TS_packet(u_int32      pcr_pid)
+extern void prime_read_buffered_TS_packet(uint32_t     pcr_pid)
 {
   TS_buffer_pcr_pid = pcr_pid;
 }
@@ -1764,19 +1764,19 @@ extern void prime_read_buffered_TS_packet(u_int32      pcr_pid)
  * false and either EOF was read, or `max` TS packets were read.
  */
 extern int read_buffered_TS_packet(TS_reader_p  tsreader,
-                                   u_int32     *count,
+                                   uint32_t    *count,
                                    byte        *data[TS_PACKET_SIZE],
-                                   u_int32     *pid,
-                                   u_int64     *pcr,
+                                   uint32_t    *pid,
+                                   uint64_t    *pcr,
                                    int          max,
                                    int          loop,
                                    offset_t     start_posn,
-                                   u_int32      start_count,
+                                   uint32_t     start_count,
                                    int          quiet)
 {
   int     err;
 
-  if (max > 0 && (*count) >= (u_int32)max)
+  if (max > 0 && (*count) >= (uint32_t)max)
   {
     if (loop)
     {
@@ -1875,7 +1875,7 @@ extern int read_buffered_TS_packet(TS_reader_p  tsreader,
 extern void get_PCR_from_adaptation_field(byte     adapt[],
                                           int      adapt_len,
                                           int     *got_pcr,
-                                          u_int64 *pcr)
+                                          uint64_t *pcr)
 {
   if (adapt_len == 0 || adapt == NULL)
     *got_pcr = FALSE;
@@ -1887,7 +1887,7 @@ extern void get_PCR_from_adaptation_field(byte     adapt[],
     // it tends to get shifted as a signed integer, and sign-extended,
     // before it gets turned unsigned (which is probably the "correct"
     // behaviour according to the standard. oh well).
-    *pcr = ((u_int64)adapt[1] << 25) | (adapt[2] << 17) | (adapt[3] << 9) |
+    *pcr = ((uint64_t)adapt[1] << 25) | (adapt[2] << 17) | (adapt[3] << 9) |
       (adapt[4] << 1) | (adapt[5] >> 7);
     // Plus the program clock reference extension
     *pcr = ((*pcr) * 300) + ((adapt[5] & 1) << 8) + adapt[6];
@@ -1909,7 +1909,7 @@ extern void report_adaptation_field(byte        adapt[],
                                     int         adapt_len)
 {
   int      got_pcr;
-  u_int64  pcr;
+  uint64_t pcr;
 
   if (adapt_len == 0 || adapt == NULL)
     return;
@@ -1954,7 +1954,7 @@ extern void report_adaptation_timing(timing_p    times,
                                      int         packet_count)
 {
   int      got_pcr;
-  u_int64  pcr;
+  uint64_t pcr;
 
   if (adapt_len == 0 || adapt == NULL || times == NULL)
     return;
@@ -2041,8 +2041,8 @@ extern int extract_prog_list_from_pat(int            verbose,
   int     current_next_indicator;
   int     section_number;
   int     last_section_number;
-  u_int32 crc = 0;
-  u_int32 check_crc;
+  uint32_t crc = 0;
+  uint32_t check_crc;
   byte   *program_data;
   int     program_data_len;
   int     err;
@@ -2142,7 +2142,7 @@ extern int extract_prog_list_from_pat(int            verbose,
   while (program_data_len > 0)
   {
     int program_number = (program_data[0] << 8) | program_data[1];
-    u_int32 pid = ((program_data[2] & 0x1F) << 8) | program_data[3];
+    uint32_t pid = ((program_data[2] & 0x1F) << 8) | program_data[3];
 
     // A program_number of 0 indicates the network ID, so ignore it and
     //  don't append to the program list - rrw 2004-10-13
@@ -2233,7 +2233,7 @@ extern int print_descriptors(FILE  *stream,
     {
       switch (tag)
       {
-        u_int32  temp_u;
+        uint32_t temp_u;
       case 5:
         fprintf(stream,"Registration ");
         if (this_length >= 4)
@@ -2405,7 +2405,7 @@ extern int print_descriptors(FILE  *stream,
 extern int build_psi_data(int            verbose,
                           byte           payload[MAX_TS_PAYLOAD_SIZE],
                           int            payload_len,
-                          u_int32        pid,
+                          uint32_t       pid,
                           byte         **data,
                           int           *data_len,
                           int           *data_used)
@@ -2515,21 +2515,21 @@ extern int build_psi_data(int            verbose,
 extern int extract_pmt(int            verbose,
                        byte           data[],
                        int            data_len,
-                       u_int32        pid,
+                       uint32_t       pid,
                        pmt_p         *pmt)
 {
   int     table_id;
   int     section_syntax_indicator,zero_bit,reserved;
-  u_int16 program_number;
-  u_int32 pcr_pid;
+  uint16_t program_number;
+  uint32_t pcr_pid;
   int     section_length;
   int     version_number;
   int     current_next_indicator;
   int     section_number;
   int     last_section_number;
   int     program_info_length;
-  u_int32 crc = 0;
-  u_int32 check_crc;
+  uint32_t crc = 0;
+  uint32_t check_crc;
   byte   *stream_data;
   int     stream_data_len;
   int     err;
@@ -2693,7 +2693,7 @@ extern int extract_pmt(int            verbose,
   while (stream_data_len > 0)
   {
     int stream_type = stream_data[0];
-    u_int32 pid = ((stream_data[1] & 0x1F) << 8) | stream_data[2];
+    uint32_t pid = ((stream_data[1] & 0x1F) << 8) | stream_data[2];
     int ES_info_length =  ((stream_data[3] & 0x0F) << 8) | stream_data[4];
     if (verbose)
     {
@@ -2734,9 +2734,9 @@ extern int extract_pmt(int            verbose,
 extern int extract_stream_list_from_pmt(int            verbose,
                                         byte           payload[MAX_TS_PAYLOAD_SIZE],
                                         int            payload_len,
-                                        u_int32        pid,
+                                        uint32_t       pid,
                                         int           *program_number,
-                                        u_int32       *pcr_pid,
+                                        uint32_t      *pcr_pid,
                                         pidint_list_p *stream_list)
 {
   byte   *data;
@@ -2750,8 +2750,8 @@ extern int extract_stream_list_from_pmt(int            verbose,
   int     section_number;
   int     last_section_number;
   int     program_info_length;
-  u_int32 crc = 0;
-  u_int32 check_crc;
+  uint32_t crc = 0;
+  uint32_t check_crc;
   byte   *stream_data;
   int     stream_data_len;
   int     err;
@@ -2914,7 +2914,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
   while (stream_data_len > 0)
   {
     int stream_type = stream_data[0];
-    u_int32 pid = ((stream_data[1] & 0x1F) << 8) | stream_data[2];
+    uint32_t pid = ((stream_data[1] & 0x1F) << 8) | stream_data[2];
     int ES_info_length =  ((stream_data[3] & 0x0F) << 8) | stream_data[4];
     if (verbose)
     {
@@ -2957,7 +2957,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
  * Returns 0 if all went well, 1 if something went wrong.
  */
 extern int split_TS_packet(byte      buf[TS_PACKET_SIZE],
-                           u_int32  *pid,
+                           uint32_t *pid,
                            int      *payload_unit_start_indicator,
                            byte     *adapt[],
                            int      *adapt_len,
@@ -3061,7 +3061,7 @@ extern int split_TS_packet(byte      buf[TS_PACKET_SIZE],
  * went wrong.
  */
 extern int get_next_TS_packet(TS_reader_p  tsreader,
-                              u_int32     *pid,
+                              uint32_t    *pid,
                               int         *payload_unit_start_indicator,
                               byte        *adapt[],
                               int         *adapt_len,
@@ -3115,7 +3115,7 @@ extern int find_pat(TS_reader_p     tsreader,
   
   for (;;)
   {
-    u_int32  pid;
+    uint32_t pid;
     int      payload_unit_start_indicator;
     byte    *adapt, *payload;
     int      adapt_len, payload_len;
@@ -3203,7 +3203,7 @@ extern int find_pat(TS_reader_p     tsreader,
  * 1 if something else went wrong.
  */
 extern int find_next_pmt(TS_reader_p     tsreader,
-			 u_int32         pmt_pid,
+			 uint32_t        pmt_pid,
 			 int             max,
 			 int             verbose,
 			 int             quiet,
@@ -3221,7 +3221,7 @@ extern int find_next_pmt(TS_reader_p     tsreader,
 
   for (;;)
   {
-    u_int32 pid;
+    uint32_t pid;
     int     payload_unit_start_indicator;
     byte   *adapt, *payload;
     int     adapt_len, payload_len;
@@ -3326,7 +3326,7 @@ extern int find_pmt(TS_reader_p     tsreader,
 {
   int  err;
   pidint_list_p  prog_list = NULL;
-  u_int32        pmt_pid;
+  uint32_t       pmt_pid;
   int            sofar;
 
   *pmt = NULL;

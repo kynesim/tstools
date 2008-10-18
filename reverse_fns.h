@@ -58,7 +58,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
  * DEFAULT_VIDEO_STREAM_ID) are not correct.
  */
 extern void set_reverse_pid(reverse_data_p  reverse_data,
-                            u_int32         pid,
+                            uint32_t        pid,
                             byte            stream_id);
 /*
  * Add a reversing context to an H.262 context (and vice versa).
@@ -104,9 +104,9 @@ extern void free_reverse_data(reverse_data_p  *reverse_data);
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
-                                      u_int32           index,
+                                      uint32_t          index,
                                       ES_offset         start_posn,
-                                      u_int32           length,
+                                      uint32_t          length,
                                       byte              seq_offset,
                                       byte              afd);
 /*
@@ -124,9 +124,9 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
-                                      u_int32           index,
+                                      uint32_t          index,
                                       ES_offset         start_posn,
-                                      u_int32           length);
+                                      uint32_t          length);
 /*
  * Retrieve video sequence bounds for entry `which`
  *
@@ -159,9 +159,9 @@ extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
  */
 extern int get_reverse_data(reverse_data_p    reverse_data,
                             int               which,
-                            u_int32          *index,
+                            uint32_t         *index,
                             ES_offset        *start_posn,
-                            u_int32          *length,
+                            uint32_t         *length,
                             byte             *seq_offset,
                             byte             *afd);
 
@@ -231,7 +231,7 @@ extern int output_from_reverse_data_as_TS(ES_p            es,
                                           TS_writer_p     tswriter,
                                           int             verbose,
                                           int             quiet,
-                                          u_int32         offset,
+                                          uint32_t        offset,
                                           reverse_data_p  reverse_data);
 /*
  * Output the last picture (or an earlier one) from the reverse arrays.
@@ -259,7 +259,7 @@ extern int output_from_reverse_data_as_ES(ES_p            es,
                                           FILE           *output,
                                           int             verbose,
                                           int             quiet,
-                                          u_int32         offset,
+                                          uint32_t        offset,
                                           reverse_data_p  reverse_data);
 /*
  * Output the H.262 pictures or H.264 access units we remembered earlier - but
@@ -292,7 +292,7 @@ extern int output_in_reverse_as_TS(ES_p            es,
                                    int             frequency,
                                    int             verbose,
                                    int             quiet,
-                                   int32           start_with,
+                                   int32_t         start_with,
                                    int             max,
                                    reverse_data_p  reverse_data);
 /*
@@ -326,7 +326,7 @@ extern int output_in_reverse_as_ES(ES_p            es,
                                    int             frequency,
                                    int             verbose,
                                    int             quiet,
-                                   int32           start_with,
+                                   int32_t         start_with,
                                    int             max,
                                    reverse_data_p  reverse_data);
 

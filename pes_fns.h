@@ -88,7 +88,7 @@ extern int build_PS_PES_reader(PS_reader_p    ps,
 extern int build_TS_PES_reader(TS_reader_p    tsreader,
                                int            give_info,
                                int            give_warnings,
-                               u_int16        program_number,
+                               uint16_t       program_number,
                                PES_reader_p  *reader);
 /*
  * Build a PES reader datastructure
@@ -110,7 +110,7 @@ extern int build_PES_reader(int            input,
                             int            is_TS,
                             int            give_info,
                             int            give_warnings,
-                            u_int16        program_number,
+                            uint16_t       program_number,
                             PES_reader_p  *reader);
 /*
  * Open a Transport Stream file for PES packet reading
@@ -130,7 +130,7 @@ extern int build_PES_reader(int            input,
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
 extern int open_PES_reader_for_TS(char          *filename,
-                                  u_int16        program_number,
+                                  uint16_t       program_number,
                                   int            give_info,
                                   int            give_warnings,
                                   PES_reader_p  *reader);
@@ -236,11 +236,11 @@ extern void set_PES_reader_audio_private1(PES_reader_p  reader);
  *   be the same as the `video_pid`
  */
 extern void set_PES_reader_program_data(PES_reader_p  reader,
-                                        u_int16       program_number,
-                                        u_int32       pmt_pid,
-                                        u_int32       video_pid,
-                                        u_int32       audio_pid,
-                                        u_int32       pcr_pid);
+                                        uint16_t      program_number,
+                                        uint32_t      pmt_pid,
+                                        uint32_t      video_pid,
+                                        uint32_t      audio_pid,
+                                        uint32_t      pcr_pid);
 /*
  * Tell the PES reader that the PS data it is reading is MPEG-4/AVC,
  * as opposed to MPEG-1/MPEG-2.
@@ -351,9 +351,9 @@ extern int read_next_PES_ES_packet(PES_reader_p       reader);
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_PTS_in_PES(byte      data[],
-                           int32     data_len,
+                           int32_t   data_len,
                            int      *got_pts,
-                           u_int64  *pts);
+                           uint64_t *pts);
 /*
  * If the given PES packet data contains a DTS field, return it
  *
@@ -365,9 +365,9 @@ extern int find_PTS_in_PES(byte      data[],
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_DTS_in_PES(byte      data[],
-                           int32     data_len,
+                           int32_t   data_len,
                            int      *got_dts,
-                           u_int64  *dts);
+                           uint64_t *dts);
 /*
  * If the given PES packet data contains a PTS and/or DTS field, return it
  *
@@ -381,11 +381,11 @@ extern int find_DTS_in_PES(byte      data[],
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_PTS_DTS_in_PES(byte      data[],
-                               int32     data_len,
+                               int32_t   data_len,
                                int      *got_pts,
-                               u_int64  *pts,
+                               uint64_t *pts,
                                int      *got_dts,
-                               u_int64  *dts);
+                               uint64_t *dts);
 /*
  * If the given PES packet data contains an ESCR field, return it
  *
@@ -397,9 +397,9 @@ extern int find_PTS_DTS_in_PES(byte      data[],
  * Returns 0 if all went well, 1 if an error occurs.
  */
 extern int find_ESCR_in_PES(byte      data[],
-                            int32     data_len,
+                            int32_t   data_len,
                             int      *got_escr,
-                            u_int64  *escr);
+                            uint64_t *escr);
 /*
  * Decode a PTS or DTS value.
  *
@@ -412,7 +412,7 @@ extern int find_ESCR_in_PES(byte      data[],
  */
 extern int decode_pts_dts(byte     data[],
                           int      required_guard,
-                          u_int64 *value);
+                          uint64_t *value);
 /*
  * Encode a PTS or DTS.
  *
@@ -423,7 +423,7 @@ extern int decode_pts_dts(byte     data[],
  */
 extern void encode_pts_dts(byte    data[],
                            int     guard_bits,
-                           u_int64 value);
+                           uint64_t value);
 /*
  * Does the given PES packet contain a PTS?
  *

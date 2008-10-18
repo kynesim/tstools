@@ -115,10 +115,10 @@ struct tsserve_context
   int      drop_number;   // how many packets to drop
 
   // Program Stream specific options
-  u_int32  pmt_pid;
-  u_int32  audio_pid;
-  u_int32  video_pid;
-  u_int32  pcr_pid;
+  uint32_t pmt_pid;
+  uint32_t audio_pid;
+  uint32_t video_pid;
+  uint32_t pcr_pid;
   int      want_h262;
   int      dolby_is_dvb;
   int      force_stream_type;
@@ -1066,12 +1066,12 @@ static int back_to_normal(stream_context  stream,
     // Said last item started in the previous PES packet
     // - we need to output the part of it that is in that previous packet
     // Given the next byte to be read (from this PES packet)
-    int32 curposn = es->posn_of_next_byte.inpacket;
+    int32_t curposn = es->posn_of_next_byte.inpacket;
     // we can work out how much of the item was in the previous packet
     // (sanity check - if the next byte to read was 1, then we've read one
     // byte from the current packet, and the following should indeed be right
     // - look at pes.c:read_PES_ES_byte and es.c:next_triple_byte for details)
-    int32 length_wanted;
+    int32_t length_wanted;
 
     if (stream.is_h262)
     {
@@ -1117,8 +1117,8 @@ static int back_to_normal(stream_context  stream,
   else
   {
     // Said last item starts part way through this PES packet
-    int32 start_offset = item_start.inpacket;
-    int32 length_wanted = reader->packet->es_data_len - start_offset;
+    int32_t start_offset = item_start.inpacket;
+    int32_t length_wanted = reader->packet->es_data_len - start_offset;
     if (extra_info)
     {
       printf(".. so output %d bytes at end of PES packet\n",length_wanted);

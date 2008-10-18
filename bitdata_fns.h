@@ -71,7 +71,7 @@ extern int read_bit(bitdata_p  bitdata,
  */
 extern int read_bits(bitdata_p  bitdata,
                      int        count,
-                     u_int32   *bits);
+                     uint32_t  *bits);
 
 /*
  * Reads `count` bits from the data, into a byte.
@@ -100,7 +100,7 @@ extern int count_zero_bits(bitdata_p  bitdata);
  * Returns 0 if all went well, 1 if there were not enough bits in the data.
  */
 extern int read_exp_golomb(bitdata_p   bitdata,
-                           u_int32    *result);
+                           uint32_t   *result);
 
 /*
  * Read and decode a signed Exp-Golomb code.
@@ -110,7 +110,7 @@ extern int read_exp_golomb(bitdata_p   bitdata,
  * Returns 0 if all went well, 1 if there were not enough bits in the data.
  */
 extern int read_signed_exp_golomb(bitdata_p   bitdata,
-                                  int32      *result);
+                                  int32_t     *result);
 
 
 #endif // _bitdata_fns

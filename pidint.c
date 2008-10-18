@@ -52,7 +52,7 @@ extern int init_pidint_list(pidint_list_p  list)
     fprintf(stderr,"### Unable to allocate array in program list datastructure\n");
     return 1;
   }
-  list->pid = malloc(sizeof(u_int32)*PIDINT_LIST_START_SIZE);
+  list->pid = malloc(sizeof(uint32_t)*PIDINT_LIST_START_SIZE);
   if (list->pid == NULL)
   {
     free(list->number);
@@ -90,7 +90,7 @@ extern int build_pidint_list(pidint_list_p  *list)
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int append_to_pidint_list(pidint_list_p  list,
-                                 u_int32        pid,
+                                 uint32_t       pid,
                                  int            program)
 {
   if (list == NULL)
@@ -108,7 +108,7 @@ extern int append_to_pidint_list(pidint_list_p  list,
       fprintf(stderr,"### Unable to extend pid/int list array\n");
       return 1;
     }
-    list->pid = realloc(list->pid,newsize*sizeof(u_int32));
+    list->pid = realloc(list->pid,newsize*sizeof(uint32_t));
     if (list->pid == NULL)
     {
       fprintf(stderr,"### Unable to extend pid/int list array\n");
@@ -128,7 +128,7 @@ extern int append_to_pidint_list(pidint_list_p  list,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remove_from_pidint_list(pidint_list_p  list,
-                                   u_int32        pid)
+                                   uint32_t       pid)
 {
   int  index;
   int  ii;
@@ -220,7 +220,7 @@ extern void report_pidint_list(pidint_list_p  list,
  * Returns its index (0 or more) if the PID is in the list, -1 if it is not.
  */
 extern int pid_index_in_pidint_list(pidint_list_p  list,
-                                    u_int32         pid)
+                                    uint32_t        pid)
 {
   int ii;
   if (list == NULL)
@@ -239,7 +239,7 @@ extern int pid_index_in_pidint_list(pidint_list_p  list,
  * Returns 0 if the PID is in the list, -1 if it is not.
  */
 extern int pid_int_in_pidint_list(pidint_list_p  list,
-                                  u_int32         pid,
+                                  uint32_t        pid,
                                   int            *number)
 {
   int ii;
@@ -266,7 +266,7 @@ extern int pid_int_in_pidint_list(pidint_list_p  list,
  * Returns TRUE if the PID is in the list, FALSE if it is not.
  */
 extern int pid_in_pidint_list(pidint_list_p  list,
-                              u_int32         pid)
+                              uint32_t        pid)
 {
   return pid_index_in_pidint_list(list,pid) != -1;
 }
@@ -294,8 +294,8 @@ extern int same_pidint_list(pidint_list_p  list1,
     return FALSE;
   for (ii = 0; ii < list1->length; ii++)
   {
-    u_int32 pid = list1->pid[ii];
-    int     idx = pid_index_in_pidint_list(list2,pid);
+    uint32_t pid = list1->pid[ii];
+    int      idx = pid_index_in_pidint_list(list2,pid);
     if (idx == -1)
       return FALSE;
     else if (list1->number[ii] != list2->number[idx])
@@ -365,8 +365,8 @@ static int init_pmt_streams(pmt_p  pmt)
  * Returns (a pointer to) the new PMT datastructure, or NULL if some error
  * occurs.
  */
-extern pmt_p build_pmt(u_int16 program_number, byte version_number,
-                       u_int32 PCR_pid)
+extern pmt_p build_pmt(uint16_t program_number, byte version_number,
+                       uint32_t PCR_pid)
 {
   pmt_p  new;
 
@@ -417,7 +417,7 @@ extern pmt_p build_pmt(u_int16 program_number, byte version_number,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int set_pmt_program_info(pmt_p    pmt,
-                                u_int16  program_info_length,
+                                uint16_t program_info_length,
                                 byte    *program_info)
 {
   if (program_info_length > PMT_MAX_INFO_LENGTH)
@@ -458,9 +458,9 @@ extern int set_pmt_program_info(pmt_p    pmt,
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int add_stream_to_pmt(pmt_p      pmt,
-                             u_int32    elementary_PID,
+                             uint32_t   elementary_PID,
                              byte       stream_type,
-                             u_int16    ES_info_length,
+                             uint16_t   ES_info_length,
                              byte      *ES_info)
 {
   if (pmt == NULL)
@@ -533,7 +533,7 @@ static void free_pmt_stream(pmt_stream_p  stream)
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remove_stream_from_pmt(pmt_p         pmt,
-                                  u_int32       pid)
+                                  uint32_t      pid)
 {
   int  index;
   int  ii;
@@ -596,7 +596,7 @@ extern void free_pmt(pmt_p  *pmt)
  * Returns its index (0 or more) if the PID is in the list, -1 if it is not.
  */
 extern int pid_index_in_pmt(pmt_p     pmt,
-                            u_int32   pid)
+                            uint32_t  pid)
 {
   int ii;
   if (pmt == NULL)
@@ -616,7 +616,7 @@ extern int pid_index_in_pmt(pmt_p     pmt,
  * NULL if it is not.
  */
 extern pmt_stream_p pid_stream_in_pmt(pmt_p          pmt,
-                                      u_int32        pid)
+                                      uint32_t       pid)
 {
   int ii;
   if (pmt == NULL)
@@ -637,7 +637,7 @@ extern pmt_stream_p pid_stream_in_pmt(pmt_p          pmt,
  * Returns TRUE if the PID is in the PMT's stream list, FALSE if it is not.
  */
 extern int pid_in_pmt(pmt_p     pmt,
-                      u_int32   pid)
+                      uint32_t  pid)
 {
   return pid_index_in_pmt(pmt,pid) != -1;
 }
@@ -700,8 +700,8 @@ extern int same_pmt(pmt_p  pmt1,
 
   for (ii = 0; ii < pmt1->num_streams; ii++)
   {
-    u_int32 pid = pmt1->streams[ii].elementary_PID;
-    int     idx = pid_index_in_pmt(pmt2,pid);
+    uint32_t pid = pmt1->streams[ii].elementary_PID;
+    int      idx = pid_index_in_pmt(pmt2,pid);
     if (idx == -1)
       return FALSE;
     else if (!same_pmt_stream(&pmt1->streams[ii],&pmt2->streams[idx]))
