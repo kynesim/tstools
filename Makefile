@@ -96,6 +96,7 @@ SRCS = \
  bitdata.c \
  es.c \
  fmtx.c \
+ h222.c \
  h262.c \
  audio.c \
  l2audio.c \
@@ -118,6 +119,7 @@ OBJS = \
  es.o \
  filter.o \
  fmtx.o \
+ h222.o \
  h262.o \
  audio.o \
  l2audio.o \
@@ -288,9 +290,9 @@ $(BINDIR)/test_es_unit_list:  	$(OBJDIR)/test_es_unit_list.o $(LIB)
 
 # Some header files depend upon others, so including one requires
 # the others as well
-ES_H = es_fns.h es_defns.h h222_defns.h
-TS_H = ts_fns.h ts_defns.h h222_defns.h tswrite_fns.h tswrite_defns.h \
-       pidint_fns.h pidint_defns.h
+ES_H = es_fns.h es_defns.h h222_fns.h h222_defns.h
+TS_H = ts_fns.h ts_defns.h h222_fns.h h222_defns.h tswrite_fns.h \
+       tswrite_defns.h pidint_fns.h pidint_defns.h
 ACCESSUNIT_H = accessunit_fns.h accessunit_defns.h $(NALUNIT_H)
 NALUNIT_H = nalunit_fns.h nalunit_defns.h es_fns.h es_defns.h \
             bitdata_fns.h bitdata_defns.h

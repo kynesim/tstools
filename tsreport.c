@@ -211,7 +211,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   printf("Looking at PCR PID %04x (%d)\n",pcr_pid,pcr_pid);
   for (ii=0; ii<num_streams; ii++)
     printf("  Stream %d: PID %04x (%d), %s\n",ii,stats[ii].pid,stats[ii].pid,
-           H222_STREAM_TYPE_STR(stats[ii].stream_type));
+           h222_stream_type_str(stats[ii].stream_type));
 
   // Now do the actual work...
   start_count = count = pmt_at;
@@ -524,7 +524,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   for (ii = 0; ii < num_streams; ii++)
   {
     printf("\nStream %d: PID %04x (%d), %s\n",ii,stats[ii].pid,stats[ii].pid,
-           H222_STREAM_TYPE_STR(stats[ii].stream_type));
+           h222_stream_type_str(stats[ii].stream_type));
     if (stats[ii].pcr_pts_diff.num > 0)
     {
       printf("  PCR/%s:\n    Minimum difference was %6s at DTS %8s, TS packet at " OFFSET_T_FORMAT_8 "\n",
@@ -673,7 +673,7 @@ static int report_ts(TS_reader_p  tsreader,
           return 1;
         }
         printf(" stream type %02x (%s)\n",
-               stream->stream_type,H222_STREAM_TYPE_STR(stream->stream_type));
+               stream->stream_type,h222_stream_type_str(stream->stream_type));
       }
       else
         printf(" stream type not identified\n");

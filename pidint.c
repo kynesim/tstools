@@ -327,7 +327,7 @@ extern void report_stream_list(pidint_list_p  list,
       if (prefix!=NULL) printf(prefix);
       printf("    PID %04x (%d) -> Stream type %3d (%s)\n",
              list->pid[ii],list->pid[ii],list->number[ii],
-             H222_STREAM_TYPE_STR(list->number[ii]));
+             h222_stream_type_str(list->number[ii]));
     }
   }
 }
@@ -752,7 +752,7 @@ extern void report_pmt(FILE   *stream,
               pmt->streams[ii].elementary_PID,
               pmt->streams[ii].stream_type,
               pmt->streams[ii].stream_type,
-              H222_STREAM_TYPE_STR(pmt->streams[ii].stream_type));
+              h222_stream_type_str(pmt->streams[ii].stream_type));
       if (pmt->streams[ii].ES_info_length > 0)
       {
         if (prefix!=NULL) fprintf(stream,prefix);

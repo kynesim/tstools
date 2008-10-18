@@ -30,6 +30,12 @@
 #ifndef _h222_defns
 #define _h222_defns
 
+// Include our function definition(s)
+// -- this is actually just the function for returning a string
+// representing a stream type (according to the following table),
+// which *used* to be a macro, defined in this header file.
+#include "h222_fns.h"
+
 // ------------------------------------------------------------
 // H.222.0 Table 2-29: Stream type assignments, as amended by
 // H.222.0 (2000) Amendment 3
@@ -74,42 +80,6 @@
 // 7F     IPMP stream
 // 80-FF  User Private
 // 81	  Traditionally ATSC Dolby (AC-3)
-
-#define H222_STREAM_TYPE_STR(s)					\
-  ((s)==0x00?"Reserved":					\
-   (s)==0x01?"11172-2 video (MPEG-1)":				\
-   (s)==0x02?"H.262/13818-2 video (MPEG-2) or 11172-2 constrained video": \
-   (s)==0x03?"11172-3 audio (MPEG-1)":				\
-   (s)==0x04?"13818-3 audio (MPEG-2)":				\
-   (s)==0x05?"H.222.0/13818-1  private sections":		\
-   (s)==0x06?"H.222.0/13818-1 PES private data (maybe Dolby/AC-3 in DVB)": \
-   (s)==0x07?"13522 MHEG":					\
-   (s)==0x08?"H.222.0/13818-1 Annex A - DSM CC":		\
-   (s)==0x09?"H.222.1":						\
-   (s)==0x0A?"13818-6 type A":					\
-   (s)==0x0B?"13818-6 type B":					\
-   (s)==0x0C?"13818-6 type C":					\
-   (s)==0x0D?"13818-6 type D":					\
-   (s)==0x0E?"H.222.0/13818-1 auxiliary":			\
-   (s)==0x0F?"13818-7 Audio with ADTS transport syntax":	\
-   (s)==0x10?"14496-2 Visual (MPEG-4 part 2 video)":		\
-   (s)==0x11?"14496-3 Audio with LATM transport syntax (14496-3/AMD 1)":  \
-   (s)==0x12?"14496-1 SL-packetized or FlexMux stream in PES packets":    \
-   (s)==0x13?"14496-1 SL-packetized or FlexMux stream in 14496 sections": \
-   (s)==0x14?"ISO/IEC 13818-6 Synchronized Download Protocol":	\
-   (s)==0x15?"Metadata in PES packets":				\
-   (s)==0x16?"Metadata in metadata_sections":			\
-   (s)==0x17?"Metadata in 13818-6 Data Carousel":		\
-   (s)==0x18?"Metadata in 13818-6 Object Carousel":		\
-   (s)==0x19?"Metadata in 13818-6 Synchronized Download Protocol": \
-   (s)==0x1A?"13818-11 MPEG-2 IPMP stream":			\
-   (s)==0x1B?"H.264/14496-10 video (MPEG-4/AVC)":		\
-   (s)==0x42?"AVS Video":                                       \
-   (0x1C < (s)) && ((s) < 0x7E)?"H.220.0/13818-1 reserved":     \
-   (s)==0x7F?"IPMP stream":					\
-   (s)==0x81?"User private (commonly Dolby/AC-3 in ATSC)":     	\
-   (0x80 <= (s)) && ((s) <= 0xFF)?"User private":		\
-   "Unrecognised")
 
 #define MPEG1_VIDEO_STREAM_TYPE		0x01
 #define MPEG2_VIDEO_STREAM_TYPE		0x02  // H.262

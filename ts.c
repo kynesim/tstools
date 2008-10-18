@@ -2698,7 +2698,7 @@ extern int extract_pmt(int            verbose,
     if (verbose)
     {
       printf("    PID %04x -> Stream %02x %s\n",pid,stream_type,
-             H222_STREAM_TYPE_STR(stream_type));
+             h222_stream_type_str(stream_type));
       if (ES_info_length > 0)
         print_descriptors(stdout,"        ",NULL,&stream_data[5],ES_info_length);
     }
@@ -2920,7 +2920,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
     {
 #define SARRAYSIZE 40
       char buf[SARRAYSIZE];
-      snprintf(buf,SARRAYSIZE,"(%s)",H222_STREAM_TYPE_STR(stream_type));
+      snprintf(buf,SARRAYSIZE,"(%s)",h222_stream_type_str(stream_type));
       // On Windows, snprintf does not guarantee to write a terminating NULL
       buf[SARRAYSIZE-1] = '\0';
       printf("    Stream %02x %-40s -> PID %04x\n",stream_type,buf,pid);

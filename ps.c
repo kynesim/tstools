@@ -1216,7 +1216,7 @@ static int write_video(TS_writer_p            output,
       printf("Video: stream %d, PID 0x%03x, stream type 0x%02x\n"
              "       %s\n",
              stream_id & 0x0F,prog_data->video_pid,prog_data->video_type,
-             H222_STREAM_TYPE_STR(prog_data->video_type));
+             h222_stream_type_str(prog_data->video_type));
 
     err = add_stream_to_pmt(prog_data->pmt,prog_data->video_pid,
                             prog_data->video_type,0,NULL);
@@ -1529,7 +1529,7 @@ static int write_audio(TS_writer_p            output,
       {
         printf("Audio: stream %d, PID 0x%03x, stream type 0x%02x = %s\n",
                stream_id & 0x1F,prog_data->audio_pid,audio_stream_type,
-               H222_STREAM_TYPE_STR(audio_stream_type));
+               h222_stream_type_str(audio_stream_type));
       }
     }
 

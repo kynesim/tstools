@@ -94,6 +94,7 @@ LIB_OBJS = \
  $(OBJDIR)\es.obj \
  $(OBJDIR)\filter.obj \
  $(OBJDIR)\fmtx.obj \
+ $(OBJDIR)\h222.obj \
  $(OBJDIR)\h262.obj \
  $(OBJDIR)\l2audio.obj \
  $(OBJDIR)\misc.obj \

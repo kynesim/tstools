@@ -419,7 +419,7 @@ int main(int argc, char **argv)
   {
     if (!quiet)
       printf("Reading input as %s (0x%02x)\n",
-             H222_STREAM_TYPE_STR(video_type),video_type);
+             h222_stream_type_str(video_type),video_type);
   }
   else
   {
@@ -427,7 +427,7 @@ int main(int argc, char **argv)
     if (err) return 1;
     if (!quiet)
       printf("Video appears to be %s (0x%02x)\n",
-             H222_STREAM_TYPE_STR(video_type),video_type);
+             h222_stream_type_str(video_type),video_type);
   }
 
   if (!quiet)

@@ -3818,11 +3818,11 @@ extern int write_program_data(PES_reader_p  reader,
            reader->output_pmt_pid,reader->output_pmt_pid,
            pcr_pid,pcr_pid,
            reader->output_video_pid,reader->output_video_pid,
-           prog_type[0],H222_STREAM_TYPE_STR(prog_type[0]));
+           prog_type[0],h222_stream_type_str(prog_type[0]));
     if (num_progs == 2)
       printf("         audio %x (%d) type %02x (%s)\n",
              reader->output_audio_pid,reader->output_audio_pid,
-             prog_type[1],H222_STREAM_TYPE_STR(prog_type[1]));
+             prog_type[1],h222_stream_type_str(prog_type[1]));
   }
 #endif
 
