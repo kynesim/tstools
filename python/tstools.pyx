@@ -109,9 +109,14 @@ cdef FILE *convert_python_file(object file):
         return stream
 
 cdef extern from "stdint.h":
-    ctypedef int uint8_t        # !!! *some* sort of int..
-    ctypedef int uint16_t       # !!! *some* sort of int..
-    ctypedef int uint32_t       # !!! *some* sort of int..
+    ctypedef unsigned char      uint8_t
+    ctypedef unsigned           uint16_t
+    ctypedef unsigned long      uint32_t
+    ctypedef unsigned long long uint64_t
+    ctypedef   signed char      int8_t
+    ctypedef          int       int16_t
+    ctypedef          long      int32_t
+    ctypedef          long long int64_t
 
 # PIDs are too long for 16 bits, short enough to fit in 32
 ctypedef uint32_t   PID
@@ -120,7 +125,7 @@ cdef extern from "compat.h":
     # We don't need to define 'offset_t' exactly, just to let Pyrex
     # know it's vaguely int-like
     ctypedef int offset_t
-    ctypedef uint8_t byte
+    ctypedef uint8_t byte  # but we already had our stdint byte daatype
 
 cdef extern from 'es_defns.h':
     # The reader for an ES file
@@ -623,6 +628,8 @@ cdef extern from "ts_fns.h":
     int split_TS_packet(byte *buf, PID *pid, int *payload_unit_start_indicator,
                         byte **adapt, int *adapt_len,
                         byte **payload, int *payload_len)
+    void get_PCR_from_adaptation_field(byte *adapt, int adapt_len, int*got_pcr,
+                                       uint64_t *pcr)
     int find_pat(TS_reader_p tsreader, int max, int verbose, int quiet,
                  int *num_read, pidint_list_p *prog_list)
     int find_next_pmt(TS_reader_p tsreader, uint32_t pmt_pid,
@@ -630,6 +637,8 @@ cdef extern from "ts_fns.h":
                       int *num_read, pmt_p *pmt)
     int find_pmt(TS_reader_p tsreader, int max, int verbose, int quiet,
                  int *num_read, pmt_p *pmt)
+    int extract_prog_list_from_pat(int verbose, byte *data, int data_len,
+                                   pidint_list_p *prog_list)
 
 
 DEF TS_PACKET_LEN = 188
@@ -643,9 +652,13 @@ cdef class TSPacket:
 
     # The following are lazily calculated if necessary
     cdef  byte      _already_split
-    cdef  int       _pusi        # payload unit start indicator
+    cdef  int       _pusi       # payload unit start indicator
     cdef  object    _adapt
     cdef  object    _payload
+
+    # Ditto with looking for a PCR
+    cdef  int       _checked_for_pcr
+    cdef  object    _pcr        # if we have one
 
     def __cinit__(self,buffer,*args,**kwargs):
         """The buffer *must* be 188 bytes long, by definition.
@@ -718,31 +731,53 @@ cdef class TSPacket:
         cdef int         adapt_len
         cdef char       *payload_buf
         cdef int         payload_len
-        if not self._already_split:
-            PyObject_AsReadBuffer(self.data, &buffer, &length)
-            retval = split_TS_packet(<byte *>buffer,&pid,&self._pusi,
-                                     <byte **>&adapt_buf,&adapt_len,
-                                     <byte **>&payload_buf,&payload_len)
-            if retval < 0:
-                raise TSToolsException,'Error splitting TS packet data'
-            if adapt_len == 0:
-                self._adapt = None
-            else:
-                self._adapt = PyString_FromStringAndSize(adapt_buf,adapt_len)
-            if payload_len == 0:
-                self._payload = None
-            else:
-                self._payload = PyString_FromStringAndSize(payload_buf,payload_len)
-            self._already_split = True
+        PyObject_AsReadBuffer(self.data, &buffer, &length)
+        retval = split_TS_packet(<byte *>buffer,&pid,&self._pusi,
+                                 <byte **>&adapt_buf,&adapt_len,
+                                 <byte **>&payload_buf,&payload_len)
+        if retval < 0:
+            raise TSToolsException,'Error splitting TS packet data'
+        if adapt_len == 0:
+            self._adapt = None
+        else:
+            self._adapt = PyString_FromStringAndSize(adapt_buf,adapt_len)
+        if payload_len == 0:
+            self._payload = None
+        else:
+            self._payload = PyString_FromStringAndSize(payload_buf,payload_len)
+        self._already_split = True
+
+    def _determine_PCR(self):
+        """Determine our PCR, if we have one.
+        Assumes that self._split() has been called already.
+        """
+        cdef void       *adapt_buf
+        cdef Py_ssize_t  adapt_len
+        cdef int         got_pcr
+        cdef uint64_t    pcr
+        if self._adapt:
+            PyObject_AsReadBuffer(self._adapt, &adapt_buf, &adapt_len)
+            get_PCR_from_adaptation_field(<byte *>adapt_buf, adapt_len,
+                                          &got_pcr, &pcr)
+        else:
+            got_pcr = 0
+        self._checked_for_pcr = True    # regardless
+        if got_pcr:
+            self._pcr = pcr
 
     def __getattr__(self,name):
-        self._split()
+        if not self._already_split:
+            self._split()
         if name == 'pusi':
             return self._pusi
         elif name == 'adapt':
             return self._adapt
         elif name == 'payload':
             return self._payload
+        elif name == "PCR":
+            if not self._checked_for_pcr:
+                self._determine_PCR()
+            return self._pcr
         else:
             raise AttributeError
 

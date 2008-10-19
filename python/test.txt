@@ -349,6 +349,11 @@ needed:
     >>> print p.adapt
     None
 
+Whether there is a PCR or not is also calculated lazily:
+
+    >>> print p.PCR
+    None
+
 The payload itself won't print out nicely, as it's binary, but we can check
 its length:
 
@@ -435,6 +440,19 @@ bytes:
 Python 2.6 introduces the ``bytearray`` (an immutable array of bytes), which
 is clearly what we'd prefer to be using to communicate with TS packets,
 instead of strings and ``array.array``.
+
+The first packet with a PCR is at 100768:
+
+    >>> f = TSFile(test_ts_file)
+    >>> f.seek(100768)
+    >>> tspcr = f.read()
+    >>> tspcr.pusi
+    0
+    >>> len(tspcr.adapt)
+    183
+    >>> tspcr.PCR
+    16303619382L
+    >>> f.close()
 
 Program data
 ------------
