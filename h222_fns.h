@@ -35,7 +35,7 @@
 
 extern const char *h222_stream_type_str(unsigned s);
 
-#endif _h222_fns
+#endif // _h222_fns
 
 // Local Variables:
 // tab-width: 8
