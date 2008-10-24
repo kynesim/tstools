@@ -860,8 +860,16 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
 
   err = read_bits(bd,2,&data->changing_slice_group_idc);
   CHECK("changing_slice_group_idc");
- 
+
   nal->decoded = TRUE; 
+
+  if (show_nal_details)
+  {
+    printf("@@ Recovery Point SEI\n");
+    printf("   recovery_frame_cnt %d\n   exact_match_flag %d\n", data->recovery_frame_cnt, data->exact_match_flag);
+    printf("   broken_link_flag %d\n   changing_slice_group_idc %d", data->broken_link_flag, data->changing_slice_group_idc);
+  }
+
   return 0;
 }
 
@@ -918,7 +926,8 @@ static int read_SEI(nal_unit_p   nal,
   nal->u.sei_recovery.payloadSize = SEI_payloadSize;
 
   if (SEI_payloadType == 6)  // SEI recovery_point
-    err = read_SEI_recovery_point(nal, SEI_payloadSize, show_nal_details);
+    err = read_SEI_recovery_point(nal, SEI_payloadSize, show_nal_details); 
+  
   return 0;
 }
 
@@ -993,19 +1002,6 @@ static int read_rbsp_data(nal_unit_p   nal,
   }
   return err;
 }
-/*
- * Is this NAL a SEI unit containing a recovery point message? 
- * 
- * Returns true if it's true :)
- */
-extern int nal_is_SEI_recovery_point(nal_unit_p  nal)
-{
-  if (nal->nal_unit_type == 6)
-    return (nal->u.sei_recovery.payloadType == 6);
-  else
-    return FALSE;
-}
-
 
 /*
  * Is this NAL unit a slice?
@@ -1382,7 +1378,7 @@ extern int setup_NAL_data(int         verbose,
             nal->unit.start_posn.infile,
             nal->unit.start_posn.inpacket,
             nal->nal_ref_idc,nal->nal_unit_type,what);
-
+    
     // Show the start of the data bytes. This is a tailored form of what
     // `print_data` would do, more suited to our purposes here (i.e.,
     // wanting multiple rows of output to line up neatly in columns).

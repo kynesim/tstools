@@ -314,7 +314,7 @@ static char choose_nal_type(access_unit_p access_unit, int *gop_start_found)
   int ii;
   int gop_start = FALSE;
   nal_unit_p temp_nal_unit;
-  int rec_point_required = TRUE;
+  int rec_point_required = FALSE;
   // FALSE: a random access point is identified as an I frame,
   // TRUE:  a random access point is identified as an I frame + recovery_point SEI.
   //        The value recovery_frame_cnt is never considered (as if it was 0).
