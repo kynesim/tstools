@@ -325,7 +325,7 @@ static int read_slice_data(nal_unit_p   nal,
 {
   int        err;
   bitdata_p  bd = nal->bit_data;
-  uint32_t   temp;
+  u_int32    temp;
   nal_slice_data_p data = &(nal->u.slice);
   nal_seq_param_data_p seq_param_data = NULL;
   nal_pic_param_data_p pic_param_data = NULL;
@@ -488,15 +488,15 @@ static int read_pic_param_set_data(nal_unit_p   nal,
   int        err;
   bitdata_p  bd = nal->bit_data;
   nal_pic_param_data_p data = &(nal->u.pic);
-  uint32_t   temp;
+  u_int32    temp;
   // Values that don't get saved into our NAL unit
-  uint32_t num_ref_idx_10_active;
-  uint32_t num_ref_idx_11_active;
+  u_int32  num_ref_idx_10_active;
+  u_int32  num_ref_idx_11_active;
   byte     weighted_pred_flag;
-  uint32_t weighted_bipred_idc;
-  int32_t  pic_init_qp;
-  int32_t  pic_init_qs;
-  int32_t  chroma_qp_index_offset;
+  u_int32  weighted_bipred_idc;
+  int32    pic_init_qp;
+  int32    pic_init_qs;
+  int32    chroma_qp_index_offset;
   byte     deblocking_filter_control_present_flag;
   byte     constrained_intra_pred_flag;
 
@@ -562,7 +562,7 @@ static int read_pic_param_set_data(nal_unit_p   nal,
       unsigned int igroup;
       for (igroup=0; igroup < data->num_slice_groups; igroup++)
       {
-        uint32_t ignint;
+        u_int32  ignint;
         err = read_exp_golomb(bd,&ignint); // run_length_minus1[igroup]
         CHECK("run_length_minus1[x]");
       }
@@ -573,7 +573,7 @@ static int read_pic_param_set_data(nal_unit_p   nal,
       unsigned int igroup;
       for (igroup=0; igroup < (data->num_slice_groups - 1); igroup++)
       {
-        uint32_t ignint;
+        u_int32  ignint;
         err = read_exp_golomb(bd,&ignint); // top_left[igroup]
         CHECK("top_left[x]");
         err = read_exp_golomb(bd,&ignint); // bottom_right[igroup]
@@ -585,7 +585,7 @@ static int read_pic_param_set_data(nal_unit_p   nal,
              data->slice_group_map_type == 5)
     {
       byte     ignbyte;
-      uint32_t ignint;
+      u_int32  ignint;
       err = read_bit(bd,&ignbyte); // slice_group_change_direction_flag
       CHECK("slice_group_change_direction_flag");
       err = read_exp_golomb(bd,&ignint); // slice_group_change_rate_minus1
@@ -593,7 +593,7 @@ static int read_pic_param_set_data(nal_unit_p   nal,
     }
     else if (data->slice_group_map_type == 6)
     {
-      uint32_t pic_size_in_map_units;
+      u_int32 pic_size_in_map_units;
       unsigned int ii;
       int size;
       err = read_exp_golomb(bd,&pic_size_in_map_units); // minus 1
@@ -605,7 +605,7 @@ static int read_pic_param_set_data(nal_unit_p   nal,
       // Again, notice the range
       for (ii=0; ii < pic_size_in_map_units; ii++)
       {
-        uint32_t ignint;
+        u_int32 ignint;
         err = read_bits(bd,size,&ignint); // slice_group_id[ii]
         CHECK("slice_group_id[x]");
       }
@@ -680,13 +680,13 @@ static int read_seq_param_set_data(nal_unit_p   nal,
   int        err;
   bitdata_p  bd = nal->bit_data;
   nal_seq_param_data_p data = &(nal->u.seq);
-  uint32_t   temp;
+  u_int32    temp;
   // Values that don't get saved into our NAL unit
   byte     reserved_zero_5bits;
-  uint32_t num_ref_frames;
+  u_int32  num_ref_frames;
   byte     gaps_in_frame_num_value_allowed_flag;
-  uint32_t pic_width_in_mbs;
-  uint32_t pic_height_in_map_units;
+  u_int32  pic_width_in_mbs;
+  u_int32  pic_height_in_map_units;
 
 #undef CHECK
 #define CHECK(name)                                                     \
@@ -769,9 +769,9 @@ static int read_seq_param_set_data(nal_unit_p   nal,
   else if (data->pic_order_cnt_type == 1)
   {
     unsigned int ii;
-    int32_t  offset_for_non_ref_pic;
-    int32_t  offset_for_top_to_bottom_field;
-    uint32_t num_ref_frames_in_pic_order_cnt_cycle;
+    int32  offset_for_non_ref_pic;
+    int32  offset_for_top_to_bottom_field;
+    u_int32 num_ref_frames_in_pic_order_cnt_cycle;
 
     err = read_bit(bd,&data->delta_pic_order_always_zero_flag);
     CHECK("delta_pic_order_always_zero_flag");
@@ -788,7 +788,7 @@ static int read_seq_param_set_data(nal_unit_p   nal,
     // shall be in the range 0..255
     for (ii=0; ii < num_ref_frames_in_pic_order_cnt_cycle; ii++)
     {
-      int32_t offset_for_ref_frame_XX;
+      int32  offset_for_ref_frame_XX;
       err = read_signed_exp_golomb(bd,&offset_for_ref_frame_XX); // XX = [ii]
       CHECK("offset_for_ref_frame_X");
     }
@@ -835,7 +835,7 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
   int        err;
   bitdata_p  bd = nal->bit_data;
   nal_SEI_recovery_data_p data = &(nal->u.sei_recovery);
-  uint32_t   temp;
+  u_int32    temp;
 
 #undef CHECK
 #define CHECK(name)                                         \
@@ -852,6 +852,12 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
   CHECK("exact_match_flag");
   err = read_bit(bd,&data->broken_link_flag);
   CHECK("broken_link_flag");
+
+  #if 0
+  if (data->broken_link_flag)
+    printf(" broken_link_flag is 1\n");
+  #endif
+
   err = read_bits(bd,2,&data->changing_slice_group_idc);
   CHECK("changing_slice_group_idc");
  
@@ -875,7 +881,7 @@ static int read_SEI(nal_unit_p   nal,
   int SEI_payloadType = 0;
   int SEI_payloadSize = 0;   // in byte
   bitdata_p  bd = nal->bit_data;
-  uint32_t temp = 0;
+  u_int32 temp = 0;
 
 #undef CHECK
 #define CHECK(name)                                         \
@@ -1461,7 +1467,7 @@ extern int find_next_NAL_unit(nal_unit_context_p  context,
     free_nal_unit(nal);
     return 2;
   }
-
+ 
   // If this is a picture parameter set, or a sequence parameter set,
   // we should remember it for later on
   if (nal_is_pic_param_set(*nal))
@@ -1525,7 +1531,7 @@ extern int write_NAL_unit_as_ES(FILE       *output,
  */
 extern int write_NAL_unit_as_TS(TS_writer_p tswriter,
                                 nal_unit_p  nal,
-                                uint32_t    video_pid)
+                                u_int32     video_pid)
 {
   // Note that we write out *all* of the data for this NAL unit,
   // i.e., including its 00 00 01 prefix. Also note that we write
@@ -1564,7 +1570,7 @@ extern int build_param_dict(param_dict_p *param_dict)
   new->last_id = -1;
   new->last_index = -1;
 
-  new->ids = malloc(sizeof(uint32_t)*NAL_PIC_PARAM_START_SIZE);
+  new->ids = malloc(sizeof(u_int32)*NAL_PIC_PARAM_START_SIZE);
   if (new->ids == NULL)
   {
     fprintf(stderr,"### Unable to allocate array within 'dictionary'"
@@ -1594,7 +1600,7 @@ extern int build_param_dict(param_dict_p *param_dict)
     return 1;
   }
 
-  new->data_lens = malloc(sizeof(uint32_t)*NAL_PIC_PARAM_START_SIZE);
+  new->data_lens = malloc(sizeof(u_int32)*NAL_PIC_PARAM_START_SIZE);
   if (new->data_lens == NULL)
   {
     fprintf(stderr,"### Unable to allocate array within 'dictionary'"
@@ -1653,7 +1659,7 @@ extern void free_param_dict(param_dict_p  *param_dict)
  * Returns 0 if it succeeds, 1 if some error occurs.
  */
 extern int remember_param_data(param_dict_p  param_dict,
-                               uint32_t      param_id,
+                               u_int32       param_id,
                                nal_unit_p    nal)
 {
   int ii;
@@ -1679,7 +1685,7 @@ extern int remember_param_data(param_dict_p  param_dict,
   if (param_dict->length == param_dict->size)
   {
     int newsize = param_dict->size + NAL_PIC_PARAM_INCREMENT;
-    param_dict->ids = realloc(param_dict->ids,newsize*sizeof(uint32_t));
+    param_dict->ids = realloc(param_dict->ids,newsize*sizeof(u_int32));
     if (param_dict->ids == NULL)
     {
       fprintf(stderr,"### Unable to extend parameter set dictionary array\n");
@@ -1699,7 +1705,7 @@ extern int remember_param_data(param_dict_p  param_dict,
       return 1;
     }
     param_dict->data_lens = realloc(param_dict->params,
-                                    newsize*sizeof(uint32_t));
+                                    newsize*sizeof(u_int32));
     if (param_dict->data_lens == NULL)
     {
       fprintf(stderr,"### Unable to extend parameter set dictionary array\n");
@@ -1733,7 +1739,7 @@ extern int remember_param_data(param_dict_p  param_dict,
  * Returns 0 if it succeeds, 1 if the id is not present.
  */
 static inline int lookup_param_data(param_dict_p      param_dict,
-                                    uint32_t          param_id,
+                                    u_int32           param_id,
                                     nal_innards_p    *param_data)
 {
   int ii;
@@ -1766,7 +1772,7 @@ static inline int lookup_param_data(param_dict_p      param_dict,
  * Returns 0 if it succeeds, 1 if the id is not recognised.
  */
 extern int get_pic_param_data(param_dict_p pic_param_dict,
-                              uint32_t     pic_param_id,
+                              u_int32      pic_param_id,
                               nal_pic_param_data_p *pic_param_data)
 {
   nal_innards_p  innards;
@@ -1797,7 +1803,7 @@ extern int get_pic_param_data(param_dict_p pic_param_dict,
  * Returns 0 if it succeeds, 1 if the id is not recognised.
  */
 extern int get_seq_param_data(param_dict_p seq_param_dict,
-                              uint32_t     seq_param_id,
+                              u_int32      seq_param_id,
                               nal_seq_param_data_p *seq_param_data)
 {
   nal_innards_p  innards;
