@@ -42,7 +42,7 @@ def main():
         base,ext = os.path.splitext(name)
         if ext == '.txt':
             print 'Processing',name
-            os.system('rst2html.py --stylesheet-path=default.css'
+            os.system('rst2html --stylesheet-path=default.css'
                       ' --embed-stylesheet %s > %s'%(name,base+'.html'))
 
 
