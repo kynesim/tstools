@@ -853,11 +853,6 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
   err = read_bit(bd,&data->broken_link_flag);
   CHECK("broken_link_flag");
 
-  #if 0
-  if (data->broken_link_flag)
-    printf(" broken_link_flag is 1\n");
-  #endif
-
   err = read_bits(bd,2,&data->changing_slice_group_idc);
   CHECK("changing_slice_group_idc");
 
