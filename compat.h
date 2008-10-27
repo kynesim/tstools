@@ -103,6 +103,11 @@ typedef uint8_t  byte;
 // value. Unfortunately, Windows has off_t defined as being a long.
 // For compatibility, therefore, we define a type that can be used on
 // both Windows and Unix
+// NB: On some systems, off_t is provided by unistd.h, but on some others
+//     it may also be necessary to explicitly include sys/types.h. We shall
+//     do both, here, for safety.
+#include <sys/types.h>
+#include <unistd.h>
 typedef off_t offset_t;
 
 #if defined(__linux__) && !defined(__USE_FILE_OFFSET64)
