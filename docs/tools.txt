@@ -454,6 +454,7 @@ count includes the sequence header.
 
 If ``-q`` is specified, only the final counts are output.
 
+The ``-x`` switch shows details of each NAL unit as it is read.
 
 
 esreverse
@@ -840,6 +841,11 @@ The ``-timing`` switch may be used to obtain PCR timing information::
      .. PCR     10430700 Mean byterate  222394 byterate   88802
     Stopping after 500 packets
     Read 500 TS packets
+
+The ``-cnt`` switch is to be followed by a PID in decimal units. 
+It checks the values of the field continuity_counter in the specified PID,
+warns in there are discontinuities and writes them in a file called 
+'continuity_counter.txt'. Using this automatically turns buffering on (-b).
 
 
 tsserve
