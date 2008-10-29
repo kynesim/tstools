@@ -52,10 +52,10 @@
 static int tfmt_diff = FMTX_TS_DISPLAY_90kHz_RAW;
 static int tfmt_abs = FMTX_TS_DISPLAY_90kHz_RAW;
 
-static u_int64
-estimate_pcr(offset_t posn, u_int64 ppcr_pos, u_int64 ppcr_val, double pcr_rate)
+static uint64_t
+estimate_pcr(offset_t posn, uint64_t ppcr_pos, uint64_t ppcr_val, double pcr_rate)
 {
-  return (u_int64)(ppcr_val + (27000000.0 * (double)(posn - ppcr_pos))/pcr_rate);
+  return (uint64_t)(ppcr_val + (27000000.0 * (double)(posn - ppcr_pos))/pcr_rate);
 }
 
 /* ============================================================================
@@ -63,29 +63,29 @@ estimate_pcr(offset_t posn, u_int64 ppcr_pos, u_int64 ppcr_val, double pcr_rate)
  */
 struct diff_from_pcr
 {
-  int64         min;          // minimum (absolute) difference
-  u_int64       min_at;       // at what PTS the minimum occurred
+  int64_t         min;          // minimum (absolute) difference
+  uint64_t       min_at;       // at what PTS the minimum occurred
   offset_t      min_posn;     // at what position in the file
-  int64         max;          // and ditto for the maximum (abs) difference
-  u_int64       max_at;
+  int64_t         max;          // and ditto for the maximum (abs) difference
+  uint64_t       max_at;
   offset_t      max_posn;
-  int64         sum;          // the sum of all of the differences
+  int64_t         sum;          // the sum of all of the differences
   unsigned int  num;          // the number of TS records compared
 };
 
 struct stream_data {
-  u_int32       pid;
+  uint32_t       pid;
   int           stream_type;
   int           had_a_pts;
   int           had_a_dts;
 
-  u_int64       first_pts;
-  u_int64       first_dts;
+  uint64_t       first_pts;
+  uint64_t       first_dts;
 
   // Keep these in our datastructure so we can easily report the last
   // PTS/DTS in the file, when we're finishing up
-  u_int64       pts;
-  u_int64       dts;
+  uint64_t       pts;
+  uint64_t       dts;
 
   int           err_pts_lt_dts;
   int           err_dts_lt_prev_dts;
@@ -99,7 +99,7 @@ struct stream_data {
 
 static int pid_index(struct stream_data *data,
                      int                 num_streams,
-                     u_int32             pid)
+                     uint32_t             pid)
 {
   int ii;
   for (ii=0; ii<num_streams; ii++)
@@ -118,8 +118,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                                   int          verbose,
                                   int          quiet,
                                   char        *output_name,
-                                  u_int32      continuity_cnt_pid,
-                                  u_int64      report_mask)
+                                  uint32_t      continuity_cnt_pid,
+                                  uint64_t      report_mask)
 {
   pmt_p         pmt = NULL;
   int           err;
@@ -142,17 +142,17 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   // data for that in one place...
   struct linear_prediction_data {
     int           had_a_pcr;      // Have we had a PCR from a PCR PID TS?
-    u_int64       prev_pcr;       // if we have, what the last one was
+    uint64_t      prev_pcr;       // if we have, what the last one was
     offset_t      prev_pcr_posn;  // and which TS it was from
     double        pcr_rate;
     int           know_pcr_rate;
-    int64         min_pcr_error;  // 27MHz
-    int64         max_pcr_error;  // 27MHz
+    int64_t       min_pcr_error;  // 27MHz
+    int64_t       max_pcr_error;  // 27MHz
   };
   struct linear_prediction_data predict = {0};
 
-  u_int32       pcr_pid;
-  u_int64       first_pcr = 0;
+  uint32_t      pcr_pid;
+  uint64_t      first_pcr = 0;
   int           pmt_at = 0;     // in case we don't look for a PMT
   int           index;
   int           ii;
@@ -160,8 +160,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   int           first = TRUE;
   offset_t      posn = 0;
   offset_t      start_posn = 0;
-  u_int32       count = 0;
-  u_int32       start_count = 0;
+  uint32_t       count = 0;
+  uint32_t       start_count = 0;
 
   memset(stats,0,sizeof(stats));
   for (ii=0; ii<MAX_NUM_STREAMS; ii++)
@@ -195,7 +195,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
   for (ii=0; ii<pmt->num_streams; ii++)
   {
-    u_int32 pid = pmt->streams[ii].elementary_PID;
+    uint32_t pid = pmt->streams[ii].elementary_PID;
     if (ii >= MAX_NUM_STREAMS)
     {
       printf("!!! Found more than %d streams -- just reporting on the first %d found\n",
@@ -213,7 +213,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   printf("Looking at PCR PID %04x (%d)\n",pcr_pid,pcr_pid);
   for (ii=0; ii<num_streams; ii++)
     printf("  Stream %d: PID %04x (%d), %s\n",ii,stats[ii].pid,stats[ii].pid,
-           H222_STREAM_TYPE_STR(stats[ii].stream_type));
+           h222_stream_type_str(stats[ii].stream_type));
 
   // Now do the actual work...
   start_count = count = pmt_at;
@@ -230,17 +230,17 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   }
   for (;;)
   {
-    u_int32 pid;
+    uint32_t pid;
     int     payload_unit_start_indicator;
     byte   *packet;
     byte   *adapt, *payload;
     int     adapt_len, payload_len;
     int     got_pcr = FALSE;
-    u_int64 acc_pcr = 0;        // The accurate PCR per TS packet
+    uint64_t acc_pcr = 0;        // The accurate PCR per TS packet
     int     continuity_counter; //lorenzo
     static int     prev_continuity_counter = 16; 
     
-    if (max > 0 && count >= (u_int32)max)
+    if (max > 0 && count >= (uint32_t)max)
     {
       printf("Stopping after %d packets (PMT was at %d)\n",max,pmt_at);
       break;
@@ -284,7 +284,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     // If we actually had a PCR, then we need to remember it
     if (pid == pcr_pid)
     {
-      u_int64   adapt_pcr;
+      uint64_t   adapt_pcr;
       // Do I need to check that this is the same PCR I got earlier?
       // I certainly hope not...
       get_PCR_from_adaptation_field(adapt,adapt_len,&got_pcr,&adapt_pcr);
@@ -294,9 +294,9 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         {
           // OK, so what we have predicted this PCR would be,
           // given the previous two PCRs and a linear rate?
-          u_int64 guess_pcr = estimate_pcr(posn,predict.prev_pcr_posn,
+          uint64_t guess_pcr = estimate_pcr(posn,predict.prev_pcr_posn,
                                            predict.prev_pcr,predict.pcr_rate);
-          int64 delta = adapt_pcr - guess_pcr;
+          int64_t delta = adapt_pcr - guess_pcr;
           if (delta < predict.min_pcr_error)
             predict.min_pcr_error = delta;
           if (delta > predict.max_pcr_error)
@@ -309,7 +309,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                  fmtx_timestamp(adapt_pcr, tfmt_abs | FMTX_TS_N_27MHz));
         if (file)
           fprintf(file,LLU_FORMAT ",read," LLU_FORMAT ",,,,\n",
-                  posn,(adapt_pcr / (int64)300) & report_mask);
+                  posn,(adapt_pcr / (int64_t)300) & report_mask);
 
         if (predict.had_a_pcr)
         {
@@ -323,7 +323,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           }
           else
           {
-            u_int64 delta_pcr = adapt_pcr - predict.prev_pcr;
+            uint64_t delta_pcr = adapt_pcr - predict.prev_pcr;
             int delta_bytes = (int)(posn - predict.prev_pcr_posn);
             predict.pcr_rate = ((double)delta_bytes * 27.0 / (double)delta_pcr) * 1000000.0;
             predict.know_pcr_rate = TRUE;
@@ -376,9 +376,9 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       // We are the start of a PES packet
       // We'll assume "enough" of the PES packet is in this TS
       int   got_pts, got_dts;
-      const u_int64 last_dts = stats[index].dts;
-      u_int64 pcr_time_now_div300 = 0;
-      int64   difference;
+      const uint64_t last_dts = stats[index].dts;
+      uint64_t pcr_time_now_div300 = 0;
+      int64_t   difference;
       err = find_PTS_DTS_in_PES(payload,payload_len,
                                 &got_pts,&stats[index].pts,&got_dts,&stats[index].dts);
       if (err)
@@ -452,7 +452,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       {
         // At the moment, we only report any ESCR to the file
         int       got_escr = FALSE;
-        u_int64   escr;
+        uint64_t   escr;
         (void) find_ESCR_in_PES(payload,payload_len,&got_escr,&escr);
 
         fprintf(file,OFFSET_T_FORMAT ",%s," LLU_FORMAT ",%d,%s,",
@@ -565,7 +565,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   for (ii = 0; ii < num_streams; ii++)
   {
     printf("\nStream %d: PID %04x (%d), %s\n",ii,stats[ii].pid,stats[ii].pid,
-           H222_STREAM_TYPE_STR(stats[ii].stream_type));
+           h222_stream_type_str(stats[ii].stream_type));
     if (stats[ii].pcr_pts_diff.num > 0)
     {
       printf("  PCR/%s:\n    Minimum difference was %6s at DTS %8s, TS packet at " OFFSET_T_FORMAT_8 "\n",
@@ -581,7 +581,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
              fmtx_timestamp(stats[ii].pcr_pts_diff.max - stats[ii].pcr_pts_diff.min, tfmt_diff));
       printf("    Mean difference (of %u) is %s\n",
              stats[ii].pcr_pts_diff.num,
-             fmtx_timestamp((int64)(stats[ii].pcr_pts_diff.sum/(double)stats[ii].pcr_pts_diff.num), tfmt_diff));
+             fmtx_timestamp((int64_t)(stats[ii].pcr_pts_diff.sum/(double)stats[ii].pcr_pts_diff.num), tfmt_diff));
     }
 
     if (stats[ii].pcr_dts_diff.num > 0 && stats[ii].pts_ne_dts)
@@ -598,7 +598,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
              fmtx_timestamp(stats[ii].pcr_dts_diff.max - stats[ii].pcr_dts_diff.min, tfmt_diff));
       printf("    Mean difference (of %u) is %s\n",
              stats[ii].pcr_dts_diff.num,
-             fmtx_timestamp((int64)(stats[ii].pcr_dts_diff.sum/(double)stats[ii].pcr_dts_diff.num), tfmt_diff));
+             fmtx_timestamp((int64_t)(stats[ii].pcr_dts_diff.sum/(double)stats[ii].pcr_dts_diff.num), tfmt_diff));
     }
 
     printf("  First PCR %8s, last %8s\n",
@@ -645,7 +645,7 @@ static int report_ts(TS_reader_p  tsreader,
   int       pat_data_len = 0;
   int       pat_data_used = 0;
 
-  u_int32   unfinished_pmt_pid = 0;
+  uint32_t   unfinished_pmt_pid = 0;
   byte     *pmt_data = NULL;
   int       pmt_data_len = 0;
   int       pmt_data_used = 0;
@@ -655,7 +655,7 @@ static int report_ts(TS_reader_p  tsreader,
 
   for (;;)
   {
-    u_int32 pid;
+    uint32_t pid;
     int     payload_unit_start_indicator;
     byte   *adapt, *payload;
     int     adapt_len, payload_len;
@@ -714,7 +714,7 @@ static int report_ts(TS_reader_p  tsreader,
           return 1;
         }
         printf(" stream type %02x (%s)\n",
-               stream->stream_type,H222_STREAM_TYPE_STR(stream->stream_type));
+               stream->stream_type,h222_stream_type_str(stream->stream_type));
       }
       else
         printf(" stream type not identified\n");
@@ -904,7 +904,7 @@ static int report_ts(TS_reader_p  tsreader,
 static int report_single_pid(TS_reader_p  tsreader,
                              int          max,
                              int          quiet,
-                             u_int32      just_pid)
+                             uint32_t      just_pid)
 {
   int       err;
   int       count = 0;
@@ -912,7 +912,7 @@ static int report_single_pid(TS_reader_p  tsreader,
 
   for (;;)
   {
-    u_int32 pid;
+    uint32_t pid;
     int     payload_unit_start_indicator;
     byte   *adapt, *payload;
     int     adapt_len, payload_len;
@@ -1041,12 +1041,12 @@ int main(int argc, char **argv)
   int       report_buffering = FALSE;
   int       show_data = FALSE;
   char     *output_name = NULL;
-  u_int32   continuity_cnt_pid = 0x2000; // PID for which we want the values of continuity_counter
+  uint32_t  continuity_cnt_pid = 0x2000; // PID for which we want the values of continuity_counter
 
-  u_int64   report_mask = ~0;   // report as many bits as we get
+  uint64_t  report_mask = ~0;   // report as many bits as we get
 
   int       select_pid = FALSE;
-  u_int32   just_pid = 0;
+  uint32_t  just_pid = 0;
 
   int    err = 0;
   int    ii = 1;
@@ -1091,7 +1091,6 @@ int main(int argc, char **argv)
       {
         err = int_value("tsreport",argv[ii],argv[ii+1],TRUE,10,&continuity_cnt_pid);
         if (err) return 1;
-//        continuity_cnt_pid = argv[ii+1];
         printf("Will report on continuity_counter for pid = %lu. Report buffering ON\n", continuity_cnt_pid);
         report_buffering = TRUE;
         quiet = FALSE;
@@ -1129,7 +1128,7 @@ int main(int argc, char **argv)
       else if (!strcmp("-justpid",argv[ii]))
       {
         CHECKARG("tsreport",ii);
-        err = int_value("tsreport",argv[ii],argv[ii+1],TRUE,0,(int32*)&just_pid);
+        err = int_value("tsreport",argv[ii],argv[ii+1],TRUE,0,(int32_t*)&just_pid);
         if (err) return 1;
         select_pid = TRUE;
         ii++;
