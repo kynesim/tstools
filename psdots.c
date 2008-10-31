@@ -245,7 +245,7 @@ static int report_ps_dots(PS_reader_p  ps,
 static void print_usage()
 {
   printf(
-    "Usage: psreport [switches] [<infile>]\n"
+    "Usage: psdots [switches] [<infile>]\n"
     "\n"
     );
   REPORT_VERSION("psdots");
