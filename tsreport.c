@@ -49,6 +49,9 @@
 
 #define AV_COUNT 2
 
+// Used to mean "PID unset" for continuity_counter monitoring
+#define INVALID_PID     0x2000
+
 static int tfmt_diff = FMTX_TS_DISPLAY_90kHz_RAW;
 static int tfmt_abs = FMTX_TS_DISPLAY_90kHz_RAW;
 
@@ -118,8 +121,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                                   int          verbose,
                                   int          quiet,
                                   char        *output_name,
-                                  uint32_t      continuity_cnt_pid,
-                                  uint64_t      report_mask)
+                                  uint32_t     continuity_cnt_pid,
+                                  uint64_t     report_mask)
 {
   pmt_p         pmt = NULL;
   int           err;
@@ -219,7 +222,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   start_count = count = pmt_at;
   start_posn  = posn  = tsreader->posn - TS_PACKET_SIZE;
 
-  if(continuity_cnt_pid != 0x2000)
+  if (continuity_cnt_pid != INVALID_PID)
   {
     file_cnt = fopen("continuity_counter.txt","w"); //lorenzo
     if (file_cnt == NULL)
@@ -350,7 +353,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     index = pid_index(stats,num_streams,pid);
 
 //lorenzo - start
-    if(continuity_cnt_pid == pid)
+    if (continuity_cnt_pid == pid)
     {
       continuity_counter =  (int)(packet[3] & 0xF);
       if (continuity_counter == 15)
@@ -366,7 +369,6 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           fprintf(file_cnt, " [Discontinuity] ");
         }
       }
-
       prev_continuity_counter = continuity_counter;
     }
 //lorenzo - end
@@ -541,7 +543,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         printf("\n");
     }
   }
-  if(continuity_cnt_pid != 0x2000)
+
+  if (continuity_cnt_pid != INVALID_PID)
   {
     fprintf(file_cnt, "\n");
     fclose(file_cnt); //lorenzo
@@ -998,7 +1001,7 @@ static void print_usage()
     "                    format similar to that used for -o)\n"
     "  -quiet, -q        Output less information (notably, not the PMT)\n"
     "  -cnt <pid>,       Check values of continuity_counter in the specified PID.\n"
-    "                    Writes all the values of the counter in a file called\n"
+    "                    Writes all the values of the counter to a file called\n"
     "                    'continuity_counter.txt'. Turns buffering on (-b).\n"
     "  -max <n>, -m <n>  Maximum number of TS packets to read\n"
     "\n"
@@ -1041,7 +1044,7 @@ int main(int argc, char **argv)
   int       report_buffering = FALSE;
   int       show_data = FALSE;
   char     *output_name = NULL;
-  uint32_t  continuity_cnt_pid = 0x2000; // PID for which we want the values of continuity_counter
+  uint32_t  continuity_cnt_pid = INVALID_PID;
 
   uint64_t  report_mask = ~0;   // report as many bits as we get
 
@@ -1089,9 +1092,10 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-cnt",argv[ii]))
       {
-        err = int_value("tsreport",argv[ii],argv[ii+1],TRUE,10,&continuity_cnt_pid);
+        err = unsigned_value("tsreport",argv[ii],argv[ii+1],10,&continuity_cnt_pid);
         if (err) return 1;
-        printf("Will report on continuity_counter for pid = %lu. Report buffering ON\n", continuity_cnt_pid);
+        printf("Reporting on continuity_counter for pid = %04x (%u)\n",
+               continuity_cnt_pid,continuity_cnt_pid);
         report_buffering = TRUE;
         quiet = FALSE;
         ii ++;
@@ -1110,7 +1114,7 @@ int main(int argc, char **argv)
         CHECKARG("tsreport",ii);
         if ((tfmt_diff = fmtx_str_to_timestamp_flags(argv[ii + 1])) < 0)
         {
-          printf("Bad timestamp format\n");
+          printf("### tsreport: Bad timestamp format '%s'\n",argv[ii+1]);
           return 1;
         }
         ii++;
@@ -1120,7 +1124,7 @@ int main(int argc, char **argv)
         CHECKARG("tsreport",ii);
         if ((tfmt_abs = fmtx_str_to_timestamp_flags(argv[ii + 1])) < 0)
         {
-          printf("Bad timestamp format\n");
+          printf("### tsreport: Bad timestamp format '%s'\n",argv[ii+1]);
           return 1;
         }
         ii++;
@@ -1128,7 +1132,7 @@ int main(int argc, char **argv)
       else if (!strcmp("-justpid",argv[ii]))
       {
         CHECKARG("tsreport",ii);
-        err = int_value("tsreport",argv[ii],argv[ii+1],TRUE,0,(int32_t*)&just_pid);
+        err = unsigned_value("tsreport",argv[ii],argv[ii+1],0,&just_pid);
         if (err) return 1;
         select_pid = TRUE;
         ii++;

@@ -604,11 +604,16 @@ extern int unsigned_value(char      *prefix,
     fprintf(stderr,"### ");
     if (prefix != NULL)
       fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,
-            "Unexpected characters ('%s') after the %.*s in %s %s\n",
-            ptr,
-            (int)(ptr-arg),arg,
-            cmd,arg);
+    if (ptr-arg == 0)
+      fprintf(stderr,
+              "Argument to %s should be a number, in %s %s\n",
+            cmd,cmd,arg);
+    else
+      fprintf(stderr,
+              "Unexpected characters ('%s') after the %.*s in %s %s\n",
+              ptr,
+              (int)(ptr-arg),arg,
+              cmd,arg);
     return 1;
   }
 
@@ -663,11 +668,16 @@ extern int int_value(char *prefix,
     fprintf(stderr,"### ");
     if (prefix != NULL)
       fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,
-            "Unexpected characters ('%s') after the %.*s in %s %s\n",
-            ptr,
-            (int)(ptr-arg),arg,
-            cmd,arg);
+    if (ptr-arg == 0)
+      fprintf(stderr,
+              "Argument to %s should be a number, in %s %s\n",
+            cmd,cmd,arg);
+    else
+      fprintf(stderr,
+              "Unexpected characters ('%s') after the %.*s in %s %s\n",
+              ptr,
+              (int)(ptr-arg),arg,
+              cmd,arg);
     return 1;
   }
 
