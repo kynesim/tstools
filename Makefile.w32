@@ -67,20 +67,23 @@ CC = cl /c /W3 /WX /GF /Fd$(OBJDIR)\ $(COPT)
 # Things to build
 
 PROGS = \
-    $(EXEDIR)\esfilter.exe    \
-    $(EXEDIR)\esdots.exe      \
-    $(EXEDIR)\esmerge.exe    \
-    $(EXEDIR)\esreport.exe    \
-    $(EXEDIR)\ts2es.exe       \
     $(EXEDIR)\es2ts.exe       \
+    $(EXEDIR)\esdots.exe      \
+    $(EXEDIR)\esfilter.exe    \
+    $(EXEDIR)\esmerge.exe     \
+    $(EXEDIR)\esreport.exe    \
     $(EXEDIR)\esreverse.exe   \
     $(EXEDIR)\m2ts2ts.exe     \
+    $(EXEDIR)\pcapreport.exe  \
     $(EXEDIR)\ps2ts.exe       \
+    $(EXEDIR)\psdots.exe      \
     $(EXEDIR)\psreport.exe    \
     $(EXEDIR)\stream_type.exe \
+    $(EXEDIR)\ts2es.exe       \
+    $(EXEDIR)\ts_packet_insert.exe      \
     $(EXEDIR)\tsinfo.exe      \
-    $(EXEDIR)\tsreport.exe    \
     $(EXEDIR)\tsplay.exe      \
+    $(EXEDIR)\tsreport.exe    \
     $(EXEDIR)\tsserve.exe
 
 # Object files for the library
@@ -115,10 +118,13 @@ PROG_OBJS = \
   $(OBJDIR)/esreport.obj \
   $(OBJDIR)/esreverse.obj \
   $(OBJDIR)/m2ts2ts.obj \
+  $(OBJDIR)/pcapreport.obj  \
   $(OBJDIR)/ps2ts.obj \
+  $(OBJDIR)/psdots.obj      \
   $(OBJDIR)/psreport.obj \
   $(OBJDIR)/stream_type.obj \
   $(OBJDIR)/ts2es.obj \
+  $(OBJDIR)/ts_packet_insert.obj      \
   $(OBJDIR)/tsinfo.obj \
   $(OBJDIR)/tsplay.obj \
   $(OBJDIR)/tsreport.obj \
@@ -167,6 +173,15 @@ $(EXEDIR)\psreport.exe: $(OBJDIR)\psreport.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\ps2ts.exe:    $(OBJDIR)\ps2ts.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\pcapreport.exe:    $(OBJDIR)\pcapreport.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\psdots.exe:   $(OBJDIR)\psdots.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\ts_packet_insert.exe:   $(OBJDIR)\ts_packet_insert.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\tsinfo.exe:   $(OBJDIR)\tsinfo.obj $(LIBFILE)
