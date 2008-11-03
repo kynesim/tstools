@@ -480,6 +480,17 @@ PMT PID. So:
     >>> print items
     [(0, 104), (1, 105)]
 
+We should be able to retrieve (the next) PAT from our file:
+
+    >>> f = TSFile(test_ts_file)
+    >>> num_read,fp1 = f.find_PAT()
+    >>> num_read
+    440
+    >>> print fp1
+    PAT({1:0x20})
+    >>> f.close()
+
+
 
 // Local Variables:
 // tab-width: 8

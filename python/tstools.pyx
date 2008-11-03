@@ -560,6 +560,15 @@ cdef extern from "pidint_defns.h":
     ctypedef _pmt    pmt
     ctypedef _pmt   *pmt_p
 
+cdef extern from "pidint_fns.h":
+    void free_pidint_list(pidint_list_p  *list)
+    void free_pmt(pmt_p  *pmt)
+
+    void report_pidint_list(pidint_list_p  list,
+                            char          *list_name,
+                            char          *int_name,
+                            int            pid_first)
+
 class PAT(object):
     """A Program Association Table.
 
@@ -607,6 +616,17 @@ class PAT(object):
     def __iter__(self):
         return self._data.iteritems()
 
+    def __repr__(self):
+        """It is nicer if we make sure the dictionary appears in some sort of
+        order.
+        """
+        words = []
+        keys = self._data.keys()
+        keys.sort()
+        for key in keys:
+            words.append('%d:%#x'%(key,self._data[key]))
+        return 'PAT({%s})'%(','.join(words))
+
 class PMT(object):
     """A Program Map Table.
 
@@ -620,6 +640,7 @@ class PMT(object):
             * value: (stream_type, ES_info) 
     """
     pass
+
 cdef extern from "ts_fns.h":
     int open_file_for_TS_read(char *filename, TS_reader_p *tsreader)
     int close_TS_reader(TS_reader_p *tsreader)
@@ -915,6 +936,38 @@ cdef class TSFile:
         """Write a TS packet to this stream.
         """
         pass
+
+    def find_PAT(self,max=0,verbose=False,quiet=False):
+        """Find the (next) PAT and return it.
+
+        If non-zero, `max` is the maximum number of TS packets to scan forwards
+        whilst looking. If it is zero, there is no limit.
+
+        If `verbose` is True, then extra information is output. If `quiet` is
+        True, then the search will be as quiet as possible.
+
+        Returns (num_read, pat), where `num_read` is how many TS packets were
+        read (whether the PAT is found or not), and `pat` is None if no PAT
+        was found.
+        """
+        cdef pidint_list_p  prog_list
+        cdef int            num_read
+        if self.tsreader == NULL:
+            raise TSToolsException,'No TS stream to read'
+        retval = find_pat(self.tsreader,max,verbose,quiet,&num_read,&prog_list)
+        if retval == EOF:       # No PAT found
+            return (num_read,None)
+        elif retval == 1:
+            raise TSToolsException,'Error searching for next PAT'
+        try:
+            pat = PAT()
+            for 0 <= ii < prog_list.length:
+                pat[prog_list.number[ii]] = prog_list.pid[ii]
+        finally:
+            free_pidint_list(&prog_list)
+        return (num_read,pat)
+
+
 
     def close(self):
         ## Since we don't appear to be able to call our __dealloc__ "method",
