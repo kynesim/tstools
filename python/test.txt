@@ -488,6 +488,14 @@ We should be able to retrieve (the next) PAT from our file:
     440
     >>> print fp1
     PAT({1:0x20})
+
+For convenience, once we're found a PAT, it is remembered on the file
+(all sorts of caveats immediately spring to mind, since a file can contain
+more than one PAT - for the moment, the last PAT "found" by such a method
+call will be remembered).
+
+    >>> print f.PAT
+    PAT({1:0x20})
     >>> f.close()
 
 

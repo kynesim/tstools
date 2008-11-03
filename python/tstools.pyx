@@ -853,6 +853,8 @@ cdef class TSFile:
     cdef readonly object name
     cdef readonly object mode
 
+    cdef readonly object PAT    # The latest PAT read, if any
+
     # It appears to be recommended to make __cinit__ expand to take more
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
@@ -927,6 +929,8 @@ cdef class TSFile:
     def read(self):
         """Read the next TS packet from this stream.
         """
+        # XXX Should we update self.PAT if the packet has PID 0?
+        # XXX See tsreport.c::report_ts for how to do this
         try:
             return _next_TSPacket(self.tsreader,self.name)
         except StopIteration:
@@ -938,7 +942,7 @@ cdef class TSFile:
         pass
 
     def find_PAT(self,max=0,verbose=False,quiet=False):
-        """Find the (next) PAT and return it.
+        """Read TS packets to find the (next) PAT.
 
         If non-zero, `max` is the maximum number of TS packets to scan forwards
         whilst looking. If it is zero, there is no limit.
@@ -949,6 +953,9 @@ cdef class TSFile:
         Returns (num_read, pat), where `num_read` is how many TS packets were
         read (whether the PAT is found or not), and `pat` is None if no PAT
         was found.
+
+        The new PAT is also saved as self.PAT (replacing, rather than updating,
+        any previous self.PAT object).
         """
         cdef pidint_list_p  prog_list
         cdef int            num_read
@@ -963,11 +970,11 @@ cdef class TSFile:
             pat = PAT()
             for 0 <= ii < prog_list.length:
                 pat[prog_list.number[ii]] = prog_list.pid[ii]
+            # And remember it on the file as well
+            self.PAT = pat
         finally:
             free_pidint_list(&prog_list)
         return (num_read,pat)
-
-
 
     def close(self):
         ## Since we don't appear to be able to call our __dealloc__ "method",
