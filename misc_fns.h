@@ -30,9 +30,12 @@
 
 #include "misc_defns.h"
 #include "es_defns.h"
+#ifndef _WIN32
 #include <stdint.h>
+#endif
 
 #ifdef _WIN32
+#include "compat.h"
 #include <winsock2.h>
 #endif // _WIN32
 

@@ -95,16 +95,19 @@ LIB_OBJS = \
  $(OBJDIR)\audio.obj \
  $(OBJDIR)\bitdata.obj \
  $(OBJDIR)\es.obj \
+ $(OBJDIR)\ethernet.obj \
  $(OBJDIR)\filter.obj \
  $(OBJDIR)\fmtx.obj \
  $(OBJDIR)\h222.obj \
  $(OBJDIR)\h262.obj \
+ $(OBJDIR)\ipv4.obj \
  $(OBJDIR)\l2audio.obj \
  $(OBJDIR)\misc.obj \
  $(OBJDIR)\nalunit.obj \
- $(OBJDIR)\ps.obj \
+ $(OBJDIR)\pcap.obj \
  $(OBJDIR)\pes.obj \
  $(OBJDIR)\pidint.obj \
+ $(OBJDIR)\ps.obj \
  $(OBJDIR)\reverse.obj \
  $(OBJDIR)\ts.obj \
  $(OBJDIR)\tswrite.obj
@@ -118,7 +121,7 @@ PROG_OBJS = \
   $(OBJDIR)/esreport.obj \
   $(OBJDIR)/esreverse.obj \
   $(OBJDIR)/m2ts2ts.obj \
-  $(OBJDIR)/pcapreport.obj  \
+  $(OBJDIR)/pcapreport.obj \
   $(OBJDIR)/ps2ts.obj \
   $(OBJDIR)/psdots.obj      \
   $(OBJDIR)/psreport.obj \
@@ -167,6 +170,9 @@ $(EXEDIR)\m2ts2ts.exe: $(OBJDIR)\m2ts2ts.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\stream_type.exe: $(OBJDIR)\stream_type.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\pcapreport.exe: $(OBJDIR)\pcapreport.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\psreport.exe: $(OBJDIR)\psreport.obj $(LIBFILE)

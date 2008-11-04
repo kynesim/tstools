@@ -34,8 +34,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-
+#include "compat.h"
 
 //! Out of memory.
 #define PCAP_ERR_OUT_OF_MEMORY (-8)

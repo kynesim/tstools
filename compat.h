@@ -39,17 +39,21 @@
 // Kill deprecation warnings
 #pragma warning( 4: 4996 )
 
+#include <io.h>
+
 // Windows doesn't seem to supply <stdint.h>, so we shall have to try
 // for values we hope work
-typedef unsigned char    byte;
-typedef unsigned char    uint8_t;
-typedef unsigned short   uint16_t;
-typedef unsigned long    uint32_t;
-typedef unsigned __int64 uint64_t;
+typedef __int8                  int8_t;
+typedef __int16                 int16_t;
+typedef __int32                 int32_t;
+typedef __int64                 int64_t;
 
-typedef short   int16_t;
-typedef long    int32_t;
-typedef __int64 int64_t;
+typedef unsigned __int8         uint8_t;
+typedef unsigned __int16        uint16_t;
+typedef unsigned __int32        uint32_t;
+typedef unsigned __int64        uint64_t;
+
+typedef uint8_t                 byte;
 
 // On BSD, lseek takes a 64-bit off_t value
 // On Linux, if the system supports long files, it does the same
@@ -93,6 +97,7 @@ typedef __int64 offset_t;
 #else // _WIN32
 // Other than on Windows, using the C99 integer definitions is what people
 // expect, so do so
+#include <stdint.h>
 #include <stdint.h>
 
 // Keep "byte" for historical/affectionate reasons

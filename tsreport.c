@@ -81,6 +81,8 @@ struct stream_data {
   int           stream_type;
   int           had_a_pts;
   int           had_a_dts;
+  int           last_cc;
+  int           cc_dup_count;
 
   uint64_t       first_pts;
   uint64_t       first_dts;
@@ -93,6 +95,8 @@ struct stream_data {
   int           err_pts_lt_dts;
   int           err_dts_lt_prev_dts;
   int           err_dts_lt_pcr;
+  int           err_cc_error;
+  int           err_cc_dup_error;
 
   struct diff_from_pcr        pcr_pts_diff;
   struct diff_from_pcr        pcr_dts_diff;
@@ -173,6 +177,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     stats[ii].pcr_dts_diff.min = LONG_MAX;
     stats[ii].pcr_pts_diff.max = LONG_MIN;
     stats[ii].pcr_dts_diff.max = LONG_MIN;
+    stats[ii].last_cc = -1;
   }
   predict.min_pcr_error = LONG_MAX;
   predict.max_pcr_error = LONG_MIN;
@@ -240,9 +245,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     int     adapt_len, payload_len;
     int     got_pcr = FALSE;
     uint64_t acc_pcr = 0;        // The accurate PCR per TS packet
-    int     continuity_counter; //lorenzo
-    static int     prev_continuity_counter = 16; 
-    
+
     if (max > 0 && count >= (uint32_t)max)
     {
       printf("Stopping after %d packets (PMT was at %d)\n",max,pmt_at);
@@ -352,26 +355,41 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
     index = pid_index(stats,num_streams,pid);
 
-//lorenzo - start
-    if (continuity_cnt_pid == pid)
+    if (index != -1)
     {
-      continuity_counter =  (int)(packet[3] & 0xF);
-      if (continuity_counter == 15)
-        fprintf(file_cnt, "%d \n", continuity_counter);
-      else
-        fprintf(file_cnt, "%d ", continuity_counter);
-
-      if (prev_continuity_counter != 16 )
+      // Do continuity counter checking
+      int cc = packet[3] & 15;
+      if (stats[index].last_cc > 0)
       {
-        if ( ((prev_continuity_counter+1)%16) != continuity_counter )
+        // We are allowed 1 dup packet
+        // *** Could check that it actually is a dup...
+        if (stats[index].last_cc == cc)
         {
-          printf("- Discontinuity in continuity_counter at " OFFSET_T_FORMAT "\n",posn);
-          fprintf(file_cnt, " [Discontinuity] ");
+          if (stats[index].cc_dup_count++ != 0)
+          {
+            if (stats[index].err_cc_dup_error++ == 0)
+            {
+              printf("### PID(%d): Continuity Counter >1 duplicate %d at " OFFSET_T_FORMAT "\n",
+                stats[index].pid, cc, posn);
+            }
+          }
+        }
+        else
+        {
+          // Otherwise CC must go up by 1 mod 16
+          stats[index].cc_dup_count = 0;
+          if (((stats[index].last_cc + 1) & 15) != cc)
+          {
+            if (stats[index].err_cc_error++ == 0)
+            {
+              printf("### PID(%d): Continuity Counter discontinuity %d->%d at " OFFSET_T_FORMAT "\n",
+                stats[index].pid, stats[index].last_cc, cc, posn);
+            }
+          }
         }
       }
-      prev_continuity_counter = continuity_counter;
+      stats[index].last_cc = cc;
     }
-//lorenzo - end
 
     if (index != -1 && payload && payload_unit_start_indicator)
     {
@@ -616,6 +634,10 @@ static int report_buffering_stats(TS_reader_p  tsreader,
              fmtx_timestamp(stats[ii].first_dts, tfmt_abs),
              fmtx_timestamp(stats[ii].dts, tfmt_abs));
 
+    if (stats[ii].err_cc_error != 0)
+      printf("  ### CC error * %d\n", stats[ii].err_cc_error);
+    if (stats[ii].err_cc_dup_error != 0)
+      printf("  ### CC duplicate error * %d\n", stats[ii].err_cc_dup_error);
     if (stats[ii].err_pts_lt_dts != 0)
       printf("  ### PTS < DTS * %d\n", stats[ii].err_pts_lt_dts);
     if (stats[ii].err_dts_lt_prev_dts != 0)

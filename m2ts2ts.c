@@ -210,7 +210,7 @@ static int extract_packets(int input, FILE * output,
 	   (unsigned int)(packet_buffer->next));
     reorder_buffer_entries++;
 
-    if (reorder_buffer_entries > reorder_buffer_size)
+    if (reorder_buffer_entries > (int)reorder_buffer_size)
     {
       // Write out the head of the reorder buffer
       printf("### queue head @ 0x%08x, next=0x%08x\n",

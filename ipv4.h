@@ -30,7 +30,7 @@
 #ifndef _ipv4_h
 #define _ipv4_h
 
-#include <stdint.h>
+#include "compat.h"
 
 /*! This is all held in host byte order (including the
  *  IP addresses! You have been warned .. )

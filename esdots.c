@@ -390,6 +390,20 @@ static int dots_by_access_unit(ES_p  es,
                                int   show_gop_time)
 {
 
+  int err = 0;
+  int access_unit_count = 0;
+  access_unit_context_p  context;
+
+  int gop_start_found = FALSE;
+  int k_frame = 0;
+  int size_gop;
+  int size_gop_max = 0;
+  int size_gop_min = 100000;
+  int gops = 0;
+  int size_gop_tot = 0;
+  int is_first_k_frame = TRUE;
+  char char_nal_type = 'a';
+
   if (verbose)
   printf("\n"
          "Each character represents a single access unit\n"
@@ -407,20 +421,6 @@ static int dots_by_access_unit(ES_p  es,
          "If -hasheos was specified:\n"
          "    # means an EOS (end-of-stream) NAL unit.\n"
          "\n");
-
-  int err = 0;
-  int access_unit_count = 0;
-  access_unit_context_p  context;
-
-  int gop_start_found = FALSE;
-  int k_frame = 0;
-  int size_gop;
-  int size_gop_max = 0;
-  int size_gop_min = 100000;
-  int gops = 0;
-  int size_gop_tot = 0;
-  int is_first_k_frame = TRUE;
-  char char_nal_type = 'a';
 
   err = build_access_unit_context(es,&context);
   if (err) return err;

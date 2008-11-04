@@ -24,13 +24,12 @@
  * ***** END LICENSE BLOCK *****
  */
 
+#include "compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <stdint.h>
 #include <assert.h>
 
 #define TS_PACKET_SIZE 188
@@ -43,6 +42,8 @@ static uint8_t *create_out_packet(char *in_data,int in_len,uint16_t pid)
 {
   uint8_t *out_packet = malloc(TS_PACKET_SIZE);
   uint8_t *ptr = out_packet;
+  uint16_t flags;
+  uint16_t flags_pid;
 
   if (!ptr)
     return NULL;
@@ -53,7 +54,7 @@ static uint8_t *create_out_packet(char *in_data,int in_len,uint16_t pid)
   ptr++;
 
   /* Transport Error Indicator */
-  uint16_t flags = 0<<15;
+  flags = 0<<15;
 
   /* Payload Unit Start Indicator */
   flags = flags | 0<<14;
@@ -61,7 +62,7 @@ static uint8_t *create_out_packet(char *in_data,int in_len,uint16_t pid)
   /* Transport Priority */
   flags = flags | 0<<13;
 
-  uint16_t flags_pid = flags | pid;
+  flags_pid = flags | pid;
   TO_BE16(flags_pid,ptr);
   ptr+=2;
 
@@ -76,16 +77,18 @@ static uint8_t *create_out_packet(char *in_data,int in_len,uint16_t pid)
 
   assert((ptr-TS_PACKET_SIZE) == out_packet);
 
-  int i;
-  ptr = out_packet;
-  DBG_INFO(("Packet to be written is:\n"));
-  for (i=0;i<TS_PACKET_SIZE;i++)
   {
-    if (!(i%16)) DBG_INFO(("\n"));
-
-    DBG_INFO(("%02x ",ptr[i]));
+    int i;
+    ptr = out_packet;
+    DBG_INFO(("Packet to be written is:\n"));
+    for (i=0;i<TS_PACKET_SIZE;i++)
+    {
+      if (!(i%16)) DBG_INFO(("\n"));
+  
+      DBG_INFO(("%02x ",ptr[i]));
+    }
+    DBG_INFO(("\n\n"));
   }
-  DBG_INFO(("\n\n"));
 
   return out_packet;
 }
@@ -142,7 +145,7 @@ static off_t get_file_size(int file)
 
 static int num_char_in_string(char *string,char c)
 {
-  int i;
+  unsigned int i;
   int a=0;
 
   for (i=0; i<strlen(string);i++)
@@ -259,6 +262,9 @@ int main(int argc, char **argv)
       if (!strcmp("-p",argv[argno]))
       {
         char *endptr;
+        char * position_string;
+        int pos_index;
+
         ++argno;
 
         free(positions);
@@ -271,8 +277,8 @@ int main(int argc, char **argv)
           exit(1);
         }
 
-        char * position_string = strtok(argv[argno],":");
-        int pos_index=0;
+        position_string = strtok(argv[argno],":");
+        pos_index=0;
         DBG_INFO(("Adding new packets at\n"));
         while(1)
         {
