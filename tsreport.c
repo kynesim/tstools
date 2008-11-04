@@ -359,6 +359,11 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     {
       // Do continuity counter checking
       int cc = packet[3] & 15;
+
+      // Log if required
+      if (continuity_cnt_pid == pid)
+        fprintf(file_cnt, "%d%c", cc, cc == 15 ? '\n' : ' ');
+
       if (stats[index].last_cc > 0)
       {
         // We are allowed 1 dup packet
@@ -369,6 +374,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           {
             if (stats[index].err_cc_dup_error++ == 0)
             {
+              if (continuity_cnt_pid == pid)
+                fprintf(file_cnt, "[Duplicate error] ");
               printf("### PID(%d): Continuity Counter >1 duplicate %d at " OFFSET_T_FORMAT "\n",
                 stats[index].pid, cc, posn);
             }
@@ -382,6 +389,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           {
             if (stats[index].err_cc_error++ == 0)
             {
+              if (continuity_cnt_pid == pid)
+                fprintf(file_cnt, "[Discontinuity] ");
               printf("### PID(%d): Continuity Counter discontinuity %d->%d at " OFFSET_T_FORMAT "\n",
                 stats[index].pid, stats[index].last_cc, cc, posn);
             }
