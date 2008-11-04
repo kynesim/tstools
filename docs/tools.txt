@@ -842,10 +842,18 @@ The ``-timing`` switch may be used to obtain PCR timing information::
     Stopping after 500 packets
     Read 500 TS packets
 
-The ``-cnt`` switch is to be followed by a PID in decimal units. 
-It checks the values of the field continuity_counter in the specified PID,
-warns in there are discontinuities and writes them in a file called 
-'continuity_counter.txt'. Using this automatically turns buffering on (-b).
+The ``-cnt <pid>`` switch makes tsreport check
+the values of the ``continuity_counter`` field for the specified PID.
+It writes the values to a file called ``continuity_counter.txt``, in lines of
+the form::
+
+    0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+
+which makes it easy to spot missing values. It also gives a warning
+for any discontinuities found, but note that the specification does allow the
+duplication of a TS packet once (which will lead to the continuity counter
+repeating once as well).  Using ``-cnt`` automatically turns buffering
+on (-b).
 
 
 tsserve
