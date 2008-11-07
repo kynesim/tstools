@@ -29,7 +29,7 @@
 #ifndef _version
 #define _version
 
-const char software_version[] = "1.10";
+const char software_version[] = "1.11";
 
 // The following is intended to be output as part of the main help text for
 // each program. ``program_name`` is thus the name of the program.
