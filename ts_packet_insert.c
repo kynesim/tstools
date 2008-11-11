@@ -31,14 +31,16 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <errno.h>
+
+#include "misc_fns.h"
+#include "version.h"
 
 #define TS_PACKET_SIZE 188
 
-#define DBG_INFO(x) printf x
-
 #define TO_BE16(from,to) *to = (0xFF & (from>>8)); *(to+1) = (0xFF & from); 
 
-static uint8_t *create_out_packet(char *in_data,int in_len,uint16_t pid)
+static uint8_t *create_out_packet(char *in_data, int in_len, uint16_t pid)
 {
   uint8_t *out_packet = malloc(TS_PACKET_SIZE);
   uint8_t *ptr = out_packet;
@@ -80,14 +82,14 @@ static uint8_t *create_out_packet(char *in_data,int in_len,uint16_t pid)
   {
     int i;
     ptr = out_packet;
-    DBG_INFO(("Packet to be written is:\n"));
+    printf("Packet to be written is:\n");
     for (i=0;i<TS_PACKET_SIZE;i++)
     {
-      if (!(i%16)) DBG_INFO(("\n"));
-  
-      DBG_INFO(("%02x ",ptr[i]));
+      if (!(i%16)) printf("\n");
+
+      printf("%02x ",ptr[i]);
     }
-    DBG_INFO(("\n\n"));
+    printf("\n\n");
   }
 
   return out_packet;
@@ -116,7 +118,7 @@ static int insert_packets(int      file,
 
     if (packet_numbers[packnum_i]==packets_read && packnum_i<n_pack)
     {
-      DBG_INFO(("Writing new packet before packet %d...\n",packets_read));
+      printf("Writing new packet before packet %d...\n",packets_read);
 
       rv = write(out_file,out_packet,TS_PACKET_SIZE);
       assert(rv == TS_PACKET_SIZE);
@@ -158,50 +160,34 @@ static int num_char_in_string(char *string,char c)
 
 static void print_usage()
 {
-  printf("Usage:\n"
-         "\tts_packet_insert [switches] <infile> [switches]\n"
-         "\n"
-        );
-
-  printf("\tInsert TS packets into a Transport Stream at a positions "
-         "\n\tspecified by the user.\n\n"
-        );
-
-  printf("Input:\n"
-         "\t<infile>\t A H.222.0 TS stream.\n\n"
-        );
-
-  printf("Switches:\n"
-         "\t-p [positions]\t This a a colon (':') delimited string of numbers\n"
-         "\t\t\t between 0 and 1, representing how far through to put \n"
-         "\t\t\t each ts packet.  E.g.  -p 0.1:0.4:0.7:0.9 will insert\n"
-         "\t\t\t 4 packets at 10%%, 40%%, 70%% and 90%% through the file.\n"
-         "\n"
-        );
-
-  printf("\t-pid [pid]\t The inserted packets will have the pid specfied.\n"
-         "\n"
-        );
-
-  printf("\t-s [string]\t The inserted packets will contain [string] as it's\n"
-         "\t\t\t payload.\n"
-         "\n"
-        );
-
-  printf("\t-o [output file] The new TS file will be written out to the file\n"
-         "\t\t\t specified. (defaults to out.ts)\n"
-         "\n"
-        );
-
-  printf("\t-h (--help) \t This message."
-         "\n\n"
-        );
-
-  printf("Example:\n"
-         "\tts_packet_insert -p 0.3:0.6 -o out.ts -pid 89 -s \"AD=start\" in.ts"
-         "\n\n"
-        );
-
+  printf(
+    "Usage: ts_packet_insert [switches] <infile>\n"
+    "\n"
+    );
+  REPORT_VERSION("ts_packet_insert");
+  printf(
+    "\n"
+    "  Insert TS packets into a Transport Stream at positions\n"
+    "  specified by the user.\n"
+    "\n"
+    "Input:\n"
+    "  <infile>          An H.222 Transport Stream file.\n"
+    "\n"
+    "Switches:\n"
+    "  -p <positions>    This a a colon (':') delimited string of numbers\n"
+    "                    between 0 and 1, representing how far through to put \n"
+    "                    each TS packet.  E.g., -p 0.1:0.4:0.7:0.9 will insert\n"
+    "                    4 packets at 10%%, 40%%, 70%% and 90%% through the file.\n"
+    "  -pid <pid>        The inserted packets will have the PID specfied.\n"
+    "                    If no PID is specified, then 0x68 will be used.\n"
+    "  -s <string>       The inserted packets will contain <string> as their\n"
+    "                    payload. This defaults to 'Inserted packet'.\n"
+    "  -o <output file>  The new TS file will be written out with the given name\n"
+    "                    (which defaults to out.ts)\n"
+    "For example:\n"
+    "\n"
+    "    ts_packet_insert -p 0.3:0.6 -o out.ts -pid 89 -s \"AD=start\" in.ts\n"
+    );
 }
 
 /* bubble sort */
@@ -234,10 +220,10 @@ static void sort_positions(double *in_array,int size)
 
 int main(int argc, char **argv)
 {
-  char *output_file_path = "./__out.ts";
+  char *output_file_path = "out.ts";
   char *in_file_path = NULL;
   long in_file_size=0;
-  /*an array of floats for the positions of packets to insert,valuse of 0-1*/
+  /*an array of floats for the positions of packets to insert,values of 0-1*/
   double *positions=NULL; 
   int *packet_numbers=NULL;
   int n_pos = 0;
@@ -245,9 +231,9 @@ int main(int argc, char **argv)
   int argno = 1;
   int arg_counter = 0;
 
-  int pid=0;
+  uint32_t pid=0x68;
 
-  char * out_string=NULL;
+  char *out_string="Inserted packet";
 
   if (argc < 2)
   {
@@ -262,7 +248,7 @@ int main(int argc, char **argv)
       if (!strcmp("-p",argv[argno]))
       {
         char *endptr;
-        char * position_string;
+        char *position_string;
         int pos_index;
 
         ++argno;
@@ -279,10 +265,10 @@ int main(int argc, char **argv)
 
         position_string = strtok(argv[argno],":");
         pos_index=0;
-        DBG_INFO(("Adding new packets at\n"));
-        while(1)
+        printf("Adding new packets at:");
+        while (1)
         {
-          if(!position_string)
+          if (!position_string)
             break;
 
           positions[pos_index] = strtod(position_string,&endptr);
@@ -293,29 +279,33 @@ int main(int argc, char **argv)
             exit(1);
           }
 
-          DBG_INFO(("\t%d%%\n",(int)(positions[pos_index]*100)));
+          printf("  %d%%",(int)(positions[pos_index]*100));
 
           position_string = strtok(NULL,":");
           pos_index++;
         }
-        DBG_INFO(("\n"));
+        printf("\n");
         sort_positions(positions,n_pos);
         assert(pos_index == n_pos);
 
       }
       else if (!strcmp("-pid",argv[argno]))
       {
-        pid = atoi(argv[++argno]);
-        DBG_INFO(("Will insert packets with a pid of 0x%x\n",pid));
+        int err;
+        CHECKARG("ts_packet_insert",argno);
+        err = unsigned_value("ts_packet_insert",argv[argno],argv[argno+1],0,&pid);
+        if (err) return 1;
+        argno++;
       }
       else if (!strcmp("-o",argv[argno]))
       {
+        CHECKARG("ts_packet_insert",argno);
         output_file_path = argv[++argno];
       }
       else if (!strcmp("-s",argv[argno]))
       {
+        CHECKARG("ts_packet_insert",argno);
         out_string = argv[++argno];
-        DBG_INFO(("Output string will be:\t%s\n",out_string));
       }
       else if (!strcmp("-h",argv[argno]) || !strcmp("--help",argv[argno]))
       {
@@ -324,7 +314,7 @@ int main(int argc, char **argv)
       }
       else
       {
-        DBG_INFO(("\n *** Unknown option %s, ignoring.\n\n",argv[argno]));
+        printf("\n *** Unknown option %s, ignoring.\n\n",argv[argno]);
       }
     }
     else
@@ -333,6 +323,11 @@ int main(int argc, char **argv)
       {
         in_file_path = argv[argno];
         arg_counter++;
+      }
+      else
+      {
+        fprintf(stderr, "### ts_packet_insert: Unexpected '%s'\n", argv[argno]);
+        return 1;
       }
     }
     argno++;
@@ -344,23 +339,27 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  DBG_INFO(("Writing to file: \t%s\n",output_file_path));
-  DBG_INFO(("Reading from: \t\t%s\n",in_file_path));
+  printf("Reading from file:   %s\n",in_file_path);
+  printf("Writing to file:     %s\n",output_file_path);
+  printf("Inserting packets with PID %#x (%u)\n",pid,pid);
+  printf("Using output string: %s\n",out_string);
 
   {
-    /* open files*/
+    int out_file;
     int in_file = open(in_file_path,O_RDONLY);
-    int out_file = open(output_file_path,O_WRONLY | O_TRUNC | O_CREAT,0644);
 
     if (in_file<0)
     {
-      fprintf(stderr,"Error: couldn't open %s for reading\n",in_file_path);
+      fprintf(stderr,"Error: could not open %s for reading: %s\n",
+              in_file_path,strerror(errno));
       exit(1);
     }
 
+    out_file = open(output_file_path,O_WRONLY | O_TRUNC | O_CREAT,0644);
     if (out_file<0)
     {
-      fprintf(stderr,"Error: couldn't open %s for reading\n",output_file_path);
+      fprintf(stderr,"Error: could not open %s for reading: %s\n",
+              output_file_path,strerror(errno));
       exit(1);
     }
 
@@ -368,15 +367,15 @@ int main(int argc, char **argv)
 
     if (in_file_size % TS_PACKET_SIZE)
     {
-      fprintf(stderr,"Error: ts file length is not a multiple of 188 bytes\n");
+      fprintf(stderr,"Error: TS file length is not a multiple of 188 bytes\n");
       exit(1);
     }
 
     {
       int num_pack = in_file_size / TS_PACKET_SIZE;
       int i;
-      DBG_INFO(("\nIn file is %ld bytes long with ",in_file_size));
-      DBG_INFO(("%d TS packets\n",num_pack));
+      printf("\nInput file is %ld bytes long with ",in_file_size);
+      printf("%d TS packets\n",num_pack);
 
       packet_numbers = malloc(n_pos * sizeof(int));
 
@@ -391,7 +390,7 @@ int main(int argc, char **argv)
         /* create the packet to spit out */
         uint8_t *out_packet = create_out_packet(out_string,
                                                 strlen(out_string)+1,
-                                                pid);	
+                                                pid);
 
         insert_packets(in_file,out_file,out_packet,packet_numbers,n_pos);
       }
