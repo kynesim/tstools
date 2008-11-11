@@ -742,11 +742,12 @@ int main(int argc, char **argv)
         video_type = VIDEO_AVS;
       }
       else if (!strcmp("-patpmtfreq", argv[ii]))
-        {
-          err = int_value("patpmtfreq", argv[ii], argv[ii+1], TRUE, 10, &pat_pmt_freq);
-          if (err) { return 1; }
-          ++ii;
-        }
+      {
+        CHECKARG("esmerge",ii);
+        err = int_value("esmerge", argv[ii], argv[ii+1], TRUE, 10, &pat_pmt_freq);
+        if (err) { return 1; }
+        ++ii;
+      }
       else
       {
         fprintf(stderr,"### esmerge: "

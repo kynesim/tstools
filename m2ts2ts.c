@@ -342,7 +342,8 @@ int main(int argc, char *argv[])
       }
       else if (!strcmp("-buffer", argv[ii]) || !strcmp("-b", argv[ii]))
       {
-	err = unsigned_value("ts2es", argv[ii], argv[ii+1],
+        CHECKARG("m2ts2ts",ii);
+	err = unsigned_value("m2ts2ts", argv[ii], argv[ii+1],
 			     0, &reorder_buff_size);
 	if (err) return 1;
 	ii++;

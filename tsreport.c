@@ -1118,11 +1118,13 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-o",argv[ii]))
       {
+        CHECKARG("tsreport",ii);
         output_name = argv[ii+1];
         ii ++;
       }
       else if (!strcmp("-cnt",argv[ii]))
       {
+        CHECKARG("tsreport",ii);
         err = unsigned_value("tsreport",argv[ii],argv[ii+1],10,&continuity_cnt_pid);
         if (err) return 1;
         printf("Reporting on continuity_counter for pid = %04x (%u)\n",

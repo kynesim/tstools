@@ -1163,6 +1163,7 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-output",argv[ii]) || !strcmp("-o",argv[ii]))
       {
+        CHECKARG("tsplay",ii);
         had_output_name = TRUE;
         use_network = FALSE;
         how = TS_W_FILE;
@@ -1240,7 +1241,7 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-vstream",argv[ii]))
       {
-        CHECKARG("ps2ts",ii);
+        CHECKARG("tsplay",ii);
         err = int_value_in_range("ps2ts",argv[ii],argv[ii+1],0,0xF,0,
                                  &video_stream);
         if (err) return 1;
@@ -1248,7 +1249,7 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-astream",argv[ii]))
       {
-        CHECKARG("ps2ts",ii);
+        CHECKARG("tsplay",ii);
         err = int_value_in_range("ps2ts",argv[ii],argv[ii+1],0,0x1F,0,
                                  &audio_stream);
         if (err) return 1;
@@ -1257,7 +1258,7 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-ac3stream",argv[ii]))
       {
-        CHECKARG("ps2ts",ii);
+        CHECKARG("tsplay",ii);
         err = int_value_in_range("ps2ts",argv[ii],argv[ii+1],0,0x7,0,
                                  &audio_stream);
         if (err) return 1;
@@ -1331,7 +1332,7 @@ int main(int argc, char **argv)
       {
         if (ii+2 >= argc)
         {
-          fprintf(stderr,"### tsplay: missing argument(s) to -drop\n");
+          fprintf(stderr,"### tsplay: -drop requires two arguments\n");
           return 1;
         }
         err = int_value("tsplay",argv[ii],argv[ii+1],TRUE,0,&drop_packets);

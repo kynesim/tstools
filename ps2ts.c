@@ -75,7 +75,7 @@ static void print_usage()
     "Files:\n"
     "  <infile>           is a file containing the program stream data\n"
     "                     (but see -stdin below)\n"
-    "  <outfile>          is an transport stream file\n"
+    "  <outfile>          is a transport stream file\n"
     "                     (but see -stdout and -host below)\n"
     "\n"
     "Input switches:\n"

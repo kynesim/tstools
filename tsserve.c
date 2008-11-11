@@ -3695,7 +3695,7 @@ int main(int argc, char **argv)
       {
         if (ii+2 >= argc)
         {
-          fprintf(stderr,"### tsserve: missing argument(s) to -drop\n");
+          fprintf(stderr,"### tsserve: -drop requires two arguments\n");
           return 1;
         }
         err = int_value("tsserve",argv[argno],argv[argno+1],TRUE,0,
