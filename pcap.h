@@ -123,7 +123,7 @@ typedef struct _pcap_io_ctx *PCAP_reader_p;
  * \return 0 on success, non-zero on failure.
  */ 
 int pcap_open(PCAP_reader_p *ctx_p, pcap_hdr_t *out_hdr, 
-	      const char *filename);
+              const char *filename);
 
 
 /*! Read the next packet from a pcap file. The returned data is
@@ -133,14 +133,17 @@ int pcap_open(PCAP_reader_p *ctx_p, pcap_hdr_t *out_hdr,
  * \return 1 on success, 0 if we've reached EOF, < 0 on error.
  */
 int pcap_read_next(PCAP_reader_p ctx_p, pcaprec_hdr_t *out_hdr,
-		   uint8_t **out_data,
-		   uint32_t *out_len);
+                   uint8_t **out_data,
+                   uint32_t *out_len);
 
 /*! Close the pcap file */
 int pcap_close(PCAP_reader_p *ctx_p);
 
 #endif
-
-
-/* End file */
-
+
+// Local Variables:
+// tab-width: 8
+// indent-tabs-mode: nil
+// c-basic-offset: 2
+// End:
+// vim: set tabstop=8 shiftwidth=2 expandtab:
