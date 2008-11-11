@@ -341,25 +341,28 @@ static int write_out_packet(pcapreport_ctx_t *ctx,
 
 static void print_usage()
 {
-  printf("Usage: pcapreport [switches] [<infile>] [switches]\n"
+  printf("Usage: pcapreport [switches] <infile>\n"
          "\n"
         );
-  REPORT_VERSION("pcap");
+  REPORT_VERSION("pcapreport");
   printf(
     "\n"
     " Report on a pcap capture file.\n"
     "\n"
-    " -o <output file>         Dump selected UDP payloads to the named output file.\n"
-    " -d <dest ip>:<port>      Select data with the given destination IP and port.\n"
-    " --dump-data | -D         Dump any data in the input file to stdout.\n"
-    " --extra-dump | -e        Dump only data which isn't being sent to the -o file.\n"
-    " --times | -t             Report on PCR vs PCAP timing for the destination specified in -d.\n"
-    " --verbose | -v           Output metadata about every packet.\n"
-    " --skew-discontinuity-threshold <number>\n"
-    "                          Gives the skew discontinuity threshold in 90kHz units.\n"
+    "  -output <file>, -o <file> Dump selected UDP payloads to the named output file.\n"
+    "  -d <dest ip>\n"
+    "  -d <dest ip>:<port>       Select data with the given destination IP and port.\n"
+    "                            If the <port> is not specified, it defaults to 0\n"
+    "                            (see below).\n"
+    "  -dump-data, -D            Dump any data in the input file to stdout.\n"
+    "  -extra-dump, -e           Dump only data which isn't being sent to the -o file.\n"
+    "  -times,  -t               Report on PCR vs PCAP timing for the destination specified in -d.\n"
+    "  -verbose, -v              Output metadata about every packet.\n"
+    "  -skew-discontinuity-threshold <number>\n"
+    "  -skew <number>            Gives the skew discontinuity threshold in 90kHz units.\n"
     "\n"
-    " Specifying 0.0.0.0 for destination IP or 0 for destination port will capture all\n"
-    " hosts and ports respectively.\n"
+    " Specifying 0.0.0.0 for destination IP will capture all hosts, specifying 0 destination\n"
+    " port will capture all ports on the destination host.\n"
     "\n"
     " Network packet and TS packet numbers start at 0.\n"
     "\n"
@@ -373,9 +376,7 @@ int main(int argc, char **argv)
 {
   int err = 0;
   int ii = 1;
-  pcapreport_ctx_t ctx;
-
-  memset(&ctx, '\0', sizeof(pcapreport_ctx_t));
+  pcapreport_ctx_t ctx = {0};
 
   ctx.skew_discontinuity_threshold = SKEW_DISCONTINUITY_THRESHOLD;
 
@@ -395,34 +396,29 @@ int main(int argc, char **argv)
         print_usage();
         return 0;
       }
-      else if (!strcmp("--o", argv[ii]) || !strcmp("-o", argv[ii]))
+      else if (!strcmp("--output", argv[ii]) ||
+               !strcmp("-output", argv[ii]) || !strcmp("-o", argv[ii]))
       {
-        ++ii;
-        if (ii < argc)
-        {
-          ctx.output_name = argv[ii];
-        }
-        else
-        {
-          fprintf(stderr, "### pcapreport: -o requires an argument.\n");
-          return 1;
-        }
+        CHECKARG("pcapreport",ii);
+        ctx.output_name = argv[ii+1];
       }
-      else if (!strcmp("-times", argv[ii]) || 
-               !strcmp("--times", argv[ii]) || !strcmp("-t", argv[ii]))
+      else if (!strcmp("--times", argv[ii]) || 
+               !strcmp("-times", argv[ii]) || !strcmp("-t", argv[ii]))
       {
         ++ctx.time_report;
       }
-      else if (!strcmp("-verbose", argv[ii]) || 
-               !strcmp("--verbose", argv[ii]) || !strcmp("-v", argv[ii]))
+      else if (!strcmp("--verbose", argv[ii]) || 
+               !strcmp("-verbose", argv[ii]) || !strcmp("-v", argv[ii]))
       {
         ++ctx.verbose;
       }
-      else if (!strcmp("--d", argv[ii]) || !strcmp("-d", argv[ii]))
+      else if (!strcmp("--d", argv[ii]) ||
+               !strcmp("-d", argv[ii]))
       {
         char *hostname;
-        int port;
+        int port = 0;
 
+        CHECKARG("pcapreport",ii);
         err = host_value("pcapreport", argv[ii], argv[ii+1], &hostname, &port);
         if (err) return 1;
         ++ii;
@@ -435,25 +431,25 @@ int main(int argc, char **argv)
           return 1;
         }
       }
-      else if (!strcmp("--dump-data", argv[ii]) || !strcmp("-D", argv[ii]))
+      else if (!strcmp("--dump-data", argv[ii]) ||
+               !strcmp("-dump-data", argv[ii]) || !strcmp("-D", argv[ii]))
       {
         ++ctx.dump_data;
       }
-      else if (!strcmp("--extra-dump", argv[ii]) || !strcmp("-E", argv[ii]))
+      else if (!strcmp("--extra-dump", argv[ii]) || 
+               !strcmp("-extra-dump", argv[ii]) || !strcmp("-E", argv[ii]))
       {
         ++ctx.dump_extra;
       }
-      else if (!strcmp("--skew-discontinuity-threshold", argv[ii]))
+      else if (!strcmp("--skew-discontinuity-threshold", argv[ii]) ||
+               !strcmp("-skew-discontinuity-threshold", argv[ii]) ||
+               !strcmp("-skew", argv[ii]))
       {
         int val;
-        int rv = 
-          int_value("pcapreport", argv[ii], argv[ii+1], TRUE, 0,
-                    &val); 
+        CHECKARG("pcapreport",ii);
+        err = int_value("pcapreport", argv[ii], argv[ii+1], TRUE, 0, &val); 
+        if (err) return 1;
         ctx.skew_discontinuity_threshold = val;
-        if (rv) 
-        {
-          return 1;
-        }
       }
       else
       {
@@ -466,8 +462,7 @@ int main(int argc, char **argv)
     {
       if (ctx.had_input_name)
       {
-        fprintf(stderr, "### pcapreport: Unexpected '%s'\n", 
-                argv[ii]);
+        fprintf(stderr, "### pcapreport: Unexpected '%s'\n", argv[ii]);
         return 1;
       }
       else
@@ -479,18 +474,35 @@ int main(int argc, char **argv)
     ++ii;
   }
 
+  if (!ctx.had_input_name)
+  {
+    fprintf(stderr,"### pcapreport: No input file specified\n");
+    return 1;
+  }
+
+  printf("%s\n",ctx.input_name);
+
   err = pcap_open(&ctx.pcreader, &ctx.pcap_hdr, ctx.input_name);
   if (err)
   {
     fprintf(stderr, 
             "### pcapreport: Unable to open input file %s for reading "
             "PCAP (code %d)\n", 
-            ctx.had_input_name ? "<stdin>": ctx.input_name, err);
+            ctx.had_input_name?ctx.input_name:"<stdin>", err);
+    // Just an error code isn't much use - let's look at the source
+    // and report something more helpful...
+    fprintf(stderr,
+            "                %s\n",
+            (err==-1?"Unable to open file":
+             err==-2?"Unable to allocate PCAP reader datastructure":
+             err==-4?"Unable to read PCAP header - is it a PCAP file?":
+             "<unrecogised error code>"));
+    return 1;
   }
 
   if (ctx.output_name)
   {
-    printf("pcapreport: Dumping all packets for %s:%d to %s .\n",
+    printf("pcapreport: Dumping all packets for %s:%d to %s\n",
            ipv4_addr_to_string(ctx.output_dest_addr),
            ctx.output_dest_port,
            ctx.output_name);
@@ -523,7 +535,6 @@ int main(int argc, char **argv)
       int sent_to_output = 0;
 
       err = pcap_read_next(ctx.pcreader, &rec_hdr, &data, &len);
-
       switch (err)
       {
       case 0: // EOF.
