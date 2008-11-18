@@ -400,7 +400,7 @@ int main(int argc, char **argv)
                !strcmp("-output", argv[ii]) || !strcmp("-o", argv[ii]))
       {
         CHECKARG("pcapreport",ii);
-        ctx.output_name = argv[ii+1];
+        ctx.output_name = argv[++ii];
       }
       else if (!strcmp("--times", argv[ii]) || 
                !strcmp("-times", argv[ii]) || !strcmp("-t", argv[ii]))
@@ -450,6 +450,7 @@ int main(int argc, char **argv)
         err = int_value("pcapreport", argv[ii], argv[ii+1], TRUE, 0, &val); 
         if (err) return 1;
         ctx.skew_discontinuity_threshold = val;
+        ++ii;
       }
       else
       {
