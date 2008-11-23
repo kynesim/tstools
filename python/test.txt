@@ -498,6 +498,17 @@ call will be remembered).
     PAT({1:0x20})
     >>> f.close()
 
+Indeed, it will automatically be read in for us as we read its record(s):
+
+    >>> f = TSFile(test_ts_file)
+    >>> print f.PAT
+    None
+    >>> for ii in range(440):
+    ...     p = f.read()
+    >>> print f.PAT
+    PAT({1:0x20})
+    >>> f.close()
+
 
 
 // Local Variables:

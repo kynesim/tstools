@@ -62,6 +62,9 @@ cdef extern from "errno.h":
 cdef extern from "string.h":
     cdef char *strerror(int errnum)
 
+cdef extern from "stdlib.h":
+    cdef void free(void *ptr)
+
 # Copied from the Pyrex documentation...
 cdef extern from "Python.h":
     # Return a new string object with a copy of the string v as value and
@@ -641,6 +644,8 @@ cdef extern from "ts_fns.h":
                         byte **payload, int *payload_len)
     void get_PCR_from_adaptation_field(byte *adapt, int adapt_len, int*got_pcr,
                                        uint64_t *pcr)
+    int build_psi_data(int verbose, byte *payload, int payload_len, PID pid,
+                       byte **data, int *data_len, int *data_used)
     int find_pat(TS_reader_p tsreader, int max, int verbose, int quiet,
                  int *num_read, pidint_list_p *prog_list)
     int find_next_pmt(TS_reader_p tsreader, uint32_t pmt_pid,
@@ -674,7 +679,7 @@ cdef class TSPacket:
     def __cinit__(self,buffer,*args,**kwargs):
         """The buffer *must* be 188 bytes long, by definition.
         """
-        # An array is easier to access than a string, can can be initialised
+        # An array is easier to access than a string, and can be initialised
         # from any sensible sequence. This may not be the most efficient thing
         # to do, though, so later on we might want to consider ways of iterating
         # over TS entries in a file without needing to create TS packets...
@@ -742,11 +747,12 @@ cdef class TSPacket:
         cdef int         adapt_len
         cdef char       *payload_buf
         cdef int         payload_len
+        cdef int         retval
         PyObject_AsReadBuffer(self.data, &buffer, &length)
         retval = split_TS_packet(<byte *>buffer,&pid,&self._pusi,
                                  <byte **>&adapt_buf,&adapt_len,
                                  <byte **>&payload_buf,&payload_len)
-        if retval < 0:
+        if retval != 0:
             raise TSToolsException,'Error splitting TS packet data'
         if adapt_len == 0:
             self._adapt = None
@@ -815,6 +821,12 @@ cdef class TSFile:
 
     cdef readonly object PAT    # The latest PAT read, if any
 
+    # We have a byte buffer in which we accumulate partial PAT parts,
+    # as we read TS packets
+    cdef byte *pat_data
+    cdef int   pat_data_len
+    cdef int   pat_data_used
+
     # It appears to be recommended to make __cinit__ expand to take more
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
@@ -837,11 +849,22 @@ cdef class TSFile:
         self.name = filename
         self.mode = mode
 
+    def _clear_pat_data(self):
+        """Clear the buffers we use to accumulate PAT data
+        (but not any actual PAT we have acquired).
+        """
+        if self.pat_data != NULL:
+            free(<void *>self.pat_data)
+        self.pat_data = NULL
+        self.pat_data_len = self.pat_data_used = 0
+
     # (__dealloc__ is apparently not allowed to call Python methods,
     # and Python methods don't seem to be allowed to call __dealloc__,
     # so let's have an intermediary)
     cdef _close_for_read(self):
         if self.tsreader != NULL:
+            self._clear_pat_data()
+            self.PAT = None
             retval = close_TS_reader(&self.tsreader)
             if retval != 0:
                 raise TSToolsException,"Error closing file '%s':"\
@@ -880,16 +903,79 @@ cdef class TSFile:
         #return self.mode == 'w' and self.file_stream != NULL
         pass
 
+    cdef _pat_from_prog_list(self, pidint_list_p prog_list):
+        try:
+            pat = PAT()
+            for 0 <= ii < prog_list.length:
+                pat[prog_list.number[ii]] = prog_list.pid[ii]
+            # And remember it on the file as well
+            self.PAT = pat
+        finally:
+            free_pidint_list(&prog_list)
+
+    cdef _check_pat(self, byte *buffer):
+        """Check if the current buffer represents (another) part of a PAT
+        """
+        # Methodology borrowed from tsreport.c::report_ts
+        cdef PID         pid
+        cdef int         pusi
+        cdef byte       *adapt_buf
+        cdef int         adapt_len
+        cdef byte       *payload_buf
+        cdef int         payload_len
+        cdef int         err
+        cdef int         retval
+        cdef pidint_list_p  prog_list
+        retval = split_TS_packet(buffer, &pid, &pusi,
+                                 &adapt_buf,&adapt_len,
+                                 &payload_buf,&payload_len)
+        if retval != 0:
+            # We couldn't split it up - presumably a broken TS packet.
+            # Ignore this problem, as the caller might legitimately want
+            # to retrieve broken TS packets and inspect them, and our wish
+            # to find (parts of) PAT packets shouldn't make that harder
+            return
+        if pid != 0:
+            return          # Not a PAT, so we can ignore it
+
+        if pusi and self.pat_data:
+            # Lose the PAT data we'd already partially accumulated
+            # XXX should we grumble out loud at this? Probably not here,
+            # XXX although note that the equivalent C code might
+            self._clear_pat_data()
+        elif not pusi and not self.pat_data:
+            # It's not the start of a PAT, and we haven't got a PAT
+            # to continue, so the best we can do is ignore it
+            # XXX again, for the moment, quietly
+            return
+
+        # Otherwise, call the "accumulate bits of a PAT" function,
+        # which does most of the heavy lifting for us
+        retval = build_psi_data(False,payload_buf,payload_len,pid,
+                                &self.pat_data,&self.pat_data_len,
+                                &self.pat_data_used)
+        if retval:
+            # For the moment, just give up
+            self._clear_pat_data()
+            return
+
+        if self.pat_data_len == self.pat_data_used:
+            # We've got it all
+            try:
+                retval = extract_prog_list_from_pat(False,
+                                                    self.pat_data,self.pat_data_len,
+                                                    &prog_list)
+                if not retval:
+                    self._pat_from_prog_list(prog_list)
+            finally:
+                self._clear_pat_data()
+
     cdef TSPacket _next_TSPacket(self):
         """Read the next TS packet and return an equivalent TSPacket instance.
 
         ``filename`` is given for use in exception messages - it should be the
-        name of the file we're reading from (using ``tsreader``). Perhaps the
-        tstools C mechanisms should be enhanced to allow that to be recovered
-        *from* ``tsreader``.
+        name of the file we're reading from (using ``tsreader``).
         """
-        # XXX Should we update self.PAT if the packet has PID 0?
-        # XXX See tsreport.c::report_ts for how to do this
         cdef byte *buffer
         if self.tsreader == NULL:
             raise TSToolsException,'No TS stream to read'
@@ -898,15 +984,24 @@ cdef class TSFile:
             raise StopIteration
         elif retval == 1:
             raise TSToolsException,'Error getting next TS packet from file %s'%self.name
+
         # Remember the buffer we get handed a pointer to is transient
         # so we need to take a copy of it (which we might as well keep in
         # a Python object...)
         buffer_str = PyString_FromStringAndSize(<char *>buffer, TS_PACKET_LEN)
         try:
-            return TSPacket(buffer_str)
+            new_packet = TSPacket(buffer_str)
         except TSToolsException, what:
             raise TSToolsException,\
                     'Error getting next TS packet from file %s (%s)'%(self.name,what)
+
+        # Check whether this packet updates our idea of the current PAT
+        # (if we called this before calling TSPacket, then, for instance,
+        # TSPacket('\0xff') would cause split_TS_packet, within _check_pat,
+        # to output errors on C stderr, followed by TSPacket detecting the
+        # problem anyway)
+        self._check_pat(buffer)
+        return new_packet
 
     # For Pyrex classes, we define a __next__ instead of a next method
     # in order to form our iterator
@@ -919,7 +1014,12 @@ cdef class TSFile:
         """Seek to the given offset, which should be a multiple of 188.
 
         Note that the method does not check the value of 'offset'.
+
+        Seeking causes the file to "forget" any PAT data it may have deduced
+        from sequential reading of the file, or by explicit calls of find_PAT.
         """
+        self._clear_pat_data
+        self.PAT = None
         retval = seek_using_TS_reader(self.tsreader,offset)
         if retval == 1:
             raise TSToolsException,'Error seeking to %d in file %s'%(offset,self.name)
@@ -952,6 +1052,9 @@ cdef class TSFile:
 
         The new PAT is also saved as self.PAT (replacing, rather than updating,
         any previous self.PAT object).
+
+        This method is more efficient than using repeated calls of ``read``,
+        because it uses the underlying C function to find the next PAT.
         """
         cdef pidint_list_p  prog_list
         cdef int            num_read
@@ -962,15 +1065,16 @@ cdef class TSFile:
             return (num_read,None)
         elif retval == 1:
             raise TSToolsException,'Error searching for next PAT'
-        try:
-            pat = PAT()
-            for 0 <= ii < prog_list.length:
-                pat[prog_list.number[ii]] = prog_list.pid[ii]
-            # And remember it on the file as well
-            self.PAT = pat
-        finally:
-            free_pidint_list(&prog_list)
-        return (num_read,pat)
+        #try:
+        #    pat = PAT()
+        #    for 0 <= ii < prog_list.length:
+        #        pat[prog_list.number[ii]] = prog_list.pid[ii]
+        #    # And remember it on the file as well
+        #    self.PAT = pat
+        #finally:
+        #    free_pidint_list(&prog_list)
+        self._pat_from_prog_list(prog_list)
+        return (num_read,self.PAT)
 
     def close(self):
         ## Since we don't appear to be able to call our __dealloc__ "method",
