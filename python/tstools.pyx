@@ -1,8 +1,10 @@
 """tstools.pyx -- Pyrex bindings for the TS tools
 
-This is being developed on a Mac, running OS X. I expect that it will also
-build on a Linux machine. I do not expect it to build (as it stands) on
-Windows, as it is making assumptions that may not follow thereon.
+This is being developed on a Mac, running OS X, and also tested on my Ubuntu
+system at work.
+
+I do not expect it to build (as it stands) on Windows, as it is making
+assumptions that may not follow thereon.
 
 It is my intent to worry about Windows after it works on the platforms that
 I can test most easily!
@@ -182,16 +184,6 @@ cdef extern from 'es_fns.h':
 class TSToolsException(Exception):
     pass
 
-cdef same_ES_unit(ES_unit_p this, ES_unit_p that):
-    """Two ES units do not need to be at the same place to be the same.
-    """
-    if this.data_len != that.data_len:
-        return False
-    for 0 <= ii < this.data_len:
-        if this.data[ii] != that.data[ii]:
-            return False
-    return True
-
 cdef class ESOffset:
     """An offset within an ES file.
 
@@ -248,6 +240,16 @@ cdef class ESOffset:
             return -1
         else:
             return 0
+
+cdef same_ES_unit(ES_unit_p this, ES_unit_p that):
+    """Two ES units do not need to be at the same place to be the same.
+    """
+    if this.data_len != that.data_len:
+        return False
+    for 0 <= ii < this.data_len:
+        if this.data[ii] != that.data[ii]:
+            return False
+    return True
 
 cdef class ESUnit       # Forward declaration
 cdef object compare_ESUnits(ESUnit this, ESUnit that, int op):
@@ -336,40 +338,6 @@ cdef class ESUnit:
         else:
             raise AttributeError
 
-# Is this the simplest way? Since it appears that a class method
-# doesn't want to take a non-Python item as an argument...
-cdef _next_ESUnit(ES_p stream, filename):
-    cdef ES_unit_p unit
-    # The C function assumes it has a valid ES stream passed to it
-    # = I don't think we're always called with such
-    if stream == NULL:
-        raise TSToolsException,'No ES stream to read'
-
-    retval = find_and_build_next_ES_unit(stream, &unit)
-    if retval == EOF:
-        raise StopIteration
-    elif retval != 0:
-        raise TSToolsException,'Error getting next ES unit from file %s'%filename
-
-    # I'd like to be able to do:
-    #     return ESUnit(unit=unit)
-    # but it's not possible to pass anything other than a Python object
-    # to methods, and an ES_unit_p is not (which is the point of what we're
-    # doing!). I could take the innards of the ES unit, and pass them as
-    # individual arguments, appropriately mangled, but that seems a bit like
-    # overkill when the (rather inelegant but at least hidden in this factory
-    # method) approach below actually works.
-    # Maybe I'll figure out something better as I learn more about Pyrex.
-
-    # From http://www.philhassey.com/blog/2007/12/05/pyrex-from-confusion-to-enlightenment/
-    # Pyrex doesn't do type inference, so it doesn't detect that 'u' is allowed
-    # to hold an ES_unit_p. It's up to us to *tell* it, specifically, what type
-    # 'u' is going to be.
-    cdef ESUnit u
-    u = ESUnit()
-    u.unit = unit
-    return u
-
 cdef class ESFile:
     """A Python class representing an ES stream.
 
@@ -444,12 +412,34 @@ cdef class ESFile:
         """
         return self.mode == 'w' and self.file_stream != NULL
 
+    cdef _next_ESUnit(self):
+        cdef ES_unit_p unit
+        # The C function assumes it has a valid ES stream passed to it
+        # = I don't think we're always called with such
+        if self.stream == NULL:
+            raise TSToolsException,'No ES stream to read'
+
+        retval = find_and_build_next_ES_unit(self.stream, &unit)
+        if retval == EOF:
+            raise StopIteration
+        elif retval != 0:
+            raise TSToolsException,'Error getting next ES unit from file %s'%self.name
+
+        # From http://www.philhassey.com/blog/2007/12/05/pyrex-from-confusion-to-enlightenment/
+        # Pyrex doesn't do type inference, so it doesn't detect that 'u' is allowed
+        # to hold an ES_unit_p. It's up to us to *tell* it, specifically, what type
+        # 'u' is going to be.
+        cdef ESUnit u
+        u = ESUnit()
+        u.unit = unit
+        return u
+
     # For Pyrex classes, we define a __next__ instead of a next method
     # in order to form our iterator
     def __next__(self):
         """Our iterator interface retrieves the ES units from the stream.
         """
-        return _next_ESUnit(self.stream,self.name)
+        return self._next_ESUnit()
 
     def seek(self,*args):
         """Seek to the given 'offset', which should be the start of an ES unit.
@@ -484,7 +474,7 @@ cdef class ESFile:
         """Read the next ES unit from this stream.
         """
         try:
-            return _next_ESUnit(self.stream,self.name)
+            return self._next_ESUnit()
         except StopIteration:
             raise EOFError
 
@@ -802,36 +792,6 @@ cdef class TSPacket:
         else:
             raise AttributeError
 
-# Not a method, honest
-# (__dealloc__ is not allowed to call Python methods, just in case,
-# and Python methods don't seem to be allowed to call __dealloc__,
-# since I assume it's not a "real" method)
-cdef _TSFile_close_for_read(TS_reader_p *tsreader):
-    if tsreader != NULL:
-        retval = close_TS_reader(tsreader)
-        if retval != 0:
-            raise TSToolsException,"Error closing file '%s':"\
-                    " %s"%(self.name,strerror(errno))
-
-cdef TSPacket _next_TSPacket(TS_reader_p tsreader, filename):
-    cdef byte *buffer
-    if tsreader == NULL:
-        raise TSToolsException,'No TS stream to read'
-    retval = read_next_TS_packet(tsreader, &buffer)
-    if retval == EOF:
-        raise StopIteration
-    elif retval == 1:
-        raise TSToolsException,'Error getting next TS packet from file %s'%filename
-    # Remember the buffer we get handed a pointer to is transient
-    # so we need to take a copy of it (which we might as well keep in
-    # a Python object...)
-    buffer_str = PyString_FromStringAndSize(<char *>buffer, TS_PACKET_LEN)
-    try:
-        return TSPacket(buffer_str)
-    except TSToolsException, what:
-        raise TSToolsException,\
-                'Error getting next TS packet from file %s (%s)'%(filename,what)
-
 cdef class TSFile:
     """A Python class representing a TS file.
 
@@ -877,8 +837,18 @@ cdef class TSFile:
         self.name = filename
         self.mode = mode
 
+    # (__dealloc__ is apparently not allowed to call Python methods,
+    # and Python methods don't seem to be allowed to call __dealloc__,
+    # so let's have an intermediary)
+    cdef _close_for_read(self):
+        if self.tsreader != NULL:
+            retval = close_TS_reader(&self.tsreader)
+            if retval != 0:
+                raise TSToolsException,"Error closing file '%s':"\
+                        " %s"%(self.name,strerror(errno))
+
     def __dealloc__(self):
-        _TSFile_close_for_read(&self.tsreader)
+        self._close_for_read()
         #if self.tsreader != NULL:
         #    retval = close_TS_reader(&self.tsreader)
         #    if retval != 0:
@@ -910,12 +880,40 @@ cdef class TSFile:
         #return self.mode == 'w' and self.file_stream != NULL
         pass
 
+    cdef TSPacket _next_TSPacket(self):
+        """Read the next TS packet and return an equivalent TSPacket instance.
+
+        ``filename`` is given for use in exception messages - it should be the
+        name of the file we're reading from (using ``tsreader``). Perhaps the
+        tstools C mechanisms should be enhanced to allow that to be recovered
+        *from* ``tsreader``.
+        """
+        # XXX Should we update self.PAT if the packet has PID 0?
+        # XXX See tsreport.c::report_ts for how to do this
+        cdef byte *buffer
+        if self.tsreader == NULL:
+            raise TSToolsException,'No TS stream to read'
+        retval = read_next_TS_packet(self.tsreader, &buffer)
+        if retval == EOF:
+            raise StopIteration
+        elif retval == 1:
+            raise TSToolsException,'Error getting next TS packet from file %s'%self.name
+        # Remember the buffer we get handed a pointer to is transient
+        # so we need to take a copy of it (which we might as well keep in
+        # a Python object...)
+        buffer_str = PyString_FromStringAndSize(<char *>buffer, TS_PACKET_LEN)
+        try:
+            return TSPacket(buffer_str)
+        except TSToolsException, what:
+            raise TSToolsException,\
+                    'Error getting next TS packet from file %s (%s)'%(self.name,what)
+
     # For Pyrex classes, we define a __next__ instead of a next method
     # in order to form our iterator
     def __next__(self):
         """Our iterator interface retrieves the TS packets from the stream.
         """
-        return _next_TSPacket(self.tsreader,self.name)
+        return self._next_TSPacket()
 
     def seek(self,offset):
         """Seek to the given offset, which should be a multiple of 188.
@@ -929,10 +927,8 @@ cdef class TSFile:
     def read(self):
         """Read the next TS packet from this stream.
         """
-        # XXX Should we update self.PAT if the packet has PID 0?
-        # XXX See tsreport.c::report_ts for how to do this
         try:
-            return _next_TSPacket(self.tsreader,self.name)
+            return self._next_TSPacket()
         except StopIteration:
             raise EOFError
 
@@ -984,7 +980,7 @@ cdef class TSFile:
         #    if retval != 0:
         #        raise TSToolsException,"Error closing file '%s':"\
         #                " %s"%(self.name,strerror(errno))
-        _TSFile_close_for_read(&self.tsreader)
+        self._close_for_read()
         self.name = None
         self.mode = None
 
