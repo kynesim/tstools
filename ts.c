@@ -3192,6 +3192,9 @@ extern int find_pat(TS_reader_p     tsreader,
  *
  * - `tsreader` is the TS packet reading context
  * - `pmt_pid` is the PID of the PMT we are looking for
+ * - if `program_number` is -1, then any PMT with that PID is acceptable,
+ *   otherwise we're only interested in a PMT with that PID and the given
+ *   program number.
  * - if `max` is non-zero, then it is the maximum number of TS packets to read
  * - if `verbose` is true, then output extra information
  * - if `quiet` is true, then don't output normal informational messages
