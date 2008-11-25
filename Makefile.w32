@@ -181,9 +181,6 @@ $(EXEDIR)\psreport.exe: $(OBJDIR)\psreport.obj $(LIBFILE)
 $(EXEDIR)\ps2ts.exe:    $(OBJDIR)\ps2ts.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
-$(EXEDIR)\pcapreport.exe:    $(OBJDIR)\pcapreport.obj $(LIBFILE)
-	link /out:$@ $(LOPT) $** wsock32.lib
-
 $(EXEDIR)\psdots.exe:   $(OBJDIR)\psdots.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 

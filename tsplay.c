@@ -196,6 +196,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
   byte  *pmt_data = NULL;
   int    pmt_data_len = 0;
   int    pmt_data_used = 0;
+  int    pmt_program_number = -1;
 
   for (;;)
   {
@@ -282,6 +283,8 @@ static int find_PCR_PID(TS_reader_p  tsreader,
         printf("Multiple programs in PAT - using the first\n\n");
 
       pmt_pid = prog_list->pid[0];
+      pmt_program_number = prog_list->number[0];
+
       got_PAT = TRUE;
       free_pidint_list(&prog_list);
       free(pat_data);
@@ -326,7 +329,16 @@ static int find_PCR_PID(TS_reader_p  tsreader,
 
       err = extract_pmt(FALSE,pmt_data,pmt_data_len,pmt_pid,&pmt);
       free(pmt_data);
+      pmt_data = NULL;
       if (err) return err;
+
+      if (pmt->program_number != pmt_program_number)
+      {
+        if (!quiet)
+          printf("Discarding PMT program %d - looking for %d\n", pmt->program_number, pmt_program_number);
+        free_pmt(&pmt);
+        continue;
+      }
 
       if (!quiet)
         report_pmt(stdout,"  ",pmt);

@@ -741,6 +741,7 @@ extern int find_pat(TS_reader_p     tsreader,
  */
 extern int find_next_pmt(TS_reader_p     tsreader,
                          uint32_t        pmt_pid,
+                         int             program_number,
                          int             max,
                          int             verbose,int             quiet,
                          int            *num_read,

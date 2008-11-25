@@ -297,7 +297,7 @@ static void print_usage()
     "Switches:\n"
     "  -stdin             Input from standard input, instead of a file\n"
     "  -verbose, -v       Output extra information about packets\n"
-    "  -max <n>, -m <n>   Number of TS packets to scan. Defaults to 1000.\n"
+    "  -max <n>, -m <n>   Number of TS packets to scan. Defaults to 10000.\n"
     "  -repeat <n>        Look for <n> PMT packets, and report on each\n"
     );
 }
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
   int    use_stdin = FALSE;
   char  *input_name = NULL;
   int    had_input_name = FALSE;
-  int    max     = 1000;
+  int    max     = 10000;
   int    verbose = FALSE; // True => output diagnostic/progress messages
   int    lookfor = 1;
   int    err = 0;

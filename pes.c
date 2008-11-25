@@ -968,7 +968,7 @@ static int find_first_PMT(PES_reader_p   reader)
 
   for (;;)
   {
-    err = find_next_pmt(reader->tsreader,reader->pmt_pid,0,
+    err = find_next_pmt(reader->tsreader,reader->pmt_pid,-1,0,
                         FALSE,!reader->give_info,&nread,&pmt);
     if (err)
     {

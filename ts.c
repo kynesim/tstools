@@ -3203,12 +3203,13 @@ extern int find_pat(TS_reader_p     tsreader,
  * 1 if something else went wrong.
  */
 extern int find_next_pmt(TS_reader_p     tsreader,
-			 uint32_t        pmt_pid,
-			 int             max,
-			 int             verbose,
-			 int             quiet,
-			 int            *num_read,
-			 pmt_p		*pmt)
+                         uint32_t        pmt_pid,
+                         int             program_number,
+                         int             max,
+                         int             verbose,
+                         int             quiet,
+                         int            *num_read,
+                         pmt_p		*pmt)
 {
   int    err;
   byte  *pmt_data = NULL;
@@ -3283,8 +3284,29 @@ extern int find_next_pmt(TS_reader_p     tsreader,
 
       if (pmt_data_len == pmt_data_used)
       {
+        int pmt_program_number;
+
         err = extract_pmt(verbose,pmt_data,pmt_data_len,pid,pmt);
-        if (pmt_data) free(pmt_data);
+        pmt_program_number = *pmt == NULL ? -1 : (int)((*pmt)->program_number);
+
+        if (pmt_data)
+        {  
+          free(pmt_data);
+          pmt_data = NULL;
+        }
+
+        // Check we've got the right program number - it would appear to be
+        // legitimate to have multiple PMTs carried in the same PID and some
+        // abuse of this appears to happen in real life
+        if (err == 0 && program_number >= 0)
+        {
+          if (pmt_program_number != program_number)
+          {
+            fprintf(stderr,"!!! Discarding PMT with program number %d\n", pmt_program_number);
+            free_pmt(pmt);
+            continue;
+          }
+        }
         return err;
       }
     }
@@ -3326,8 +3348,8 @@ extern int find_pmt(TS_reader_p     tsreader,
 {
   int  err;
   pidint_list_p  prog_list = NULL;
-  uint32_t       pmt_pid;
   int            sofar;
+  int            prog_index = 0;
 
   *pmt = NULL;
 
@@ -3358,16 +3380,23 @@ extern int find_pmt(TS_reader_p     tsreader,
   else if (prog_list->length > 1 && !quiet)
     printf("Multiple programs in PAT - using the first non-zero\n\n");
 
-  pmt_pid = prog_list->pid[0];
-  if (prog_list->number[0] == 0 && prog_list->length > 1)
-	  pmt_pid = prog_list->pid[1];
-
-  free_pidint_list(&prog_list);
+  while (prog_list->number[prog_index] == 0)
+  {
+    if (++prog_index >= prog_list->length)
+    {
+      if (!quiet)
+        printf("No non-zero program_numbers in PAT (packet %d)\n",sofar);
+      return -2;
+    }
+  }
 
   // Amend max to take account of the packets we've already read
   max -= sofar;
 
-  err = find_next_pmt(tsreader,pmt_pid,max,verbose,quiet,num_read,pmt);
+  err = find_next_pmt(tsreader,prog_list->pid[prog_index],prog_list->number[prog_index],
+                      max,verbose,quiet,num_read,pmt);
+
+  free_pidint_list(&prog_list);
 
   *num_read += sofar;
 
