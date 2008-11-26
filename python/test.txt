@@ -509,6 +509,23 @@ Indeed, it will automatically be read in for us as we read its record(s):
     PAT({1:0x20})
     >>> f.close()
 
+We can also find PMTs in a similar manner:
+
+    >>> f = TSFile(test_ts_file)
+    >>> num_read,pmt = f.find_PMT(0x20,1)
+    >>> num_read
+    441
+    >>> print pmt
+    PMT program 1, version 0, PCR PID 0030 (48)
+    >>> pmt.report()
+    PMT program 1, version 0, PCR PID 0030 (48)
+      Program info ''
+      Program streams:
+        PID 0031 (  49) -> Stream type 02 (  2)
+            ES info '\x52\x01\x00'
+        PID 0032 (  50) -> Stream type 81 (129)
+            ES info '\x52\x01\x10'
+
 
 
 // Local Variables:

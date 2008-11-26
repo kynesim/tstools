@@ -187,6 +187,32 @@ cdef extern from 'es_fns.h':
 class TSToolsException(Exception):
     pass
 
+def hexify(bytes):
+    """Return a representation of an array of bytes as a hex values string.
+    """
+    words = []
+    for val in bytes:
+        words.append('\\x%02x'%val)
+    return ''.join(words)
+
+def hexify_string(bytes):
+    """Return a representation of a Python string as a hex values string.
+    """
+    words = []
+    for character in bytes:
+        words.append('\\x%02x'%ord(character))
+    return ''.join(words)
+
+cdef hexify_byte_array(byte *bytes, int bytes_len):
+    """Return a representation of a (byte) array as a hex values string.
+
+    Doesn't leave any spaces between hex bytes.
+    """
+    words = []
+    for 0 <= ii < bytes_len:
+        words.append('\\x%02x'%bytes[ii])
+    return ''.join(words)
+
 cdef class ESOffset:
     """An offset within an ES file.
 
@@ -312,10 +338,7 @@ cdef class ESUnit:
         return text
 
     def __repr__(self):
-        words = []
-        for 0 <= ii < self.unit.data_len:
-            words.append('\\x%02x'%self.unit.data[ii])
-        return 'ESUnit("%s")'%(''.join(words))
+        return 'ESUnit("%s")'%hexify_byte_array(self.unit.data,self.unit.data_len)
 
     cdef __set_es_unit(self, ES_unit_p unit):
         if self.unit == NULL:
@@ -547,9 +570,8 @@ cdef extern from "pidint_defns.h":
         uint32_t     PCR_pid
         uint16_t     program_info_length
         byte        *program_info
-        int          streams_size
         int          num_streams
-        pmt_stream_p streams
+        pmt_stream  *streams
     ctypedef _pmt    pmt
     ctypedef _pmt   *pmt_p
 
@@ -620,6 +642,50 @@ class PAT(object):
             words.append('%d:%#x'%(key,self._data[key]))
         return 'PAT({%s})'%(','.join(words))
 
+# XXX Should this be an extension type, and enforce the datatypes it can hold?
+# XXX Or is that just too much bother?
+class ProgramStream(object):
+    """A program stream, within a PMT.
+    """
+
+    def __init__(self,stream_type,elementary_PID,es_info):
+        self.stream_type = stream_type
+        self.elementary_PID = elementary_PID
+        self.es_info = es_info
+
+    def __str__(self):
+        """Return a fairly compact and (relatively) self-explanatory format
+        """
+        return "PID %04x (%4d) -> Stream type %02x (%3d) ES info '%s'"%(\
+                                                            self.elementary_PID,
+                                                            self.stream_type,
+                                                            hexify_string(self.es_info))
+
+
+    def __repr__(self):
+        """Return something we could be recreated from.
+        """
+        return "ProgramStream(%#02x,%#04x,'%s')"%(self.stream_type,
+                                               self.elementary_PID,
+                                               hexify_string(self.es_info))
+
+    def formatted(self):
+        """Return a representation that is similar to that returned by the C tools.
+        ...not easy for program streams
+        """
+        return self.__str__()
+
+    def report(self,indent=2):
+        print "%sPID %04x (%4d) -> Stream type %02x (%3d)"%(' '*indent,
+                                                            self.elementary_PID,
+                                                            self.elementary_PID,
+                                                            self.stream_type,
+                                                            self.stream_type)
+        # XXX should actually output them as descriptors
+        print "%s    ES info '%s'"%(' '*indent,hexify_string(self.es_info))
+
+# XXX Should this be an extension type, and enforce the datatypes it can hold?
+# XXX Or is that just too much bother?
 class PMT(object):
     """A Program Map Table.
 
@@ -632,7 +698,56 @@ class PMT(object):
             * key:   elementary_PID
             * value: (stream_type, ES_info) 
     """
-    pass
+
+    def __init__(self,program_number,version_number,PCR_pid):
+        self.program_number = program_number
+        self.version_number = version_number
+        self.PCR_pid = PCR_pid
+
+        self.program_info = None
+        self.streams = []
+
+    def set_program_info(self,program_info):
+        """Set our program_info bytes.
+        """
+        self.program_info = program_info
+
+    def add_stream(self,stream):
+        """Append a ProgramStream to our list of such.
+        """
+        self.streams.append(stream)
+
+    def __str__(self):
+        # XXX Don't see what I can do aboout the program info and streams
+        return "PMT program %d, version %d, PCR PID %04x (%d)"%(self.program_number,
+                                                                self.version_number,
+                                                                self.PCR_pid,
+                                                                self.PCR_pid)
+
+    def __repr__(self):
+        # XXX Don't see what I can do aboout the program streams
+        return "PMT(%d,%d,%#04x,'%s')"%(self.program_number,
+                                        self.version_number,
+                                        self.PCR_pid,
+                                        hexify_string(self.program_info))
+
+    def formatted(self):
+        """Return a representation that is similar to that returned by the C tools.
+        ...not easy for PMT
+        """
+        return self.__str__()
+
+    def report(self):
+        print "PMT program %d, version %d, PCR PID %04x (%d)"%(self.program_number,
+                                                               self.version_number,
+                                                               self.PCR_pid,
+                                                               self.PCR_pid)
+        # XXX should actually output them as descriptors
+        print "  Program info '%s'"%hexify_string(self.program_info)
+        if self.streams:
+            print "  Program streams:"
+            for stream in self.streams:
+                stream.report(indent=4)
 
 cdef extern from "ts_fns.h":
     int open_file_for_TS_read(char *filename, TS_reader_p *tsreader)
@@ -648,7 +763,7 @@ cdef extern from "ts_fns.h":
                        byte **data, int *data_len, int *data_used)
     int find_pat(TS_reader_p tsreader, int max, int verbose, int quiet,
                  int *num_read, pidint_list_p *prog_list)
-    int find_next_pmt(TS_reader_p tsreader, uint32_t pmt_pid,
+    int find_next_pmt(TS_reader_p tsreader, uint32_t pmt_pid, int program_number,
                       int max, int verbose, int quiet,
                       int *num_read, pmt_p *pmt)
     int find_pmt(TS_reader_p tsreader, int max, int verbose, int quiet,
@@ -723,10 +838,7 @@ cdef class TSPacket:
         return text
 
     def __repr__(self):
-        words = []
-        for val in self.data:
-            words.append('\\x%02x'%val)
-        return 'TSPacket("%s")'%(''.join(words))
+        return 'TSPacket("%s")'%hexify(self.data)
 
     def __richcmp__(self,other,op):
         if op == 2:     # ==
@@ -819,7 +931,8 @@ cdef class TSFile:
     cdef readonly object name
     cdef readonly object mode
 
-    cdef readonly object PAT    # The latest PAT read, if any
+    cdef readonly object PAT        # The latest PAT read, if any
+    cdef readonly object PMT_dict   # A dictionary of {program number : PMT}
 
     # We have a byte buffer in which we accumulate partial PAT parts,
     # as we read TS packets
@@ -848,6 +961,7 @@ cdef class TSFile:
         # What should go in __init__ and what in __cinit__ ???
         self.name = filename
         self.mode = mode
+        self.PMT_dict = {}
 
     def _clear_pat_data(self):
         """Clear the buffers we use to accumulate PAT data
@@ -912,6 +1026,36 @@ cdef class TSFile:
             self.PAT = pat
         finally:
             free_pidint_list(&prog_list)
+
+    cdef _pmt_from_pmt_p(self, pmt_p pmt):
+        """Dissect a PMT from C and store it.
+        XXX Should we remember the PMT's PID?
+
+        Returns the new PMT object, or None if none
+        """
+        try:
+            this = PMT(pmt.program_number,
+                       pmt.version_number,
+                       pmt.PCR_pid)
+
+            prog_info = PyString_FromStringAndSize(<char *>pmt.program_info,
+                                                   pmt.program_info_length)
+            this.set_program_info(prog_info)
+
+            for 0 <= ii < pmt.num_streams:
+                es_info = PyString_FromStringAndSize(<char *>pmt.streams[ii].ES_info,
+                                                     pmt.streams[ii].ES_info_length)
+                stream = ProgramStream(pmt.streams[ii].stream_type,
+                                       pmt.streams[ii].elementary_PID,
+                                       es_info)
+
+                this.add_stream(stream)
+
+            # And remember it on the file as well
+            self.PMT_dict[pmt.program_number] = this
+            return this
+        finally:
+            free_pmt(&pmt)
 
     cdef _check_pat(self, byte *buffer):
         """Check if the current buffer represents (another) part of a PAT
@@ -1065,16 +1209,46 @@ cdef class TSFile:
             return (num_read,None)
         elif retval == 1:
             raise TSToolsException,'Error searching for next PAT'
-        #try:
-        #    pat = PAT()
-        #    for 0 <= ii < prog_list.length:
-        #        pat[prog_list.number[ii]] = prog_list.pid[ii]
-        #    # And remember it on the file as well
-        #    self.PAT = pat
-        #finally:
-        #    free_pidint_list(&prog_list)
         self._pat_from_prog_list(prog_list)
         return (num_read,self.PAT)
+
+    def find_PMT(self,pmt_pid,program_number=-1,max=0,verbose=False,quiet=False):
+        """Read TS packets to find the (next) PMT with PID `pmt_pid`.
+
+        If `program_number` is 0 or more, then only a PMT with that program
+        number will do, otherwise any PMT of the given PID will be OK.
+
+        If non-zero, `max` is the maximum number of TS packets to scan forwards
+        whilst looking. If it is zero, there is no limit.
+
+        If `verbose` is True, then extra information is output. If `quiet` is
+        True, then the search will be as quiet as possible.
+
+        Returns (num_read, pmt), where `num_read` is how many TS packets were
+        read (whether the PMT is found or not), and `pmt` is None if no
+        appropriate PMT was found.
+
+        The new PMT is also saved as self.PMT[progno] (replacing, rather than
+        updating, any previous self.PMT[progno] object), where `progno` is the
+        actual program number of the PMT.
+
+        This method is more efficient than using repeated calls of ``read``,
+        because it uses the underlying C function to find the next PMT.
+        """
+        cdef pmt_p     pmt
+        cdef int       num_read
+        cdef unsigned  actual_prog_num
+        if self.tsreader == NULL:
+            raise TSToolsException,'No TS stream to read'
+        retval = find_next_pmt(self.tsreader,pmt_pid,program_number,max,verbose,quiet,
+                               &num_read,&pmt)
+        if retval == EOF:       # No PMT found
+            return (num_read,None)
+        elif retval == 1:
+            raise TSToolsException,'Error searching for next PMT'
+        this_pmt = self._pmt_from_pmt_p(pmt)
+
+        return (num_read,this_pmt)
 
     def close(self):
         ## Since we don't appear to be able to call our __dealloc__ "method",
