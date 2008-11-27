@@ -34,6 +34,7 @@ I can test most easily!
 #
 # ***** END LICENSE BLOCK *****
 
+import sys
 import array
 
 # If we're going to use definitions like this in more than one pyx file, we'll
@@ -98,20 +99,24 @@ cdef extern from "Python.h":
     # seems to mean ending up with grumbles from gcc when we can't declare a
     # const void ** item...
 
+cdef extern from "Python.h":
+    FILE *PySys_GetFile(char *name, FILE *default)
+
 cdef FILE *convert_python_file(object file):
     """Given a Python file object, return an equivalent stream.
     There are *so many things* dodgy about doing this...
     """
-    cdef int fileno
-    cdef char *mode
-    cdef FILE *stream
-    fileno = file.fileno()
-    mode = file.mode
-    stream = fdopen(fileno, mode) 
-    if stream == NULL:
-        raise TSToolsException, 'Error converting Python file to C FILE *'
-    else:
-        return stream
+    return PySys_GetFile('stdout',stdout)
+    #cdef int fileno
+    #cdef char *mode
+    #cdef FILE *stream
+    #fileno = file.fileno()
+    #mode = file.mode
+    #stream = fdopen(fileno, mode) 
+    #if stream == NULL:
+    #    raise TSToolsException, 'Error converting Python file to C FILE *'
+    #else:
+    #    return stream
 
 cdef extern from "stdint.h":
     ctypedef unsigned char      uint8_t
@@ -187,7 +192,7 @@ cdef extern from 'es_fns.h':
 class TSToolsException(Exception):
     pass
 
-def hexify(bytes):
+def hexify_array(bytes):
     """Return a representation of an array of bytes as a hex values string.
     """
     words = []
@@ -195,15 +200,7 @@ def hexify(bytes):
         words.append('\\x%02x'%val)
     return ''.join(words)
 
-def hexify_string(bytes):
-    """Return a representation of a Python string as a hex values string.
-    """
-    words = []
-    for character in bytes:
-        words.append('\\x%02x'%ord(character))
-    return ''.join(words)
-
-cdef hexify_byte_array(byte *bytes, int bytes_len):
+cdef hexify_C_byte_array(byte *bytes, int bytes_len):
     """Return a representation of a (byte) array as a hex values string.
 
     Doesn't leave any spaces between hex bytes.
@@ -338,7 +335,7 @@ cdef class ESUnit:
         return text
 
     def __repr__(self):
-        return 'ESUnit("%s")'%hexify_byte_array(self.unit.data,self.unit.data_len)
+        return 'ESUnit("%s")'%hexify_C_byte_array(self.unit.data,self.unit.data_len)
 
     cdef __set_es_unit(self, ES_unit_p unit):
         if self.unit == NULL:
@@ -642,6 +639,14 @@ class PAT(object):
             words.append('%d:%#x'%(key,self._data[key]))
         return 'PAT({%s})'%(','.join(words))
 
+cdef void _print_descriptors(es_info):
+    cdef FILE       *py_stdout
+    cdef void       *desc_data
+    cdef Py_ssize_t  desc_data_len
+    py_stdout = convert_python_file(sys.stdout)
+    PyObject_AsReadBuffer(es_info, &desc_data, &desc_data_len)
+    print_descriptors(py_stdout,'    ','*',<byte *>desc_data,desc_data_len)
+
 # XXX Should this be an extension type, and enforce the datatypes it can hold?
 # XXX Or is that just too much bother?
 class ProgramStream(object):
@@ -651,7 +656,8 @@ class ProgramStream(object):
     def __init__(self,stream_type,elementary_PID,es_info):
         self.stream_type = stream_type
         self.elementary_PID = elementary_PID
-        self.es_info = es_info
+        # Use an array for the same reasons discussed in TSPacket
+        self.es_info = array.array('B',es_info)
 
     def __str__(self):
         """Return a fairly compact and (relatively) self-explanatory format
@@ -659,7 +665,7 @@ class ProgramStream(object):
         return "PID %04x (%4d) -> Stream type %02x (%3d) ES info '%s'"%(\
                                                             self.elementary_PID,
                                                             self.stream_type,
-                                                            hexify_string(self.es_info))
+                                                            hexify_array(self.es_info))
 
 
     def __repr__(self):
@@ -667,7 +673,7 @@ class ProgramStream(object):
         """
         return "ProgramStream(%#02x,%#04x,'%s')"%(self.stream_type,
                                                self.elementary_PID,
-                                               hexify_string(self.es_info))
+                                               hexify_array(self.es_info))
 
     def formatted(self):
         """Return a representation that is similar to that returned by the C tools.
@@ -682,7 +688,12 @@ class ProgramStream(object):
                                                             self.stream_type,
                                                             self.stream_type)
         # XXX should actually output them as descriptors
-        print "%s    ES info '%s'"%(' '*indent,hexify_string(self.es_info))
+        if self.es_info:
+            print "%s    ES info '%s'"%(' '*indent,hexify_array(self.es_info))
+
+            # Highly experimental
+            # XXX - and doesn't work...
+            #_print_descriptors(self.es_info)
 
 # XXX Should this be an extension type, and enforce the datatypes it can hold?
 # XXX Or is that just too much bother?
@@ -704,17 +715,23 @@ class PMT(object):
         self.version_number = version_number
         self.PCR_pid = PCR_pid
 
-        self.program_info = None
+        # Use an array for the same reasons discussed in TSPacket
+        self.program_info = array.array('B','')
         self.streams = []
 
     def set_program_info(self,program_info):
         """Set our program_info bytes.
         """
-        self.program_info = program_info
+        self.program_info = array.array('B',program_info)
 
     def add_stream(self,stream):
         """Append a ProgramStream to our list of such.
         """
+        # I *think* this is justified,
+        # but I still suspect I shall come to regret it
+        if not isinstance(stream,ProgramStream):
+            raise TypeError('Argument to PMT.add_stream should be a ProgramStream')
+
         self.streams.append(stream)
 
     def __str__(self):
@@ -729,7 +746,7 @@ class PMT(object):
         return "PMT(%d,%d,%#04x,'%s')"%(self.program_number,
                                         self.version_number,
                                         self.PCR_pid,
-                                        hexify_string(self.program_info))
+                                        hexify_array(self.program_info))
 
     def formatted(self):
         """Return a representation that is similar to that returned by the C tools.
@@ -743,7 +760,8 @@ class PMT(object):
                                                                self.PCR_pid,
                                                                self.PCR_pid)
         # XXX should actually output them as descriptors
-        print "  Program info '%s'"%hexify_string(self.program_info)
+        if self.program_info:
+            print "  Program info '%s'"%hexify_array(self.program_info)
         if self.streams:
             print "  Program streams:"
             for stream in self.streams:
@@ -770,6 +788,8 @@ cdef extern from "ts_fns.h":
                  int *num_read, pmt_p *pmt)
     int extract_prog_list_from_pat(int verbose, byte *data, int data_len,
                                    pidint_list_p *prog_list)
+    int print_descriptors(FILE *stream, char *leader1, char *leader2,
+                          byte *desc_data, int desc_data_len)
 
 
 DEF TS_PACKET_LEN = 188
@@ -838,7 +858,7 @@ cdef class TSPacket:
         return text
 
     def __repr__(self):
-        return 'TSPacket("%s")'%hexify(self.data)
+        return 'TSPacket("%s")'%hexify_array(self.data)
 
     def __richcmp__(self,other,op):
         if op == 2:     # ==

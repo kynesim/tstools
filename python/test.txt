@@ -519,13 +519,28 @@ We can also find PMTs in a similar manner:
     PMT program 1, version 0, PCR PID 0030 (48)
     >>> pmt.report()
     PMT program 1, version 0, PCR PID 0030 (48)
-      Program info ''
       Program streams:
         PID 0031 (  49) -> Stream type 02 (  2)
             ES info '\x52\x01\x00'
         PID 0032 (  50) -> Stream type 81 (129)
             ES info '\x52\x01\x10'
 
+It is, of course, possible to create our own PMT:
+
+    >>> from tstools import PMT, ProgramStream
+    >>> pmt = PMT(2,1,0x68)
+    >>> pmt.set_program_info('\x23\x47')
+    >>> stream = ProgramStream(0x47,0x17,'\x0A\x04GER\x02')
+    >>> stream.report()
+      PID 0017 (  23) -> Stream type 47 ( 71)
+          ES info '\x0a\x04\x47\x45\x52\x02'
+    >>> pmt.add_stream(stream)
+    >>> pmt.report()
+    PMT program 2, version 1, PCR PID 0068 (104)
+      Program info '\x23\x47'
+      Program streams:
+        PID 0017 (  23) -> Stream type 47 ( 71)
+            ES info '\x0a\x04\x47\x45\x52\x02'
 
 
 // Local Variables:
