@@ -524,8 +524,24 @@ We can also find PMTs in a similar manner:
             ES info '\x52\x01\x00'
         PID 0032 (  50) -> Stream type 81 (129)
             ES info '\x52\x01\x10'
+    >>> f.close()
 
-It is, of course, possible to create our own PMT:
+The "PMT" attribute of a TSFile is a dictionary of PMT objects, keyed by the
+program number. It starts off empty, and gets filled in as PMT records are
+found, so:
+
+    >>> f = TSFile(test_ts_file)
+    >>> print f.PMT
+    {}
+    >>> for ii in range(441):
+    ...     p = f.read()
+    >>> print f.PMT
+    {1L: PMT(1,0,0x30,'')}
+    >>> print f.PMT[1]
+    PMT program 1, version 0, PCR PID 0030 (48)
+    >>> f.close()
+
+And it is, of course, possible to create our own PMT:
 
     >>> from tstools import PMT, ProgramStream
     >>> pmt = PMT(2,1,0x68)

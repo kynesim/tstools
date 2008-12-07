@@ -639,6 +639,26 @@ class PAT(object):
             words.append('%d:%#x'%(key,self._data[key]))
         return 'PAT({%s})'%(','.join(words))
 
+    def has_PMT(self,pid):
+        """Return whether a particular PID belongs to a PMT.
+        """
+        return pid in self._data.values()
+
+    def find_program_numbers(self,PMT_pid):
+        """Given a PMT pid, return its program number(s), as a list.
+
+        Note that technically one PID may be used in more than one program.
+
+        Returns an empty list if the PID is not found
+        """
+        # XXX Is it worth maintaining an extra (reversed) dictionary instead?
+        program_numbers = []
+        for prog_num, pid in self._data():
+            if pid == PMT_pid:
+                program_numbers.append(prog_num)
+        return program_numbers
+
+
 cdef void _print_descriptors(es_info):
     cdef FILE       *py_stdout
     cdef void       *desc_data
@@ -788,6 +808,8 @@ cdef extern from "ts_fns.h":
                  int *num_read, pmt_p *pmt)
     int extract_prog_list_from_pat(int verbose, byte *data, int data_len,
                                    pidint_list_p *prog_list)
+    int extract_pmt(int verbose, byte *data, int data_len, uint32_t pid,
+                    pmt_p *pmt)
     int print_descriptors(FILE *stream, char *leader1, char *leader2,
                           byte *desc_data, int desc_data_len)
 
@@ -930,6 +952,50 @@ cdef class TSPacket:
         else:
             raise AttributeError
 
+cdef class _PMT_accumulator:
+    """This is just an accumulator for a single PMT's data.
+    """
+    cdef PID   pid
+    cdef byte *pmt_data
+    cdef int   pmt_data_len
+    cdef int   pmt_data_used
+
+    def __cinit__(self, pid):
+        self.pid = pid
+
+    def __init__(self, pid):
+        pass
+
+    def __dealloc__(self):
+        self.clear()
+
+    def clear(self):
+        """Clear our internal buffers
+        """
+        if self.pmt_data != NULL:
+            free(<void *>self.pmt_data)
+        self.pmt_data = NULL
+        self.pmt_data_len = self.pmt_data_used = 0
+
+    cdef accumulate(self, byte *payload_buf, int payload_len):
+        cdef int retval
+        retval =  build_psi_data(False,payload_buf,payload_len,self.pid,
+                                 &self.pmt_data,&self.pmt_data_len,
+                                 &self.pmt_data_used)
+        return retval
+
+    def finished(self):
+        return self.pmt_data_len == self.pmt_data_used
+
+    cdef pmt_p extract(self):
+        cdef pmt_p  pmt
+        cdef int    retval
+        retval = extract_pmt(False, self.pmt_data, self.pmt_data_len,
+                             self.pid, &pmt)
+        if retval:
+            raise TSToolsException,'Error extracting PMT'
+        return pmt
+
 cdef class TSFile:
     """A Python class representing a TS file.
 
@@ -952,13 +1018,17 @@ cdef class TSFile:
     cdef readonly object mode
 
     cdef readonly object PAT        # The latest PAT read, if any
-    cdef readonly object PMT_dict   # A dictionary of {program number : PMT}
+    cdef readonly object PMT        # A dictionary of {program number : PMT}
 
     # We have a byte buffer in which we accumulate partial PAT parts,
     # as we read TS packets
     cdef byte *pat_data
     cdef int   pat_data_len
     cdef int   pat_data_used
+
+    # We have a dictionary linking PMT PID to an individual accumulator
+    # for PMT data
+    cdef object PMT_data
 
     # It appears to be recommended to make __cinit__ expand to take more
     # arguments (if __init__ ever gains them), since both get the same
@@ -981,7 +1051,8 @@ cdef class TSFile:
         # What should go in __init__ and what in __cinit__ ???
         self.name = filename
         self.mode = mode
-        self.PMT_dict = {}
+        self.PMT = {}
+        self.PMT_data = {}
 
     def _clear_pat_data(self):
         """Clear the buffers we use to accumulate PAT data
@@ -992,13 +1063,30 @@ cdef class TSFile:
         self.pat_data = NULL
         self.pat_data_len = self.pat_data_used = 0
 
+    def _clear_pmt_data(self,pid):
+        """Clear the buffers we use to accunulate PMT data
+        (but not any actual PMT we have acquired).
+        """
+        if pid in self.PMT_data:
+            self.PMT_data[pid].clear()
+            del self.PMT_data[pid]
+
+    def _clear_all_pmt_data(self):
+        """Clear the PMT accumulating buffers for all PIDs.
+        """
+        for pid in self.PMT_data:
+            self.PMT_data[pid].clear()
+        self.PMT_data = {}
+
     # (__dealloc__ is apparently not allowed to call Python methods,
     # and Python methods don't seem to be allowed to call __dealloc__,
     # so let's have an intermediary)
     cdef _close_for_read(self):
         if self.tsreader != NULL:
             self._clear_pat_data()
+            self._clear_all_pmt_data()
             self.PAT = None
+            self.PMT = None
             retval = close_TS_reader(&self.tsreader)
             if retval != 0:
                 raise TSToolsException,"Error closing file '%s':"\
@@ -1072,10 +1160,14 @@ cdef class TSFile:
                 this.add_stream(stream)
 
             # And remember it on the file as well
-            self.PMT_dict[pmt.program_number] = this
+            self.PMT[pmt.program_number] = this
             return this
         finally:
             free_pmt(&pmt)
+
+    cdef _check_pat_pmt(self, byte *buffer):
+        self._check_pat(buffer)
+        self._check_pmt(buffer)
 
     cdef _check_pat(self, byte *buffer):
         """Check if the current buffer represents (another) part of a PAT
@@ -1134,6 +1226,82 @@ cdef class TSFile:
             finally:
                 self._clear_pat_data()
 
+    cdef _check_pmt(self, byte *buffer):
+        """Check if the current buffer represents (another) part of a PMT
+        """
+        # Methodology borrowed from tsreport.c::report_ts
+        cdef PID         pid
+        cdef int         pusi
+        cdef byte       *adapt_buf
+        cdef int         adapt_len
+        cdef byte       *payload_buf
+        cdef int         payload_len
+        cdef int         err
+        cdef int         retval
+        cdef _PMT_accumulator  this_pmt_data
+        cdef pmt_p       pmt_ptr
+
+        # We can't tell if this is a PMT until we've had a PAT, so:
+        if self.PAT is None:
+            return
+
+        # And there's at least one PID we know we can ignore
+        if pid == 0:        # i.e., we're *not* a PAT
+            return
+
+        retval = split_TS_packet(buffer, &pid, &pusi,
+                                 &adapt_buf,&adapt_len,
+                                 &payload_buf,&payload_len)
+        if retval != 0:
+            # We couldn't split it up - presumably a broken TS packet.
+            # Ignore this problem, as the caller might legitimately want
+            # to retrieve broken TS packets and inspect them, and our wish
+            # to find (parts of) PAT packets shouldn't make that harder
+            return
+
+        # So, are we actually a PMT?
+        if not self.PAT.has_PMT(pid):
+            return
+
+        # Note that whilst we support a PMT PID belonging to more than
+        # one program, we don't support interleaving of parts of such
+        # - i.e., once a PMT with a given PID has started, we assume
+        # that all the partial PMT records with the same PID belong
+        # together...
+
+        if pusi:
+            if pid in self.PMT_data:
+                # Lose the PMT data we'd already partially accumulated for
+                # this PMT PID
+                # XXX should we grumble out loud at this? Probably not here,
+                # XXX although note that the equivalent C code might
+                self._clear_pmt_data(pid)
+            this_pmt_data = self.PMT_data[pid] = _PMT_accumulator(pid)
+        else:
+            if pid in self.PMT_data:
+                this_pmt_data = self.PMT_data[pid]
+            else:
+                # It's not the start of a PMT, and we haven't got a PMT
+                # to continue, so the best we can do is ignore it
+                # XXX again, for the moment, quietly
+                return
+
+        # Otherwise, call the "accumulate bits of a PMT" function,
+        # which does most of the heavy lifting for us
+        retval = this_pmt_data.accumulate(payload_buf,payload_len)
+        if retval:
+            # For the moment, just give up
+            self._clear_pmt_data(pid)
+            return
+
+        if this_pmt_data.finished():
+            # We've got it all
+            try:
+                pmt_ptr = this_pmt_data.extract()
+                self._pmt_from_pmt_p(pmt_ptr)
+            finally:
+                self._clear_pmt_data(pid)
+
     cdef TSPacket _next_TSPacket(self):
         """Read the next TS packet and return an equivalent TSPacket instance.
 
@@ -1160,11 +1328,14 @@ cdef class TSFile:
                     'Error getting next TS packet from file %s (%s)'%(self.name,what)
 
         # Check whether this packet updates our idea of the current PAT
-        # (if we called this before calling TSPacket, then, for instance,
-        # TSPacket('\0xff') would cause split_TS_packet, within _check_pat,
-        # to output errors on C stderr, followed by TSPacket detecting the
-        # problem anyway)
-        self._check_pat(buffer)
+        # or PMT
+        #
+        # (We call this *after* calling TSPacket, becuse if we call it first
+        # then, for instance, TSPacket('\0xff') would cause split_TS_packet,
+        # within _check_pat, to output errors on C stderr, followed by TSPacket
+        # detecting the problem anyway)
+        self._check_pat_pmt(buffer)
+
         return new_packet
 
     # For Pyrex classes, we define a __next__ instead of a next method
