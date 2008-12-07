@@ -952,6 +952,44 @@ cdef class TSPacket:
         else:
             raise AttributeError
 
+cdef pat_from_prog_list(pidint_list_p prog_list):
+    """Convert a program list into a PAT instance.
+    """
+    try:
+        pat = PAT()
+        for 0 <= ii < prog_list.length:
+            pat[prog_list.number[ii]] = prog_list.pid[ii]
+        return pat
+    finally:
+        free_pidint_list(&prog_list)
+
+cdef pmt_from_pmt_p(pmt_p pmt):
+    """Convert a C PMT structure into a PMT instance.
+    XXX Should we remember the PMT's PID?
+
+    Returns the new PMT object, or None if none
+    """
+    try:
+        this = PMT(pmt.program_number,
+                   pmt.version_number,
+                   pmt.PCR_pid)
+
+        prog_info = PyString_FromStringAndSize(<char *>pmt.program_info,
+                                               pmt.program_info_length)
+        this.set_program_info(prog_info)
+
+        for 0 <= ii < pmt.num_streams:
+            es_info = PyString_FromStringAndSize(<char *>pmt.streams[ii].ES_info,
+                                                 pmt.streams[ii].ES_info_length)
+            stream = ProgramStream(pmt.streams[ii].stream_type,
+                                   pmt.streams[ii].elementary_PID,
+                                   es_info)
+
+            this.add_stream(stream)
+        return this
+    finally:
+        free_pmt(&pmt)
+
 cdef class _PAT_accumulator:
     """This is just an accumulator for a single PAT's data.
     """
@@ -982,6 +1020,8 @@ cdef class _PAT_accumulator:
         return self.pat_data != NULL
 
     cdef accumulate(self, byte *payload_buf, int payload_len):
+        """Add a bit more to our accumulating data.
+        """
         cdef int retval
         retval =  build_psi_data(False,payload_buf,payload_len,0,
                                  &self.pat_data,&self.pat_data_len,
@@ -989,9 +1029,13 @@ cdef class _PAT_accumulator:
         return retval
 
     def finished(self):
+        """Have we all the data we need for our PAT?
+        """
         return self.pat_data_len == self.pat_data_used
 
-    cdef pidint_list_p extract(self):
+    cdef extract(self):
+        """Finally extract an actual PAT from the accumulated data.
+        """
         cdef pidint_list_p  prog_list
         cdef int            retval
         retval = extract_prog_list_from_pat(False,
@@ -999,7 +1043,7 @@ cdef class _PAT_accumulator:
                                             &prog_list)
         if retval:
             raise TSToolsException,'Error extracting program list from PAT'
-        return prog_list
+        return pat_from_prog_list(prog_list)
 
 cdef class _PMT_accumulator:
     """This is just an accumulator for a single PMT's data.
@@ -1027,6 +1071,8 @@ cdef class _PMT_accumulator:
         self.pmt_data_len = self.pmt_data_used = 0
 
     cdef accumulate(self, byte *payload_buf, int payload_len):
+        """Add a bit more to our accumulating data.
+        """
         cdef int retval
         retval =  build_psi_data(False,payload_buf,payload_len,self.pid,
                                  &self.pmt_data,&self.pmt_data_len,
@@ -1034,16 +1080,20 @@ cdef class _PMT_accumulator:
         return retval
 
     def finished(self):
+        """Have we all the data we need for our PMT?
+        """
         return self.pmt_data_len == self.pmt_data_used
 
-    cdef pmt_p extract(self):
+    cdef extract(self):
+        """Finally extract an actual PMT from the accumulated data.
+        """
         cdef pmt_p  pmt
         cdef int    retval
         retval = extract_pmt(False, self.pmt_data, self.pmt_data_len,
                              self.pid, &pmt)
         if retval:
             raise TSToolsException,'Error extracting PMT'
-        return pmt
+        return pmt_from_pmt_p(pmt)
 
 cdef class TSFile:
     """A Python class representing a TS file.
@@ -1073,7 +1123,7 @@ cdef class TSFile:
     # as we read TS packets
     cdef _PAT_accumulator PAT_data
 
-    # We have a dictionary linking PMT PID to an individual accumulator
+    # We have a dictionary linking PMT PID to each individual accumulator
     # for PMT data
     cdef object PMT_data
 
@@ -1171,64 +1221,14 @@ cdef class TSFile:
         #return self.mode == 'w' and self.file_stream != NULL
         pass
 
-    cdef _pat_from_prog_list(self, pidint_list_p prog_list):
-        try:
-            pat = PAT()
-            for 0 <= ii < prog_list.length:
-                pat[prog_list.number[ii]] = prog_list.pid[ii]
-            # And remember it on the file as well
-            self.PAT = pat
-        finally:
-            free_pidint_list(&prog_list)
-
-    cdef _pmt_from_pmt_p(self, pmt_p pmt):
-        """Dissect a PMT from C and store it.
-        XXX Should we remember the PMT's PID?
-
-        Returns the new PMT object, or None if none
-        """
-        try:
-            this = PMT(pmt.program_number,
-                       pmt.version_number,
-                       pmt.PCR_pid)
-
-            prog_info = PyString_FromStringAndSize(<char *>pmt.program_info,
-                                                   pmt.program_info_length)
-            this.set_program_info(prog_info)
-
-            for 0 <= ii < pmt.num_streams:
-                es_info = PyString_FromStringAndSize(<char *>pmt.streams[ii].ES_info,
-                                                     pmt.streams[ii].ES_info_length)
-                stream = ProgramStream(pmt.streams[ii].stream_type,
-                                       pmt.streams[ii].elementary_PID,
-                                       es_info)
-
-                this.add_stream(stream)
-
-            # And remember it on the file as well
-            self.PMT[pmt.program_number] = this
-            return this
-        finally:
-            free_pmt(&pmt)
-
     cdef _check_pat_pmt(self, byte *buffer):
-        self._check_pat(buffer)
-        self._check_pmt(buffer)
-
-    cdef _check_pat(self, byte *buffer):
-        """Check if the current buffer represents (another) part of a PAT
-        """
-        # Methodology borrowed from tsreport.c::report_ts
         cdef PID         pid
         cdef int         pusi
         cdef byte       *adapt_buf
         cdef int         adapt_len
         cdef byte       *payload_buf
         cdef int         payload_len
-        cdef int         err
         cdef int         retval
-        cdef pidint_list_p  prog_list
-        cdef _PAT_accumulator this_pat_data
         retval = split_TS_packet(buffer, &pid, &pusi,
                                  &adapt_buf,&adapt_len,
                                  &payload_buf,&payload_len)
@@ -1238,8 +1238,19 @@ cdef class TSFile:
             # to retrieve broken TS packets and inspect them, and our wish
             # to find (parts of) PAT packets shouldn't make that harder
             return
-        if pid != 0:
-            return          # Not a PAT, so we can ignore it
+        if pid == 0:
+            self._check_pat(pusi,adapt_buf,adapt_len,payload_buf,payload_len)
+        else:
+            self._check_pmt(pid,pusi,adapt_buf,adapt_len,payload_buf,payload_len)
+
+    cdef _check_pat(self, int pusi, byte *adapt_buf, int adapt_len,
+                    byte *payload_buf, int payload_len):
+        """Check if the current buffer represents (another) part of a PAT
+        """
+        # Methodology borrowed from tsreport.c::report_ts
+        cdef int retval
+        cdef pidint_list_p  prog_list
+        cdef _PAT_accumulator this_pat_data
 
         if pusi:
             if self.PAT_data.started():
@@ -1265,42 +1276,22 @@ cdef class TSFile:
         if self.PAT_data.finished():
             # We've got it all
             try:
-                prog_list = self.PAT_data.extract()
-                self._pat_from_prog_list(prog_list)
+                self.PAT = self.PAT_data.extract()
             finally:
                 self._clear_pat_data()
 
-    cdef _check_pmt(self, byte *buffer):
+    cdef _check_pmt(self, PID pid,
+                    int pusi, byte *adapt_buf, int adapt_len,
+                    byte *payload_buf, int payload_len):
         """Check if the current buffer represents (another) part of a PMT
         """
         # Methodology borrowed from tsreport.c::report_ts
-        cdef PID         pid
-        cdef int         pusi
-        cdef byte       *adapt_buf
-        cdef int         adapt_len
-        cdef byte       *payload_buf
-        cdef int         payload_len
-        cdef int         err
         cdef int         retval
         cdef _PMT_accumulator  this_pmt_data
         cdef pmt_p       pmt_ptr
 
         # We can't tell if this is a PMT until we've had a PAT, so:
         if self.PAT is None:
-            return
-
-        retval = split_TS_packet(buffer, &pid, &pusi,
-                                 &adapt_buf,&adapt_len,
-                                 &payload_buf,&payload_len)
-        if retval != 0:
-            # We couldn't split it up - presumably a broken TS packet.
-            # Ignore this problem, as the caller might legitimately want
-            # to retrieve broken TS packets and inspect them, and our wish
-            # to find (parts of) PAT packets shouldn't make that harder
-            return
-
-        # There's at least one PID we know we can ignore, trivially
-        if pid == 0:        # i.e., we're *not* a PAT
             return
 
         # So, are we actually a PMT?
@@ -1341,8 +1332,10 @@ cdef class TSFile:
         if this_pmt_data.finished():
             # We've got it all
             try:
-                pmt_ptr = this_pmt_data.extract()
-                self._pmt_from_pmt_p(pmt_ptr)
+                # Finally, our PMT
+                pmt = this_pmt_data.extract()
+                # And remember it on the file as well
+                self.PMT[pmt.program_number] = pmt
             finally:
                 self._clear_pmt_data(pid)
 
@@ -1444,7 +1437,8 @@ cdef class TSFile:
             return (num_read,None)
         elif retval == 1:
             raise TSToolsException,'Error searching for next PAT'
-        self._pat_from_prog_list(prog_list)
+        # Don't forget to remember it on the file as well
+        self.PAT = pat_from_prog_list(prog_list)
         return (num_read,self.PAT)
 
     def find_PMT(self,pmt_pid,program_number=-1,max=0,verbose=False,quiet=False):
@@ -1481,7 +1475,10 @@ cdef class TSFile:
             return (num_read,None)
         elif retval == 1:
             raise TSToolsException,'Error searching for next PMT'
-        this_pmt = self._pmt_from_pmt_p(pmt)
+        this_pmt = pmt_from_pmt_p(pmt)
+
+        # Don't forget to remember it on the file as well
+        self.PMT[this_pmt.program_number] = this_pmt
 
         return (num_read,this_pmt)
 
