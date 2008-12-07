@@ -952,6 +952,55 @@ cdef class TSPacket:
         else:
             raise AttributeError
 
+cdef class _PAT_accumulator:
+    """This is just an accumulator for a single PAT's data.
+    """
+    cdef byte *pat_data
+    cdef int   pat_data_len
+    cdef int   pat_data_used
+
+    def __cinit__(self):
+        pass
+
+    def __init__(self):
+        pass
+
+    def __dealloc__(self):
+        self.clear()
+
+    def clear(self):
+        """Clear our internal buffers
+        """
+        if self.pat_data != NULL:
+            free(<void *>self.pat_data)
+        self.pat_data = NULL
+        self.pat_data_len = self.pat_data_used = 0
+
+    def started(self):
+        """Have we started accumulating data?
+        """
+        return self.pat_data != NULL
+
+    cdef accumulate(self, byte *payload_buf, int payload_len):
+        cdef int retval
+        retval =  build_psi_data(False,payload_buf,payload_len,0,
+                                 &self.pat_data,&self.pat_data_len,
+                                 &self.pat_data_used)
+        return retval
+
+    def finished(self):
+        return self.pat_data_len == self.pat_data_used
+
+    cdef pidint_list_p extract(self):
+        cdef pidint_list_p  prog_list
+        cdef int            retval
+        retval = extract_prog_list_from_pat(False,
+                                            self.pat_data,self.pat_data_len,
+                                            &prog_list)
+        if retval:
+            raise TSToolsException,'Error extracting program list from PAT'
+        return prog_list
+
 cdef class _PMT_accumulator:
     """This is just an accumulator for a single PMT's data.
     """
@@ -1022,9 +1071,7 @@ cdef class TSFile:
 
     # We have a byte buffer in which we accumulate partial PAT parts,
     # as we read TS packets
-    cdef byte *pat_data
-    cdef int   pat_data_len
-    cdef int   pat_data_used
+    cdef _PAT_accumulator PAT_data
 
     # We have a dictionary linking PMT PID to an individual accumulator
     # for PMT data
@@ -1052,16 +1099,15 @@ cdef class TSFile:
         self.name = filename
         self.mode = mode
         self.PMT = {}
+        self.PAT_data = _PAT_accumulator()
         self.PMT_data = {}
 
     def _clear_pat_data(self):
         """Clear the buffers we use to accumulate PAT data
         (but not any actual PAT we have acquired).
         """
-        if self.pat_data != NULL:
-            free(<void *>self.pat_data)
-        self.pat_data = NULL
-        self.pat_data_len = self.pat_data_used = 0
+        if self.PAT_data:
+            self.PAT_data.clear()
 
     def _clear_pmt_data(self,pid):
         """Clear the buffers we use to accunulate PMT data
@@ -1182,6 +1228,7 @@ cdef class TSFile:
         cdef int         err
         cdef int         retval
         cdef pidint_list_p  prog_list
+        cdef _PAT_accumulator this_pat_data
         retval = split_TS_packet(buffer, &pid, &pusi,
                                  &adapt_buf,&adapt_len,
                                  &payload_buf,&payload_len)
@@ -1194,35 +1241,32 @@ cdef class TSFile:
         if pid != 0:
             return          # Not a PAT, so we can ignore it
 
-        if pusi and self.pat_data:
-            # Lose the PAT data we'd already partially accumulated
-            # XXX should we grumble out loud at this? Probably not here,
-            # XXX although note that the equivalent C code might
-            self._clear_pat_data()
-        elif not pusi and not self.pat_data:
-            # It's not the start of a PAT, and we haven't got a PAT
-            # to continue, so the best we can do is ignore it
-            # XXX again, for the moment, quietly
-            return
+        if pusi:
+            if self.PAT_data.started():
+                # Lose the PAT data we'd already partially accumulated
+                # XXX should we grumble out loud at this? Probably not here,
+                # XXX although note that the equivalent C code might
+                self._clear_pat_data()
+        else:
+            if not self.PAT_data.started():
+                # It's not the start of a PAT, and we haven't got a PAT
+                # to continue, so the best we can do is ignore it
+                # XXX again, for the moment, quietly
+                return
 
         # Otherwise, call the "accumulate bits of a PAT" function,
         # which does most of the heavy lifting for us
-        retval = build_psi_data(False,payload_buf,payload_len,pid,
-                                &self.pat_data,&self.pat_data_len,
-                                &self.pat_data_used)
+        retval = self.PAT_data.accumulate(payload_buf,payload_len)
         if retval:
             # For the moment, just give up
             self._clear_pat_data()
             return
 
-        if self.pat_data_len == self.pat_data_used:
+        if self.PAT_data.finished():
             # We've got it all
             try:
-                retval = extract_prog_list_from_pat(False,
-                                                    self.pat_data,self.pat_data_len,
-                                                    &prog_list)
-                if not retval:
-                    self._pat_from_prog_list(prog_list)
+                prog_list = self.PAT_data.extract()
+                self._pat_from_prog_list(prog_list)
             finally:
                 self._clear_pat_data()
 
@@ -1245,10 +1289,6 @@ cdef class TSFile:
         if self.PAT is None:
             return
 
-        # And there's at least one PID we know we can ignore
-        if pid == 0:        # i.e., we're *not* a PAT
-            return
-
         retval = split_TS_packet(buffer, &pid, &pusi,
                                  &adapt_buf,&adapt_len,
                                  &payload_buf,&payload_len)
@@ -1257,6 +1297,10 @@ cdef class TSFile:
             # Ignore this problem, as the caller might legitimately want
             # to retrieve broken TS packets and inspect them, and our wish
             # to find (parts of) PAT packets shouldn't make that harder
+            return
+
+        # There's at least one PID we know we can ignore, trivially
+        if pid == 0:        # i.e., we're *not* a PAT
             return
 
         # So, are we actually a PMT?
