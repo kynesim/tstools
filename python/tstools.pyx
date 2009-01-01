@@ -66,6 +66,11 @@ cdef extern from "string.h":
 cdef extern from "stdlib.h":
     cdef void free(void *ptr)
 
+# From the Cython FAQ, but according to a useful message on the Pyrex mailing
+# list, also applicable to Pyrex
+cdef extern from *:
+    ctypedef void* const_void_ptr "const void*"
+
 # Copied from the Pyrex documentation...
 cdef extern from "Python.h":
     # Return a new string object with a copy of the string v as value and
@@ -94,19 +99,16 @@ cdef extern from "Python.h":
     # interface. On success, returns 0, sets buffer to the memory location and
     # buffer_len to the buffer length. Returns -1 and sets a TypeError on
     # error.
-    int PyObject_AsReadBuffer(object obj, void **buffer, Py_ssize_t *buffer_len) except -1
-    # Unfortunately, that second argument is declared "const void **", which
-    # seems to mean ending up with grumbles from gcc when we can't declare a
-    # const void ** item...
+    int PyObject_AsReadBuffer(object obj, const_void_ptr *buffer, Py_ssize_t *buffer_len) except -1
 
 cdef extern from "Python.h":
     FILE *PySys_GetFile(char *name, FILE *default)
 
-cdef FILE *convert_python_file(object file):
-    """Given a Python file object, return an equivalent stream.
-    There are *so many things* dodgy about doing this...
-    """
-    return PySys_GetFile('stdout',stdout)
+#cdef FILE *convert_python_file(object file):
+#    """Given a Python file object, return an equivalent stream.
+#    There are *so many things* dodgy about doing this...
+#    """
+#    return PySys_GetFile('stdout',stdout)
     #cdef int fileno
     #cdef char *mode
     #cdef FILE *stream
@@ -659,14 +661,6 @@ class PAT(object):
         return program_numbers
 
 
-cdef void _print_descriptors(es_info):
-    cdef FILE       *py_stdout
-    cdef void       *desc_data
-    cdef Py_ssize_t  desc_data_len
-    py_stdout = convert_python_file(sys.stdout)
-    PyObject_AsReadBuffer(es_info, &desc_data, &desc_data_len)
-    print_descriptors(py_stdout,'    ','*',<byte *>desc_data,desc_data_len)
-
 # XXX Should this be an extension type, and enforce the datatypes it can hold?
 # XXX Or is that just too much bother?
 class ProgramStream(object):
@@ -710,10 +704,6 @@ class ProgramStream(object):
         # XXX should actually output them as descriptors
         if self.es_info:
             print "%s    ES info '%s'"%(' '*indent,hexify_array(self.es_info))
-
-            # Highly experimental
-            # XXX - and doesn't work...
-            #_print_descriptors(self.es_info)
 
 # XXX Should this be an extension type, and enforce the datatypes it can hold?
 # XXX Or is that just too much bother?
@@ -894,14 +884,14 @@ cdef class TSPacket:
     def _split(self):
         """Split the packet up when requested to do so.
         """
-        cdef void       *buffer
-        cdef Py_ssize_t  length
-        cdef PID         pid
-        cdef char       *adapt_buf
-        cdef int         adapt_len
-        cdef char       *payload_buf
-        cdef int         payload_len
-        cdef int         retval
+        cdef const_void_ptr buffer
+        cdef Py_ssize_t     length
+        cdef PID            pid
+        cdef char          *adapt_buf
+        cdef int            adapt_len
+        cdef char          *payload_buf
+        cdef int            payload_len
+        cdef int            retval
         PyObject_AsReadBuffer(self.data, &buffer, &length)
         retval = split_TS_packet(<byte *>buffer,&pid,&self._pusi,
                                  <byte **>&adapt_buf,&adapt_len,
@@ -922,10 +912,10 @@ cdef class TSPacket:
         """Determine our PCR, if we have one.
         Assumes that self._split() has been called already.
         """
-        cdef void       *adapt_buf
-        cdef Py_ssize_t  adapt_len
-        cdef int         got_pcr
-        cdef uint64_t    pcr
+        cdef const_void_ptr adapt_buf
+        cdef Py_ssize_t     adapt_len
+        cdef int            got_pcr
+        cdef uint64_t       pcr
         if self._adapt:
             PyObject_AsReadBuffer(self._adapt, &adapt_buf, &adapt_len)
             get_PCR_from_adaptation_field(<byte *>adapt_buf, adapt_len,
