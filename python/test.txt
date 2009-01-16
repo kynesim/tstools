@@ -582,10 +582,7 @@ In the Python wrapping, the basic TSFile class provides "unbuffered" reading.
 It is thus suitable for applications that are not trying to track the PCR.
 
 The BufferedTSFile class is then a subclass of TSFile, and uses the PCR
-buffered interface to retrieve TS packets. This class only opens a TSFile for
-read, there is no 'w' mode.
-
-So::
+buffered interface to retrieve TS packets. So:
 
     >>> from tstools import BufferedTSFile
     >>> bfile = BufferedTSFile(test_ts_file)
@@ -596,10 +593,83 @@ So::
     >>> bfile.is_writable()
     0
     >>> bfile.close()
+
+Since this class only opens a TSFile for read, there is no 'w' mode:
+
     >>> bfile = BufferedTSFile(test_ts_file,'w')
     Traceback (most recent call last):
     ...
     TypeError: function takes exactly 1 argument (2 given)
+    >>> bfile = BufferedTSFile(test_ts_file,mode='w')
+    Traceback (most recent call last):
+    ...
+    TypeError: 'mode' is an invalid keyword argument for this function
+
+I'd *like* a BufferedTSFile to act very much like a TSFile in many ways, and
+in particular I'd like it to start reading from the start of the file.
+However, at the moment it starts reading with the first TS packet after the
+first PMT.
+
+
+  So in particular, the start should be readable in the same manner, which we
+  can verify by checking how far in the "first interesting packet" we found
+  when first testing TSFile is:
+
+     x >>> p = None        # Outside the "with" scope...
+     x >>> with BufferedTSFile(test_ts_file) as f:
+     x ...     count = 0
+     x ...     p = f.read()
+     x ...     while p.is_padding():
+     x ...         count += 1
+     x ...         p = f.read()
+     x ...     print count
+     x 71
+     x >>> p == first_interesting_TS_packet
+     x 1
+
+   which at the moment would fail (the responses being '0' and '0'
+   respectively), so I shan't actually make be proper tests.
+
+What I can do is check if works as I expect:
+
+    >>> p1 = p2 = p3 = None
+    >>> with TSFile(test_ts_file) as f:
+    ...    # Read until we find the first PMT
+    ...    p = f.read()
+    ...    while len(f.PMT) == 0:
+    ...        p = f.read()
+    ...    # Then read until we find the first packet with a PCR
+    ...    p1 = f.read()
+    ...    while p1.PCR == None:
+    ...        p1 = f.read()
+    ...    p2 = f.read()
+    ...    p3 = f.read()
+    >>> print p1
+    TS packet PID 0030 A 20 b7 10 01 9e 9f 5a ff...
+    >>> print p2
+    TS packet PID 0031 P 1a 6c 42 26 10 88 58 30...
+    >>> print p3
+    TS packet PID 0031 P 1b 19 80 3b 28 06 28 21...
+
+and thus:
+
+    >>> pb1 = pb2 = pb3 = None
+    >>> with BufferedTSFile(test_ts_file) as f:
+    ...    pb1 = f.read()
+    ...    pb2 = f.read()
+    ...    pb3 = f.read()
+    >>> print pb1
+    TS packet PID 0030 A 20 b7 10 01 9e 9f 5a ff...
+    >>> print pb2
+    TS packet PID 0031 P 1a 6c 42 26 10 88 58 30...
+    >>> print pb3
+    TS packet PID 0031 P 1b 19 80 3b 28 06 28 21...
+    >>> # Or, explicitly
+    >>> p1 == pb1 and p2 == pb2 and p3 == pb3
+    1
+
+As I said, not perhaps what I want, but definitely what it is currently
+expected to do.
 
 
 // Local Variables:

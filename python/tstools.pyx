@@ -629,6 +629,12 @@ class PAT(object):
     def __iter__(self):
         return self._data.iteritems()
 
+    def items(self):
+        # Return the (program number, PMT PID) pairs from the PAT,
+        # sorted by program number
+        pairs = self._data.items()
+        return sorted(pairs)
+
     def __repr__(self):
         """It is nicer if we make sure the dictionary appears in some sort of
         order.
@@ -781,6 +787,12 @@ cdef extern from "ts_fns.h":
     int close_TS_reader(TS_reader_p *tsreader)
     int seek_using_TS_reader(TS_reader_p tsreader, offset_t posn)
     int read_next_TS_packet(TS_reader_p tsreader, byte **packet)
+    int read_first_TS_packet_from_buffer(TS_reader_p tsreader,
+                                         uint32_t pcr_pid, uint32_t start_count,
+                                         byte **packet, uint32_t *pid,
+                                         uint64_t *pcr, uint32_t *count)
+    int read_next_TS_packet_from_buffer(TS_reader_p tsreader,
+                                        byte **packet, uint32_t *pid, uint64_t *pcr)
     int split_TS_packet(byte *buf, PID *pid, int *payload_unit_start_indicator,
                         byte **adapt, int *adapt_len,
                         byte **payload, int *payload_len)
@@ -1522,22 +1534,60 @@ cdef class BufferedTSFile(TSFile):
     """A Python class representing a PCR-buffered TS file.
 
     This provides a read-only TSFile in which all TS packets have a reliable
-    PCR.
+    PCR. This is managed by:
 
-    If "PCR buffering" is enabled, then we always read-ahead enough so that we
-    have two PCRs in hand -- the previous and the next. This allows us to
-    assign an exact PCR value to every TS packet.
+        1. Locating the first PAT.
+        2. Locating the first PMT associated with that PAT
+        3. Reading TS packets until two PMTs have been found with a PCR.
+        4. Deducing the PCR values for intermediate TS packets based on
+           those PCRs and the locations of the PMT packets within the
+           file.
+        5. "Rewinding" back to the first PMT to beging reading packets.
 
-    If "PCR buffering" is not enabled, then we only know PCR values for those
-    TS packets that actually contain an explicit PCR.
+    Note that this last means the first packets of the file are likely to be
+    ignored, which is a bug, and should eventually be fixed.
+
+    Further note that the current implementation doesn't offer any means of
+    changing which PMT PID is used, which program is selected, etc -- the PMT
+    from the first program stream in the first PAT will be the one chosen.
     """
 
+    cdef object    got_first   # Have we already read the first TS packet?
+    cdef object    pcr_pid     # The PID we're using for our PCRs
+    cdef uint32_t  start_count # A hack
+
     # The __cinit__ of our base type (TSFile) is automatically called
-    # for us. Luckily, its default value for the "mode" argument is
-    # 'r', which is what we want.
+    # for us, before our own __cinit__
+    def __cinit__(self,filename,*args,**kwargs):
+        pass
 
     def __init__(self,filename):
+        """Open the given file for reading via the PCR buffering mechanism.
+        """
         super(BufferedTSFile,self).__init__(filename,mode='r')
+
+        # Locate our first PMT
+        (num_read,PAT) = self.find_PAT()
+        if PAT is None:
+            raise TSToolsException,"Unable to find PAT in file '%s'"%self.name
+
+        self.start_count = num_read
+
+        # Choose the first program from therein (the list returned is sorted
+        # by program number)
+        programs = PAT.items()
+        if len(programs) == 0:
+            raise TSToolsException,"No programs in first PAT in '%s'"%self.name
+
+        # Find the PMT for the first program
+        (progno,PMT_pid) = programs[0]
+        (num_read,PMT) = self.find_PMT(PMT_pid,progno)
+        if PMT is None:
+            raise TSToolsException,"Unable to find PMT with PID %04x"\
+                    " for program %d in file '%s'"%(PMT_pid,progno,self.name)
+
+        self.start_count += num_read
+        self.pcr_pid      = PMT.PCR_pid
 
     def __repr__(self):
         if self.name:
@@ -1556,22 +1606,34 @@ cdef class BufferedTSFile(TSFile):
         ``filename`` is given for use in exception messages - it should be the
         name of the file we're reading from (using ``tsreader``).
         """
-        raise NotImplementedError
-
-        cdef byte *buffer
+        cdef byte     *buffer
+        cdef PID       pid
+        cdef uint64_t  pcr
+        cdef uint32_t  count
         if self.tsreader == NULL:
             raise TSToolsException,'No TS stream to read'
-        retval = read_next_TS_packet(self.tsreader, &buffer)
+
+        if self.got_first:
+            retval = read_next_TS_packet_from_buffer(self.tsreader, &buffer,
+                                                     &pid, &pcr)
+        else:
+            retval = read_first_TS_packet_from_buffer(self.tsreader, self.pcr_pid,
+                                                      self.start_count,
+                                                      &buffer,
+                                                      &pid, &pcr, &count)
         if retval == EOF:
             raise StopIteration
         elif retval == 1:
             raise TSToolsException,'Error getting next TS packet from file %s'%self.name
+
+        self.got_first = True
 
         # Remember the buffer we get handed a pointer to is transient
         # so we need to take a copy of it (which we might as well keep in
         # a Python object...)
         buffer_str = PyString_FromStringAndSize(<char *>buffer, TS_PACKET_LEN)
         try:
+            # XXX And we really must tell the TSPacket that we *know* its PCR
             new_packet = TSPacket(buffer_str)
         except TSToolsException, what:
             raise TSToolsException,\
