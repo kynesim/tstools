@@ -288,7 +288,7 @@ cdef object compare_ESUnits(ESUnit this, ESUnit that, int op):
     elif op == 3:   # !=
         return not same_ES_unit(this.unit, that.unit)
     else:
-        #return NotImplemented
+        #return NotImplementedError
         raise TypeError, 'ESUnit only supports == and != comparisons'
 
 cdef class ESUnit:
@@ -390,7 +390,6 @@ cdef class ESFile:
     # things passed to them. Hmm, normally I'd trust myself, but let's
     # try the recommended route
     def __cinit__(self,filename,mode='r',*args,**kwargs):
-        actual_mode = mode+'b'
         self.file_stream = fopen(filename,mode)
         if self.file_stream == NULL:
             raise TSToolsException,"Error opening file '%s'"\
@@ -878,7 +877,7 @@ cdef class TSPacket:
         elif op == 3:   # !=
             return self.data != other.data
         else:
-            #return NotImplemented
+            #return NotImplementedError
             raise TypeError, 'TSPacket only supports == and != comparisons'
 
     def _split(self):
@@ -1099,6 +1098,15 @@ cdef class TSFile:
 
     Note that there is always an implicit 'b' attached to the mode (i.e., the
     file is accessed in binary mode).
+
+    When reading, the default is to read with "PCR buffering" enabled.
+    
+    If "PCR buffering" is enabled, then we always read-ahead enough so that we
+    have two PCRs in hand -- the previous and the next. This allows us to
+    assign an exact PCR value to every TS packet.
+
+    If "PCR buffering" is not enabled, then we only know PCR values for those
+    TS packets that actually contain an explicit PCR.
     """
 
     cdef TS_reader_p    tsreader
@@ -1121,26 +1129,39 @@ cdef class TSFile:
     # arguments (if __init__ ever gains them), since both get the same
     # things passed to them. Hmm, normally I'd trust myself, but let's
     # try the recommended route
-    def __cinit__(self,filename,mode='r',*args,**kwargs):
-        actual_mode = mode+'b'
+    def __cinit__(self,filename,*args,**kwargs):
+        pass
+
+    def __init__(self,filename,mode='r'):
+        # In practice, we need to do the actual opening of the file here,
+        # because we wish to subclassable by BufferedTSFile, which only
+        # supports mode 'r' for its files.
+        # However, as the Pyrex documentation warns that our __init__
+        # method *might* get called more than once, don't try to open
+        # a file more than once...
+
+        if self.tsreader:       # Oh dear, we're already open
+            if filename != self.filename or mode != self.mode:
+                raise TSToolsException,"Attempt to reopen %s as '%s' with mode '%s'"%\
+                        (self.__repr__,filename,mode)
+            return
+
+        self.name = filename
+        self.mode = mode
+        self.PMT = {}
+        self.PAT_data = _PAT_accumulator()
+        self.PMT_data = {}
+
         if mode == 'r':
             retval = open_file_for_TS_read(filename,&self.tsreader)
             if retval == 1:
                 raise TSToolsException,"Error opening file '%s'"\
                         " for TS reading: %s"%(filename,strerror(errno))
         elif mode == 'w':
-            raise NotImplemented
+            raise NotImplementedError,"TSFile mode 'w' is not yet available"
         else:
             raise TSToolsException,"Error opening file '%s'"\
                     " with mode '%s' (only 'r' and 'w' supported)"%(filename,mode)
-
-    def __init__(self,filename,mode='r'):
-        # What should go in __init__ and what in __cinit__ ???
-        self.name = filename
-        self.mode = mode
-        self.PMT = {}
-        self.PAT_data = _PAT_accumulator()
-        self.PMT_data = {}
 
     def _clear_pat_data(self):
         """Clear the buffers we use to accumulate PAT data
@@ -1496,6 +1517,76 @@ cdef class TSFile:
             self.close()
             # And allow the exception to be re-raised
             return False
+
+cdef class BufferedTSFile(TSFile):
+    """A Python class representing a PCR-buffered TS file.
+
+    This provides a read-only TSFile in which all TS packets have a reliable
+    PCR.
+
+    If "PCR buffering" is enabled, then we always read-ahead enough so that we
+    have two PCRs in hand -- the previous and the next. This allows us to
+    assign an exact PCR value to every TS packet.
+
+    If "PCR buffering" is not enabled, then we only know PCR values for those
+    TS packets that actually contain an explicit PCR.
+    """
+
+    # The __cinit__ of our base type (TSFile) is automatically called
+    # for us. Luckily, its default value for the "mode" argument is
+    # 'r', which is what we want.
+
+    def __init__(self,filename):
+        super(BufferedTSFile,self).__init__(filename,mode='r')
+
+    def __repr__(self):
+        if self.name:
+            return "<BufferedTSFile '%s' open for read>"%self.name
+        else:
+            return "<BufferedTSFile, closed>"
+
+    def write(self, TSPacket tspacket):
+        """BufferedTSFiles do not support writing.
+        """
+        raise NotImplementedError,'BufferedTSFiles do not support writing'
+
+    cdef TSPacket _next_TSPacket(self):
+        """Read the next TS packet and return an equivalent TSPacket instance.
+
+        ``filename`` is given for use in exception messages - it should be the
+        name of the file we're reading from (using ``tsreader``).
+        """
+        raise NotImplementedError
+
+        cdef byte *buffer
+        if self.tsreader == NULL:
+            raise TSToolsException,'No TS stream to read'
+        retval = read_next_TS_packet(self.tsreader, &buffer)
+        if retval == EOF:
+            raise StopIteration
+        elif retval == 1:
+            raise TSToolsException,'Error getting next TS packet from file %s'%self.name
+
+        # Remember the buffer we get handed a pointer to is transient
+        # so we need to take a copy of it (which we might as well keep in
+        # a Python object...)
+        buffer_str = PyString_FromStringAndSize(<char *>buffer, TS_PACKET_LEN)
+        try:
+            new_packet = TSPacket(buffer_str)
+        except TSToolsException, what:
+            raise TSToolsException,\
+                    'Error getting next TS packet from file %s (%s)'%(self.name,what)
+
+        # Check whether this packet updates our idea of the current PAT
+        # or PMT
+        #
+        # (We call this *after* calling TSPacket, becuse if we call it first
+        # then, for instance, TSPacket('\0xff') would cause split_TS_packet,
+        # within _check_pat, to output errors on C stderr, followed by TSPacket
+        # detecting the problem anyway)
+        self._check_pat_pmt(buffer)
+
+        return new_packet
 
 # ----------------------------------------------------------------------
 # vim: set filetype=python expandtab shiftwidth=4:

@@ -558,6 +558,49 @@ And it is, of course, possible to create our own PMT:
         PID 0017 (  23) -> Stream type 47 ( 71)
             ES info '\x0a\x04\x47\x45\x52\x02'
 
+PCR buffering
+-------------
+There are two ways of reading TS packets from a file.
+
+The original mechanism reads each TS packet relatively directly, and only TS
+packets that actually contain a PCR "know" their PCR. It is then up to the
+calling program to try to "guess" (or, perhaps, approximate) the PCRs for
+intermediate packets.
+
+Later versions of tstools introduced the concept of PCR buffering. In this
+mode, the software will always have read forwards through the file enough to
+have two PCRs in hand -- the previous and the next. This allows the PCR for
+each TS packet in between to be determined absolutely, at the cost of a
+read-ahead buffer, and some special tricks before the first PCR and after the
+last (where linear approximation is all that can really be done).
+
+  NB: at time of writing, approximation at the start of the file is not done,
+  and thus in "PCR buffering" mode, TS packets before the first PCR are
+  skipped. This is a bug, and should be fixed in the future.
+
+In the Python wrapping, the basic TSFile class provides "unbuffered" reading.
+It is thus suitable for applications that are not trying to track the PCR.
+
+The BufferedTSFile class is then a subclass of TSFile, and uses the PCR
+buffered interface to retrieve TS packets. This class only opens a TSFile for
+read, there is no 'w' mode.
+
+So::
+
+    >>> from tstools import BufferedTSFile
+    >>> bfile = BufferedTSFile(test_ts_file)
+    >>> print bfile
+    <BufferedTSFile '../data/ed24p_11.ts' open for read>
+    >>> bfile.is_readable()
+    1
+    >>> bfile.is_writable()
+    0
+    >>> bfile.close()
+    >>> bfile = BufferedTSFile(test_ts_file,'w')
+    Traceback (most recent call last):
+    ...
+    TypeError: function takes exactly 1 argument (2 given)
+
 
 // Local Variables:
 // tab-width: 8
