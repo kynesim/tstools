@@ -29,6 +29,8 @@
 #ifndef _ts_defns
 #define _ts_defns
 
+#include "compat.h"
+
 // Transport Stream packets are always the same size
 #define TS_PACKET_SIZE 188
 
