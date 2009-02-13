@@ -45,8 +45,8 @@ test:	setup
 
 .PHONY: clean
 clean:
-	-rm tstools/tstools.so
+	-rm tstools/*.so
 
 .PHONY: distclean
 distclean: clean
-	-rm tstools/tstools.c
+	-rm tstools/*.c

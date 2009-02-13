@@ -86,6 +86,28 @@ cdef extern from "Python.h":
     # error.
     int PyObject_AsReadBuffer(object obj, const_void_ptr *buffer, Py_ssize_t *buffer_len) except -1
 
+cdef extern from "Python.h":
+    FILE *PySys_GetFile(char *name, FILE *default)
+
+cdef extern from "stdint.h":
+    ctypedef unsigned char      uint8_t
+    ctypedef unsigned           uint16_t
+    ctypedef unsigned long      uint32_t
+    ctypedef unsigned long long uint64_t
+    ctypedef   signed char      int8_t
+    ctypedef          int       int16_t
+    ctypedef          long      int32_t
+    ctypedef          long long int64_t
+
+# PIDs are too long for 16 bits, short enough to fit in 32
+ctypedef uint32_t   PID
+
+cdef extern from "compat.h":
+    # We don't need to define 'offset_t' exactly, just to let Pyrex
+    # know it's vaguely int-like
+    ctypedef int offset_t
+    ctypedef uint8_t byte  # but we already had our stdint byte daatype
+
 # ----------------------------------------------------------------------
 # vim: set filetype=python expandtab shiftwidth=4:
 # [X]Emacs local variables declaration - place us into python mode

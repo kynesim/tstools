@@ -37,3 +37,4 @@ I can test most easily!
 # The following also makes available the "sys" and "array" modules as
 # imported to tsools, so is probably not the best way to do it. Ho hum.
 from tstools import *
+from es import *
