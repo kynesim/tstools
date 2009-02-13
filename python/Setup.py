@@ -29,27 +29,17 @@ from distutils.core import setup
 from Pyrex.Distutils.extension import Extension
 from Pyrex.Distutils import build_ext
 
+sources = [ 'tstools/tstools.pyx' ]
+
+tstools_ext = Extension("tstools/tstools",
+                        sources,
+                        include_dirs=['..'],
+                        library_dirs=['../lib'],
+                        libraries=['tstools'],
+                        )
+
 setup(
   name = 'tstools',
-  ext_modules=[ 
-    Extension("tstools/tstools", ["tstools/tstools.pyx"],
-              include_dirs=['..'],
-              libraries=['tstools'],
-              library_dirs=['../lib'],
-              ),
-    ],
+  ext_modules=[tstools_ext],
   cmdclass = {'build_ext': build_ext}
 )
-
-#setup(
-#  name = 'tstools',
-#  ext_modules=[ 
-#    Extension("tstools", ["tstools.pyx"],
-#              include_dirs=['..'],
-#              libraries=['tstools'],
-#              library_dirs=['../lib'],
-#              ),
-#    ],
-#  cmdclass = {'build_ext': build_ext}
-#)
-

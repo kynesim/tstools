@@ -34,9 +34,6 @@ I can test most easily!
 #
 # ***** END LICENSE BLOCK *****
 
-# For the moment, treat all entities in submodules as if they were at
-# the top level
-
-__all__ = ["tstools"]
-
+# The following also makes available the "sys" and "array" modules as
+# imported to tsools, so is probably not the best way to do it. Ho hum.
 from tstools import *

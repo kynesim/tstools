@@ -37,88 +37,14 @@ I can test most easily!
 import sys
 import array
 
-# If we're going to use definitions like this in more than one pyx file, we'll
-# need to define the shared types in a .pxd file and use cimport to import
-# them.
-
-cdef extern from "stdio.h":
-    ctypedef struct FILE:
-        int _fileno
-    cdef enum:
-        EOF = -1
-    cdef FILE *stdout
-    # Associate a stream (returned) with an existing file descriptor.
-    # The specified mode must be compatible with the existing mode of
-    # the file descriptor. Closing the stream will close the descriptor
-    # as well.
-    cdef FILE *fdopen(int fildes, char *mode)
-
-    cdef FILE *fopen(char *path, char *mode)
-    cdef int fclose(FILE *stream)
-    cdef int fileno(FILE *stream)
-
-cdef extern from "errno.h":
-    cdef int errno
-
-cdef extern from "string.h":
-    cdef char *strerror(int errnum)
-
-cdef extern from "stdlib.h":
-    cdef void free(void *ptr)
-
-# From the Cython FAQ, but according to a useful message on the Pyrex mailing
-# list, also applicable to Pyrex
-cdef extern from *:
-    ctypedef void* const_void_ptr "const void*"
-
-# Copied from the Pyrex documentation...
-cdef extern from "Python.h":
-    # Return a new string object with a copy of the string v as value and
-    # length len on success, and NULL on failure. If v is NULL, the contents of
-    # the string are uninitialized.
-    object PyString_FromStringAndSize(char *v, int len)
-
-    # Return a NUL-terminated representation of the contents of the object obj
-    # through the output variables buffer and length. 
-    #
-    # The function accepts both string and Unicode objects as input. For
-    # Unicode objects it returns the default encoded version of the object. If
-    # length is NULL, the resulting buffer may not contain NUL characters; if
-    # it does, the function returns -1 and a TypeError is raised. 
-    #
-    # The buffer refers to an internal string buffer of obj, not a copy. The
-    # data must not be modified in any way, unless the string was just created
-    # using PyString_FromStringAndSize(NULL, size). It must not be deallocated.
-    # If string is a Unicode object, this function computes the default
-    # encoding of string and operates on that. If string is not a string object
-    # at all, PyString_AsStringAndSize() returns -1 and raises TypeError.
-    int PyString_AsStringAndSize(object obj, char **buffer, Py_ssize_t* length) except -1
-
-    # Returns a pointer to a read-only memory location containing arbitrary
-    # data. The obj argument must support the single-segment readable buffer
-    # interface. On success, returns 0, sets buffer to the memory location and
-    # buffer_len to the buffer length. Returns -1 and sets a TypeError on
-    # error.
-    int PyObject_AsReadBuffer(object obj, const_void_ptr *buffer, Py_ssize_t *buffer_len) except -1
+from common cimport FILE, EOF, stdout, fopen, fclose, fileno
+from common cimport errno, strerror, free
+from common cimport const_void_ptr
+from common cimport PyString_FromStringAndSize, PyString_AsStringAndSize, \
+                    PyObject_AsReadBuffer
 
 cdef extern from "Python.h":
     FILE *PySys_GetFile(char *name, FILE *default)
-
-#cdef FILE *convert_python_file(object file):
-#    """Given a Python file object, return an equivalent stream.
-#    There are *so many things* dodgy about doing this...
-#    """
-#    return PySys_GetFile('stdout',stdout)
-    #cdef int fileno
-    #cdef char *mode
-    #cdef FILE *stream
-    #fileno = file.fileno()
-    #mode = file.mode
-    #stream = fdopen(fileno, mode) 
-    #if stream == NULL:
-    #    raise TSToolsException, 'Error converting Python file to C FILE *'
-    #else:
-    #    return stream
 
 cdef extern from "stdint.h":
     ctypedef unsigned char      uint8_t
@@ -194,7 +120,7 @@ cdef extern from 'es_fns.h':
 class TSToolsException(Exception):
     pass
 
-def hexify_array(bytes):
+def _hexify_array(bytes):
     """Return a representation of an array of bytes as a hex values string.
     """
     words = []
@@ -202,7 +128,7 @@ def hexify_array(bytes):
         words.append('\\x%02x'%val)
     return ''.join(words)
 
-cdef hexify_C_byte_array(byte *bytes, int bytes_len):
+cdef _hexify_C_byte_array(byte *bytes, int bytes_len):
     """Return a representation of a (byte) array as a hex values string.
 
     Doesn't leave any spaces between hex bytes.
@@ -337,7 +263,7 @@ cdef class ESUnit:
         return text
 
     def __repr__(self):
-        return 'ESUnit("%s")'%hexify_C_byte_array(self.unit.data,self.unit.data_len)
+        return 'ESUnit("%s")'%_hexify_C_byte_array(self.unit.data,self.unit.data_len)
 
     cdef __set_es_unit(self, ES_unit_p unit):
         if self.unit == NULL:
@@ -684,7 +610,7 @@ class ProgramStream(object):
         return "PID %04x (%4d) -> Stream type %02x (%3d) ES info '%s'"%(\
                                                             self.elementary_PID,
                                                             self.stream_type,
-                                                            hexify_array(self.es_info))
+                                                            _hexify_array(self.es_info))
 
 
     def __repr__(self):
@@ -692,7 +618,7 @@ class ProgramStream(object):
         """
         return "ProgramStream(%#02x,%#04x,'%s')"%(self.stream_type,
                                                self.elementary_PID,
-                                               hexify_array(self.es_info))
+                                               _hexify_array(self.es_info))
 
     def formatted(self):
         """Return a representation that is similar to that returned by the C tools.
@@ -708,7 +634,7 @@ class ProgramStream(object):
                                                             self.stream_type)
         # XXX should actually output them as descriptors
         if self.es_info:
-            print "%s    ES info '%s'"%(' '*indent,hexify_array(self.es_info))
+            print "%s    ES info '%s'"%(' '*indent,_hexify_array(self.es_info))
 
 # XXX Should this be an extension type, and enforce the datatypes it can hold?
 # XXX Or is that just too much bother?
@@ -761,7 +687,7 @@ class PMT(object):
         return "PMT(%d,%d,%#04x,'%s')"%(self.program_number,
                                         self.version_number,
                                         self.PCR_pid,
-                                        hexify_array(self.program_info))
+                                        _hexify_array(self.program_info))
 
     def formatted(self):
         """Return a representation that is similar to that returned by the C tools.
@@ -776,7 +702,7 @@ class PMT(object):
                                                                self.PCR_pid)
         # XXX should actually output them as descriptors
         if self.program_info:
-            print "  Program info '%s'"%hexify_array(self.program_info)
+            print "  Program info '%s'"%_hexify_array(self.program_info)
         if self.streams:
             print "  Program streams:"
             for stream in self.streams:
@@ -881,7 +807,7 @@ cdef class TSPacket:
         return text
 
     def __repr__(self):
-        return 'TSPacket("%s")'%hexify_array(self.data)
+        return 'TSPacket("%s")'%_hexify_array(self.data)
 
     def __richcmp__(self,other,op):
         if op == 2:     # ==
