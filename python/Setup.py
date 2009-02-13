@@ -40,15 +40,15 @@ es = Extension("tstools/es",
                libraries=['tstools'],
                )
 
-tstools = Extension("tstools/tstools",
-                    ['tstools/tstools.pyx'],
-                    include_dirs=['..'],
-                    library_dirs=['../lib'],
-                    libraries=['tstools'],
-                    )
+ts = Extension("tstools/ts",
+               ['tstools/ts.pyx'],
+               include_dirs=['..'],
+               library_dirs=['../lib'],
+               libraries=['tstools'],
+               )
 
 setup(
   name = 'tstools',
-  ext_modules=[tstools,es],
+  ext_modules=[ts, es],
   cmdclass = {'build_ext': build_ext}
 )
