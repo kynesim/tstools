@@ -671,6 +671,52 @@ and thus:
 As I said, not perhaps what I want, but definitely what it is currently
 expected to do.
 
+Opening a TSFile (for read) more than once at the same time
+-----------------------------------------------------------
+It's not particularly obvious when coding in C, but in Python there seems no
+reason to expect a problem in opening a TSFile more than once for reading at
+the same time.
+
+For instance:
+
+    >>> f1 = TSFile(test_ts_file)
+    >>> p1 = f1.read()
+    >>> f2 = TSFile(test_ts_file)
+    >>> p2 = f2.read()
+    >>> p1 == p2
+    1
+    >>> p1 = f1.read()
+    >>> p1 = f1.read()
+    >>> p1 = f1.read()
+    >>> p2 = f2.read()
+    >>> p2 = f2.read()
+    >>> p2 = f2.read()
+    >>> p1 == p2
+    1
+    >>> f1.close()
+    >>> f2.close()
+
+The same should be true for BufferedTSFile:
+
+    >>> f1 = BufferedTSFile(test_ts_file)
+    >>> p1 = f1.read()
+    >>> f2 = BufferedTSFile(test_ts_file)
+    >>> p2 = f2.read()
+    >>> p1 == p2
+    1
+    >>> p1 = f1.read()
+    >>> p1 = f1.read()
+    >>> p1 = f1.read()
+    >>> p2 = f2.read()
+    >>> p2 = f2.read()
+    >>> p2 = f2.read()
+    >>> p1 == p2
+    1
+    >>> f1.close()
+    >>> f2.close()
+
+(hint: when I first wrote this, I already knew it would not be)
+
 
 // Local Variables:
 // tab-width: 8

@@ -422,7 +422,8 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
   }
 
   // Once we've found that, we're ready to play our data
-  prime_read_buffered_TS_packet(pcr_pid);
+  err = prime_read_buffered_TS_packet(tsreader,pcr_pid);
+  if (err) return 1;
 
   // If we're looping, remember the location of the first packet of (probable)
   // data - there's not much point rewinding before that point

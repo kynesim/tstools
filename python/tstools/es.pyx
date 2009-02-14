@@ -44,7 +44,7 @@ from common cimport PyString_FromStringAndSize, PyString_AsStringAndSize, \
                     PyObject_AsReadBuffer
 from common cimport uint8_t, uint16_t, uint32_t, uint64_t
 from common cimport int8_t, int16_t, int32_t, int64_t
-from common cimport PID, offset_t, byte
+from common cimport offset_t, byte
 
 from tstools import TSToolsException
 

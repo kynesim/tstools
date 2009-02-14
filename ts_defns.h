@@ -40,6 +40,58 @@
 #define MAX_TS_PAYLOAD_SIZE  (TS_PACKET_SIZE-4)
 
 // ------------------------------------------------------------
+// Support for PCR read-ahead buffering
+// Basically, always ensure that we know have read both the
+// previous and the next PCR, so we can calculate the actual
+// PCR for each packet between.
+
+// Let's guess for a maximum number of TS entries we're likely to need
+// to be able to hold...
+//
+// XXX But whatever number we guess here will be too small for some
+// XXX streams, or so big it's really quite over the top for most
+// XXX (and more than I'd like). So maybe we should have something
+// XXX that's likely to cope for most streams, and we should (ideally)
+// XXX have a way for the user to set the size with a swich, but also
+// XXX (perhaps) we should allow the reader to continue (using the last
+// XXX calculated rate) if we can't read ahead? Or perhaps having the
+// XXX switch is enough, for the nonce... Or maybe we should allow the
+// XXX buffer to grow (on demand, within some sort of reason) if it
+// XXX needs to.
+#define PCR_READ_AHEAD_SIZE     20000          // a made-up number
+
+struct _ts_pcr_buffer
+{
+  byte     TS_buffer[PCR_READ_AHEAD_SIZE][TS_PACKET_SIZE];
+  // For convenience (since we'll already have calculated this once),
+  // remember each packets PID
+  uint32_t TS_buffer_pids[PCR_READ_AHEAD_SIZE];
+  // And the PCR PID we're looking for (we have to assume that's fairly
+  // static, or we couldn't do read-aheads and interpolations)
+  uint32_t TS_buffer_pcr_pid;
+  // The number of TS entries we've got therein, the *last* of which
+  // has a PCR
+  int      TS_buffer_len;
+  // Which TS packet we should read next...
+  int      TS_buffer_next;
+  // The PCR of that last entry
+  uint64_t TS_buffer_end_pcr;
+  // And the PCR of the *previous* last entry
+  uint64_t TS_buffer_prev_pcr;
+  // From which, we can deduce the time per packet
+  uint64_t TS_buffer_time_per_TS;
+  // For diagnostic purposes, the sequence number of TS_buffer[0]
+  // (and thus, of the overall read-ahead buffer) in the overall file
+  int      TS_buffer_posn;
+  // Did we read an EOF before finding a "second" PCR?
+  // (perhaps we should instead call this "TS_playing_out", but that's
+  // less directly named from how we set it)
+  int      TS_had_EOF;
+};
+typedef struct _ts_pcr_buffer *TS_pcr_buffer_p;
+#define SIZEOF_TS_PCR_BUFFER sizeof(struct _ts_pcr_buffer)
+
+// ------------------------------------------------------------
 // The number of TS packets to read ahead
 #define TS_READ_AHEAD_COUNT 1024        // aim for multiple of block boundary -- used to be 50
 // Thus the number of bytes to read ahead
@@ -65,6 +117,10 @@ struct _ts_reader
   byte     read_ahead[TS_READ_AHEAD_COUNT*TS_PACKET_SIZE];
   byte    *read_ahead_ptr;  // location of next packet in said array
   byte    *read_ahead_end;  // pointer just after the end of `read_ahead`
+
+  // If we are doing PCR read-ahead (so we have exact PCR values for our
+  // TS packets), then we also need:
+  TS_pcr_buffer_p    pcrbuf;
 };
 typedef struct _ts_reader *TS_reader_p;
 #define SIZEOF_TS_READER sizeof(struct _ts_reader)

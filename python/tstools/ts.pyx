@@ -304,6 +304,7 @@ cdef extern from "ts_fns.h":
     int open_file_for_TS_read(char *filename, TS_reader_p *tsreader)
     int close_TS_reader(TS_reader_p *tsreader)
     int seek_using_TS_reader(TS_reader_p tsreader, offset_t posn)
+    int prime_read_buffered_TS_packet(TS_reader_p tsreader, uint32_t pcr_pid)
     int read_next_TS_packet(TS_reader_p tsreader, byte **packet)
     int read_first_TS_packet_from_buffer(TS_reader_p tsreader,
                                          uint32_t pcr_pid, uint32_t start_count,
@@ -1106,6 +1107,12 @@ cdef class BufferedTSFile(TSFile):
 
         self.start_count += num_read
         self.pcr_pid      = PMT.PCR_pid
+
+        # Tell the read mechanism which PCR PID we want to use
+        retval = prime_read_buffered_TS_packet(self.tsreader,self.pcr_pid)
+        if retval == 1:
+            raise TSToolsException,'Error priming PCR read ahead for file %s'%self.name
+
 
     def __repr__(self):
         if self.name:

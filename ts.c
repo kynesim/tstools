@@ -1192,37 +1192,7 @@ static uint64_t TWENTY_SEVEN_MHZ = 27000000;
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int build_TS_reader(int           file,
-                           TS_reader_p  *tsreader)
-{
-  TS_reader_p new = malloc(SIZEOF_TS_READER);
-  if (new == NULL)
-  {
-    fprintf(stderr,"### Unable to allocate TS read-ahead buffer\n");
-    return 1;
-  }
-
-  memset(new, '\0', SIZEOF_TS_READER);
-
-  new->file = file;
-  new->posn = 0;
-  new->read_ahead_ptr = NULL;
-  new->read_ahead_end = NULL;
-
-  *tsreader = new;
-  return 0;
-}
-
-
-/*
- * Build a TS packet reader using the given functions as read() and seek().
- *
- * Returns 0 on success, 1 on failure.
- */
-extern int build_TS_reader_with_fns(void *handle,
-                                    int (*read_fn)(void *, byte *, size_t),
-                                    int (*seek_fn)(void *, offset_t), 
-                                    TS_reader_p *tsreader)
+static int new_TS_reader(TS_reader_p  *tsreader)
 {
   TS_reader_p new = malloc(SIZEOF_TS_READER);
   if (new == NULL)
@@ -1234,12 +1204,53 @@ extern int build_TS_reader_with_fns(void *handle,
   memset(new, '\0', SIZEOF_TS_READER);
 
   new->file = -1;
+
+  *tsreader = new;
+  return 0;
+}
+
+// ------------------------------------------------------------
+// File handling
+// ------------------------------------------------------------
+/*
+ * Build a TS packet reader, including its read-ahead buffer
+ *
+ * - `file` is the file that the TS packets will be read from.
+ *   It is assumed that its read position is at its start.
+ *
+ * Returns 0 if all goes well, 1 if something goes wrong.
+ */
+extern int build_TS_reader(int           file,
+                           TS_reader_p  *tsreader)
+{
+  TS_reader_p new;
+  int err = new_TS_reader(&new);
+  if (err) return 1;
+
+  new->file = file;
+
+  *tsreader = new;
+  return 0;
+}
+
+
+/*
+ * Build a TS packet reader using the given functions as read() and seek().
+ *
+ * Returns 0 on success, 1 on failure.
+ */
+extern int build_TS_reader_with_fns(void *handle,
+                                    int (*read_fn)(void *, byte *, size_t),
+                                    int (*seek_fn)(void *, offset_t), 
+                                    TS_reader_p *tsreader)
+{
+  TS_reader_p new;
+  int err = new_TS_reader(&new);
+  if (err) return 1;
+
   new->handle = handle;
   new->read_fn = read_fn;
   new->seek_fn = seek_fn;
-  new->posn = 0;
-  new->read_ahead_ptr = NULL;
-  new->read_ahead_end = NULL;
 
   *tsreader = new;
   return 0;
@@ -1286,6 +1297,8 @@ extern void free_TS_reader(TS_reader_p  *tsreader)
 {
   if (*tsreader != NULL)
   {
+    if ((*tsreader)->pcrbuf != NULL)
+      free((*tsreader)->pcrbuf);
     (*tsreader)->file = -1;
     free(*tsreader);
     *tsreader = NULL;
@@ -1307,9 +1320,8 @@ extern int close_TS_reader(TS_reader_p  *tsreader)
     return 0;
   if ((*tsreader)->file != STDIN_FILENO && (*tsreader)->file != -1)
     err = close_file((*tsreader)->file);
-  (*tsreader)->file = -1;
-  free(*tsreader);
-  *tsreader = NULL;
+
+  free_TS_reader(tsreader);
   return err;
 }
 
@@ -1485,46 +1497,28 @@ extern int read_next_TS_packet(TS_reader_p  tsreader,
 // it will be left as-is until something more sophisticated is
 // needed
 
-// Let's guess for a maximum number of TS entries we're likely to need
-// to be able to hold...
-// XXX
-// XXX But whatever number we guess here will be too small for some
-// XXX streams, or so big it's really quite over the top for most
-// XXX (and more than I'd like). So maybe we should have something
-// XXX that's likely to cope for most streams, and we should (ideally)
-// XXX have a way for the user to set the size with a swich, but also
-// XXX (perhaps) we should allow the reader to continue (using the last
-// XXX calculated rate) if we can't read ahead? Or perhaps having the
-// XXX switch is enough, for the nonce... Or maybe we should allow the
-// XXX buffer to grow (on demand, within some sort of reason) if it
-// XXX needs to.
-// XXX
-#define PCR_READ_AHEAD_SIZE     20000          // a made-up number
-static byte     TS_buffer[PCR_READ_AHEAD_SIZE][TS_PACKET_SIZE];
-// For convenience (since we'll already have calculated this once),
-// remember each packets PID
-static uint32_t TS_buffer_pids[PCR_READ_AHEAD_SIZE];
-// And the PCR PID we're looking for (we have to assume that's fairly
-// static, or we couldn't do read-aheads and interpolations)
-static uint32_t TS_buffer_pcr_pid = 0;
-// The number of TS entries we've got therein, the *last* of which
-// has a PCR
-static int      TS_buffer_len = 0;
-// Which TS packet we should read next...
-static int      TS_buffer_next = 0;
-// The PCR of that last entry
-static uint64_t TS_buffer_end_pcr = 0;
-// And the PCR of the *previous* last entry
-static uint64_t TS_buffer_prev_pcr = 0;
-// From which, we can deduce the time per packet
-static uint64_t TS_buffer_time_per_TS = 0;
-// For diagnostic purposes, the sequence number of TS_buffer[0]
-// (and thus, of the overall read-ahead buffer) in the overall file
-static int      TS_buffer_posn = 0;
-// Did we read an EOF before finding a "second" PCR?
-// (perhaps we should instead call this "TS_playing_out", but that's
-// less directly named from how we set it)
-static int      TS_had_EOF = FALSE;
+
+/* Make sure we've got a PCR buffer allocated, and that
+ * its content is entirely unset (so this also serves as
+ * a "reset" function).
+ *
+ * Returns 0 if all went well, 1 if something went wrong.
+ */
+static int start_TS_packet_buffer(TS_reader_p  tsreader)
+{
+  if (tsreader->pcrbuf == NULL)
+  {
+    tsreader->pcrbuf = malloc(SIZEOF_TS_PCR_BUFFER);
+    if (tsreader->pcrbuf == NULL)
+    {
+      fprintf(stderr,"### Unable to allocate TS PCR read-ahead buffer\n");
+      return 1;
+    }
+  }
+  memset(tsreader->pcrbuf, '\0', SIZEOF_TS_PCR_BUFFER);
+  return 0;
+}
+
 
 /* Fill up the PCR read-ahead buffer with TS entries, until we hit
  * one (of the correct PID) with a PCR.
@@ -1536,10 +1530,11 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
   int ii;
 
   // Work out which TS packet we *will* have as our first (zeroth) entry
-  TS_buffer_posn = TS_buffer_posn + TS_buffer_len + 1;
+  tsreader->pcrbuf->TS_buffer_posn = tsreader->pcrbuf->TS_buffer_posn +
+                                     tsreader->pcrbuf->TS_buffer_len + 1;
 
-  TS_buffer_len = 0;
-  TS_buffer_next = 0;
+  tsreader->pcrbuf->TS_buffer_len = 0;
+  tsreader->pcrbuf->TS_buffer_next = 0;
   for (ii=0; ii<PCR_READ_AHEAD_SIZE; ii++)
   {
     byte    *data;
@@ -1565,32 +1560,36 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
       }
       else
       {
-        fprintf(stderr,"### Error (pre)reading TS packet %d\n",TS_buffer_posn+ii);
+        fprintf(stderr,"### Error (pre)reading TS packet %d\n",
+                tsreader->pcrbuf->TS_buffer_posn+ii);
         return 1;
       }
     }
 
     // Copy the data into our own read-ahead buffer
-    memcpy(TS_buffer[ii],data,TS_PACKET_SIZE);
+    memcpy(tsreader->pcrbuf->TS_buffer[ii],data,TS_PACKET_SIZE);
 
     err = split_TS_packet(data,&pid,&payload_unit_start_indicator,
                           &adapt,&adapt_len,&payload,&payload_len);
     if (err)
     {
-      fprintf(stderr,"### Error splitting TS packet %d\n",TS_buffer_posn+ii);
+      fprintf(stderr,"### Error splitting TS packet %d\n",
+              tsreader->pcrbuf->TS_buffer_posn+ii);
       return 1;
     }
-    TS_buffer_len ++;
+    tsreader->pcrbuf->TS_buffer_len ++;
 
-    if (pid != TS_buffer_pcr_pid)
+    if (pid != tsreader->pcrbuf->TS_buffer_pcr_pid)
       continue;                 // don't care about any PCR it might have
 
     get_PCR_from_adaptation_field(adapt,adapt_len,&got_pcr,&pcr);
     if (got_pcr)
     {
-      TS_buffer_prev_pcr = TS_buffer_end_pcr;
-      TS_buffer_end_pcr = pcr;
-      TS_buffer_time_per_TS = (TS_buffer_end_pcr - TS_buffer_prev_pcr) / TS_buffer_len;
+      tsreader->pcrbuf->TS_buffer_prev_pcr = tsreader->pcrbuf->TS_buffer_end_pcr;
+      tsreader->pcrbuf->TS_buffer_end_pcr = pcr;
+      tsreader->pcrbuf->TS_buffer_time_per_TS = (tsreader->pcrbuf->TS_buffer_end_pcr -
+                                                 tsreader->pcrbuf->TS_buffer_prev_pcr) /
+                                                tsreader->pcrbuf->TS_buffer_len;
       return 0;
     }
   }
@@ -1598,15 +1597,37 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
   // with an appropriate grumble
   fprintf(stderr,"!!! Next PCR not found when reading forwards"
           " (for %d TS packets, starting at TS packet %d)\n",PCR_READ_AHEAD_SIZE,
-          TS_buffer_posn);
+          tsreader->pcrbuf->TS_buffer_posn);
   return 1;
+}
+
+/* Set up the the "looping" buffered TS packet reader and let it know what its
+ * PCR PID is.
+ *
+ * This must be called before any other _buffered_TS_packet function.
+ *
+ * - `pcr_pid` is the PID within which we should look for PCR entries
+ *
+ * Returns 0 if all went well, 1 if something went wrong (allocating space
+ * for the TS PCR buffer).
+ */
+extern int prime_read_buffered_TS_packet(TS_reader_p  tsreader,
+                                         uint32_t     pcr_pid)
+{
+  if (start_TS_packet_buffer(tsreader))
+    return 1;
+  tsreader->pcrbuf->TS_buffer_pcr_pid = pcr_pid;
+  return 0;
 }
 
 /* Retrieve the first TS packet from the PCR read-ahead buffer,
  * complete with its calculated PCR time.
  *
+ * prime_read_buffered_TS_packet() must have been called before this.
+ *
  * This should be called the first time a TS packet is to be read
- * using the PCR read-ahead buffer. It "primes" the read-ahead mechanism.
+ * using the PCR read-ahead buffer. It "primes" the read-ahead mechanism
+ * by performing the first actual read-ahead.
  *
  * - `pcr_pid` is the PID within which we should look for PCR entries
  * - `start_count` is the index of the current (last read) TS entry (which will
@@ -1633,14 +1654,12 @@ extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
 {
   int err;
 
-  // Reset ourselves
-  TS_buffer_next = 0;
-  TS_buffer_end_pcr = 0;
-  TS_buffer_prev_pcr = 0;
-  TS_buffer_posn = start_count;
-  TS_buffer_len = 0;                // this (+1) gets added to TS_buffer_posn
-  TS_buffer_pcr_pid = pcr_pid;
-  TS_had_EOF = FALSE;
+  if (tsreader->pcrbuf == NULL)
+  {
+    fprintf(stderr,"### TS PCR read-ahead buffer has not been set up\n"
+                   "    Make sure prime_read_buffered_TS_packet() has been called\n");
+    return 1;
+  }
 
   // Read TS packets into our buffer until we find one with a PCR
   err = fill_TS_packet_buffer(tsreader);
@@ -1648,17 +1667,17 @@ extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
 
   // However, it's only the last packet (the one with the PCR) that
   // we are actually interested in
-  TS_buffer_next = TS_buffer_len - 1;
+  tsreader->pcrbuf->TS_buffer_next = tsreader->pcrbuf->TS_buffer_len - 1;
 
   // Why, this is the very packet with its own PCR
-  *pcr = TS_buffer_end_pcr;
+  *pcr = tsreader->pcrbuf->TS_buffer_end_pcr;
 
-  *data = TS_buffer[TS_buffer_next];
-  *pid = TS_buffer_pids[TS_buffer_next];
+  *data = tsreader->pcrbuf->TS_buffer[tsreader->pcrbuf->TS_buffer_next];
+  *pid = tsreader->pcrbuf->TS_buffer_pids[tsreader->pcrbuf->TS_buffer_next];
 
-  *count = start_count + TS_buffer_len;
+  *count = start_count + tsreader->pcrbuf->TS_buffer_len;
 
-  TS_buffer_next ++;
+  tsreader->pcrbuf->TS_buffer_next ++;
   return 0;
 }
 
@@ -1682,9 +1701,17 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
                                            uint64_t    *pcr)
 {
   int err;
-  if (TS_buffer_next == TS_buffer_len)
+
+  if (tsreader->pcrbuf == NULL)
   {
-    if (TS_had_EOF)
+    fprintf(stderr,"### TS PCR read-ahead buffer has not been set up\n"
+                   "    Make sure read_first_TS_packet_from_buffer() has been called\n");
+    return 1;
+  }
+
+  if (tsreader->pcrbuf->TS_buffer_next == tsreader->pcrbuf->TS_buffer_len)
+  {
+    if (tsreader->pcrbuf->TS_had_EOF)
     {
       // We'd already run out of look-ahead packets, so just return
       // our (deferred) end-of-file
@@ -1702,45 +1729,40 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
         // at the end of the file. This proved unacceptable in practice,
         // so our second best choice is to "play out" using the last
         // known PCR rate-of-change.
-        TS_had_EOF = TRUE;              // remember we're playing out
+        tsreader->pcrbuf->TS_had_EOF = TRUE;              // remember we're playing out
       }
       else if (err)
         return err;
     }
   }
 
-  *data = TS_buffer[TS_buffer_next];
-  *pid = TS_buffer_pids[TS_buffer_next];
+  *data = tsreader->pcrbuf->TS_buffer[tsreader->pcrbuf->TS_buffer_next];
+  *pid = tsreader->pcrbuf->TS_buffer_pids[tsreader->pcrbuf->TS_buffer_next];
 
-  TS_buffer_next ++;
+  tsreader->pcrbuf->TS_buffer_next ++;
 
-  if (TS_buffer_next == TS_buffer_len && !TS_had_EOF)
+  if (tsreader->pcrbuf->TS_buffer_next == tsreader->pcrbuf->TS_buffer_len &&
+      !tsreader->pcrbuf->TS_had_EOF)
   {
     // Why, this is the very packet with its own PCR
-    *pcr = TS_buffer_end_pcr;
+    *pcr = tsreader->pcrbuf->TS_buffer_end_pcr;
   }
   else
   {
-    *pcr = TS_buffer_prev_pcr + TS_buffer_time_per_TS * TS_buffer_next;
+    *pcr = tsreader->pcrbuf->TS_buffer_prev_pcr +
+           tsreader->pcrbuf->TS_buffer_time_per_TS *
+           tsreader->pcrbuf->TS_buffer_next;
   }
   return 0;
-}
-
-/* Let the "looping" buffered TS packet reader know what its PCR PID is
- *
- * Call this before the first call of read_buffered_TS_packet().
- *
- * - `pcr_pid` is the PID within which we should look for PCR entries
- */
-extern void prime_read_buffered_TS_packet(uint32_t     pcr_pid)
-{
-  TS_buffer_pcr_pid = pcr_pid;
 }
 
 /*
  * Read the next TS packet, coping with looping, etc.
  *
  * prime_read_buffered_TS_packet() should have been called first.
+ *
+ * This is a convenience wrapper around read_first_TS_packet_from_buffer()
+ * and read_next_TS_packet_from_buffer().
  *
  * This differs from ``read_TS_packet`` in that it assumes that the
  * underlying code will already have read to the next PCR, so that
@@ -1805,7 +1827,8 @@ extern int read_buffered_TS_packet(TS_reader_p  tsreader,
     // XXX the first packet with a PCR? Probably more so than that we
     // XXX should ignore any packets at the end of the file.
     // XXX
-    err = read_first_TS_packet_from_buffer(tsreader,TS_buffer_pcr_pid,
+    err = read_first_TS_packet_from_buffer(tsreader,
+                                           tsreader->pcrbuf->TS_buffer_pcr_pid,
                                            start_count,data,pid,pcr,count);
     if (err)
     {
@@ -1847,7 +1870,8 @@ extern int read_buffered_TS_packet(TS_reader_p  tsreader,
       if (err) return 1;
 
       *count = start_count;
-      err = read_first_TS_packet_from_buffer(tsreader,TS_buffer_pcr_pid,
+      err = read_first_TS_packet_from_buffer(tsreader,
+                                             tsreader->pcrbuf->TS_buffer_pcr_pid,
                                              start_count,data,pid,pcr,count);
       if (err)
       {
