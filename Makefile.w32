@@ -107,6 +107,7 @@ LIB_OBJS = \
  $(OBJDIR)\pcap.obj \
  $(OBJDIR)\pes.obj \
  $(OBJDIR)\pidint.obj \
+ $(OBJDIR)\printing.obj \
  $(OBJDIR)\ps.obj \
  $(OBJDIR)\reverse.obj \
  $(OBJDIR)\ts.obj \

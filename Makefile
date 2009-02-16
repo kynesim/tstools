@@ -102,6 +102,7 @@ SRCS = \
  l2audio.c \
  misc.c \
  nalunit.c \
+ printing.c \
  ps.c \
  pes.c \
  pidint.c \
@@ -128,6 +129,7 @@ OBJS = \
  ps.o \
  pes.o \
  pidint.o \
+ printing.o \
  reverse.o \
  ts.o \
  tswrite.o \
@@ -161,6 +163,7 @@ PROG_OBJS = \
 TS2PS_OBJS = $(OBJDIR)/ts2ps.o
 
 TEST_PES_OBJS = $(OBJDIR)/test_pes.o 
+TEST_PRINTING_OBJS = $(OBJDIR)/test_printing.o 
 
 TEST_OBJS = \
   $(OBJDIR)/test_nal_unit_list.o \
@@ -197,6 +200,7 @@ TS2PS_PROG = $(BINDIR)/ts2ps
 
 # Is test_pes still useful?
 TEST_PES_PROG = $(BINDIR)/test_pes 
+TEST_PRINTING_PROG = $(BINDIR)/test_printing 
 
 # And then the testing programs (which we only build if we are
 # running the tests)
@@ -283,6 +287,9 @@ $(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(LIB)
 $(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(LIB)
 		$(CC) $< -o $(BINDIR)/test_pes $(LDFLAGS) $(LIBOPTS)
 
+$(BINDIR)/test_printing:	$(OBJDIR)/test_printing.o $(LIB)
+		$(CC) $< -o $(BINDIR)/test_printing $(LDFLAGS) $(LIBOPTS)
+
 $(BINDIR)/test_nal_unit_list: 	$(OBJDIR)/test_nal_unit_list.o $(LIB)
 			$(CC) $< -o $(BINDIR)/test_nal_unit_list $(LDFLAGS) $(LIBOPTS)
 $(BINDIR)/test_es_unit_list:  	$(OBJDIR)/test_es_unit_list.o $(LIB)
@@ -305,13 +312,14 @@ REVERSE_H = reverse_fns.h reverse_defns.h
 FILTER_H = filter_fns.h filter_defns.h $(REVERSE_H)
 AUDIO_H = adts_fns.h l2audio_fns.h ac3_fns.h audio_fns.h audio_defns.h adts_defns.h
 
-# Everyone depends upon the basic configuration file
-$(LIB)($(OBJS)) $(TEST_OBJS) $(PROG_OBJS): compat.h
+# Everyone depends upon the basic configuration file, and I assert they all
+# want (or may want) printing...
+$(LIB)($(OBJS)) $(TEST_OBJS) $(PROG_OBJS): compat.h printing_fns.h
 
 # Which library modules depend on which header files is complex, so
 # lets just be simple
 $(LIB)($(OBJS)): $(ACCESSUNIT_H) $(NALUNIT_H) $(TS_H) $(ES_H) $(PES_H) \
-                 misc_fns.h $(PS_H) $(H262_H) $(TSWRITE_H) $(AVS_H) \
+                 misc_fns.h printing_fns.h $(PS_H) $(H262_H) $(TSWRITE_H) $(AVS_H) \
                  $(REVERSE_H) $(FILTER_H) $(AUDIO_H)
 
 $(OBJDIR)/es2ts.o:        es2ts.c $(ES_H) $(TS_H) misc_fns.h version.h
@@ -359,6 +367,8 @@ $(OBJDIR)/pcapreport.o:      pcapreport.c pcap.h version.h misc_fns.h
 
 $(OBJDIR)/test_pes.o: test_pes.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
+$(OBJDIR)/test_printing.o: test_printing.c $(TS_H) $(PS_H) $(ES_H) version.h
+	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/test_ps.o: test_ps.c $(PS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/test_nal_unit_list.o: test_nal_unit_list.c $(NALUNIT_H) version.h
@@ -386,6 +396,7 @@ objclean:
 	-rm -f $(TEST_PROGS)
 	-rm -f $(TS2PS_OBJS) $(TS2PS_PROG)
 	-rm -f $(TEST_PES_OBJS) $(TEST_PES_PROG)
+	-rm -f $(TEST_PRINTING_OBJS) $(TEST_PRINTING_PROG)
 	-rm -f ES_test3.ts  es_test3.ts
 	-rm -f ES_test2.264 es_test3.264
 	-rm -f es_test_a.ts es_test_a.264
@@ -405,6 +416,10 @@ distclean: clean
 	-rmdir $(BINDIR)
 
 TESTDATAFILE = /data/video/CVBt_hp_trail.264
+
+# Only build test_printing if explicitly asked to do so
+.PHONY: test_printing
+test_printing: $(BINDIR)/test_printing
 
 # Only build test_pes if explicitly asked to do so
 .PHONY: test_pes
