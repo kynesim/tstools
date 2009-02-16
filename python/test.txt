@@ -715,8 +715,6 @@ The same should be true for BufferedTSFile:
     >>> f1.close()
     >>> f2.close()
 
-(hint: when I first wrote this, I already knew it would not be)
-
 
 // Local Variables:
 // tab-width: 8

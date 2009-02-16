@@ -47,8 +47,15 @@ ts = Extension("tstools/ts",
                libraries=['tstools'],
                )
 
+printing = Extension("tstools/printing",
+                     ['tstools/printing.pyx'],
+                     include_dirs=['..'],
+                     library_dirs=['../lib'],
+                     libraries=['tstools'],
+                     )
+
 setup(
   name = 'tstools',
-  ext_modules=[ts, es],
+  ext_modules=[ts, es, printing],
   cmdclass = {'build_ext': build_ext}
 )
