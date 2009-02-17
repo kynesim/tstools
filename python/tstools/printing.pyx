@@ -57,9 +57,10 @@ cdef extern from "Python.h":
     void PySys_WriteStdout(const_char_ptr format, ...)
 
     # Unfortunately, there are two common ways of implementing a va_list,
-    # and we just have to guess which is being used.
+    # and we just have to guess which is being used. For the moment, though,
+    # just take advantage of the fact that the following seems to work for
+    # our purposes...
     ctypedef void * va_list
-    #ctypedef struct va_list va_list
 
     # Output not more than size bytes to str according to the format string
     # format and the variable argument list va. Unix man page vsnprintf(2).
@@ -96,7 +97,7 @@ def setup_printing():
         print 'Setting output redirection OK'
     else:
         print 'Setting output redirection FAILED'
-                          
+
 def test_printing():
     setup_printing()
     print_msg('Message\n')
