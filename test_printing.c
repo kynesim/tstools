@@ -33,25 +33,23 @@
 
 // Some example redirection routines
 
-static int print_message_to_stdout(const char *message)
+static void print_message_to_stdout(const char *message)
 {
   (void) printf("<<<MSG>>> %s",message);
-  return 0;
 }
-static int print_message_to_stderr(const char *message)
+static void print_message_to_stderr(const char *message)
 {
   (void) printf("<<<ERR>>> %s",message);
-  return 0;
 }
-static int fprint_message_to_stdout(const char *format, va_list arg_ptr)
+static void fprint_message_to_stdout(const char *format, va_list arg_ptr)
 {
   printf("<<<MSG>>> ");
-  return (vfprintf(stdout, format, arg_ptr) < 0 ? 1:0);
+  (void) vfprintf(stdout, format, arg_ptr);
 }
-static int fprint_message_to_stderr(const char *format, va_list arg_ptr)
+static void fprint_message_to_stderr(const char *format, va_list arg_ptr)
 {
   printf("<<<ERR>>> ");
-  return (vfprintf(stdout, format, arg_ptr) < 0 ? 1:0);
+  (void) vfprintf(stdout, format, arg_ptr);
 }
 
 static void print_usage()

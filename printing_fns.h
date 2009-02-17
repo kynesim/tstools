@@ -36,28 +36,20 @@
 // ============================================================
 /*
  * Prints the given string, as a normal message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int print_msg(const char *text);
+extern void print_msg(const char *text);
 /*
  * Prints the given string, as an error message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int print_err(const char *text);
+extern void print_err(const char *text);
 /*
  * Prints the given format text, as a normal message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int fprint_msg(const char *format, ...);
+extern void fprint_msg(const char *format, ...);
 /*
  * Prints the given formatted text, as an error message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int fprint_err(const char *format, ...);
+extern void fprint_err(const char *format, ...);
 
 // ============================================================
 // Choosing what the printing functions do
@@ -94,10 +86,10 @@ extern void redirect_output_stdout(void);
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int redirect_output( int (*new_print_message_fn) (const char *message),
-                            int (*new_print_error_fn) (const char *message),
-                            int (*new_fprint_message_fn) (const char *format, va_list arg_ptr),
-                            int (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
+extern int redirect_output( void (*new_print_message_fn) (const char *message),
+                            void (*new_print_error_fn) (const char *message),
+                            void (*new_fprint_message_fn) (const char *format, va_list arg_ptr),
+                            void (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
                           );
 
 #endif // _printing_fns

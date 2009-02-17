@@ -37,16 +37,6 @@ I can test most easily!
 import sys
 import array
 
-from common cimport FILE, EOF, stdout, fopen, fclose, fileno
-from common cimport errno, strerror, free
-from common cimport const_void_ptr
-from common cimport PyString_FromStringAndSize, PyString_AsStringAndSize, \
-                    PyObject_AsReadBuffer
-from common cimport uint8_t, uint16_t, uint32_t, uint64_t
-from common cimport int8_t, int16_t, int32_t, int64_t
-
-from tstools import TSToolsException
-
 cdef extern from *:
     ctypedef char* const_char_ptr "const char*"
 
@@ -66,6 +56,8 @@ cdef extern from "Python.h":
     # written to the real (C level) stdout.
     void PySys_WriteStdout(const_char_ptr format, ...)
 
+    # Unfortunately, there are two common ways of implementing a va_list,
+    # and we just have to guess which is being used.
     ctypedef void * va_list
     #ctypedef struct va_list va_list
 
@@ -77,32 +69,24 @@ cdef extern from "Python.h":
 #     ctypedef void* va_list "va_list"
 
 cdef extern from 'printing_fns.h':
-    int print_msg(const_char_ptr text)
-    int print_err(const_char_ptr text)
-    int fprint_msg(const_char_ptr format, ...)
-    int fprint_err(const_char_ptr format, ...)
-    int redirect_output( int (*new_print_message_fn) (const_char_ptr message),
-                         int (*new_print_error_fn) (const_char_ptr message),
-                         int (*new_fprint_message_fn) (const_char_ptr format, va_list arg_ptr),
-                         int (*new_fprint_error_fn) (const_char_ptr format, va_list arg_ptr)
+    void print_msg(const_char_ptr text)
+    void print_err(const_char_ptr text)
+    void fprint_msg(const_char_ptr format, ...)
+    void fprint_err(const_char_ptr format, ...)
+    int redirect_output( void (*new_print_message_fn) (const_char_ptr message),
+                         void (*new_print_error_fn) (const_char_ptr message),
+                         void (*new_fprint_message_fn) (const_char_ptr format, va_list arg_ptr),
+                         void (*new_fprint_error_fn) (const_char_ptr format, va_list arg_ptr)
                         )
 
-cdef int our_print_msg(const_char_ptr text):
+cdef void our_print_msg(const_char_ptr text):
     PySys_WriteStdout('%s',text)
-    return 0
 
-cdef int our_format_msg(const_char_ptr format, va_list arg_ptr):
+cdef void our_format_msg(const_char_ptr format, va_list arg_ptr):
     cdef int err
     cdef char buffer[1000]
-    err = PyOS_vsnprintf(buffer, 1000, format, arg_ptr)
-    if err < 0:
-        return 1
-    elif err > 999:
-        PySys_WriteStdout('%s',buffer)
-        return 1
-    else:
-        PySys_WriteStdout('%s',buffer)
-        return 0
+    PyOS_vsnprintf(buffer, 1000, format, arg_ptr)
+    PySys_WriteStdout('%s',buffer)
 
 def setup_printing():
     cdef int err

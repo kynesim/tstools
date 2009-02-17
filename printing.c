@@ -37,32 +37,32 @@
 // Default printing functions
 // ============================================================
 
-static int print_message_to_stdout(const char *message)
+static void print_message_to_stdout(const char *message)
 {
-  return (fputs(message,stdout) == 0 ? 0:1);
+  (void) fputs(message,stdout);
 }
-static int print_message_to_stderr(const char *message)
+static void print_message_to_stderr(const char *message)
 {
-  return (fputs(message,stderr) == 0 ? 0:1);
+  (void) fputs(message,stderr);
 }
-static int fprint_message_to_stdout(const char *format, va_list arg_ptr)
+static void fprint_message_to_stdout(const char *format, va_list arg_ptr)
 {
-  return (vfprintf(stdout, format, arg_ptr) < 0 ? 1:0);
+  (void) vfprintf(stdout, format, arg_ptr);
 }
-static int fprint_message_to_stderr(const char *format, va_list arg_ptr)
+static void fprint_message_to_stderr(const char *format, va_list arg_ptr)
 {
-  return (vfprintf(stderr, format, arg_ptr) < 0 ? 1:0);
+  (void) vfprintf(stderr, format, arg_ptr);
 }
 
 // ============================================================
 // Print redirection
 // ============================================================
 
-static int (*print_message_fn) (const char *message) = print_message_to_stdout;
-static int (*print_error_fn) (const char *message)   = print_message_to_stdout;
+static void (*print_message_fn) (const char *message) = print_message_to_stdout;
+static void (*print_error_fn) (const char *message)   = print_message_to_stdout;
 
-static int (*fprint_message_fn) (const char *format, va_list arg_ptr) = fprint_message_to_stdout;
-static int (*fprint_error_fn) (const char *format, va_list arg_ptr)   = fprint_message_to_stdout;
+static void (*fprint_message_fn) (const char *format, va_list arg_ptr) = fprint_message_to_stdout;
+static void (*fprint_error_fn) (const char *format, va_list arg_ptr)   = fprint_message_to_stdout;
 
 
 // ============================================================
@@ -70,55 +70,43 @@ static int (*fprint_error_fn) (const char *format, va_list arg_ptr)   = fprint_m
 // ============================================================
 /*
  * Prints the given string, as a normal message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int print_msg(const char *text)
+extern void print_msg(const char *text)
 {
-  return print_message_fn(text);
+  print_message_fn(text);
 }
 
 
 /*
  * Prints the given string, as an error message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int print_err(const char *text)
+extern void print_err(const char *text)
 {
-  return print_error_fn(text);
+  print_error_fn(text);
 }
 
 
 /*
  * Prints the given format text, as a normal message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int fprint_msg(const char *format, ...)
+extern void fprint_msg(const char *format, ...)
 {
-  int retval;
   va_list va_arg;
   va_start(va_arg, format); 
-  retval = fprint_message_fn(format, va_arg);
+  fprint_message_fn(format, va_arg);
   va_end(va_arg);
-  return retval;
 }
 
 
 /*
  * Prints the given formatted text, as an error message.
- *
- * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int fprint_err(const char *format, ...)
+extern void fprint_err(const char *format, ...)
 {
-  int retval;
   va_list va_arg;
   va_start(va_arg, format); 
-  retval = fprint_error_fn(format, va_arg);
+  fprint_error_fn(format, va_arg);
   va_end(va_arg);
-  return retval;
 }
 
 // ============================================================
@@ -172,10 +160,10 @@ extern void redirect_output_stdout(void)
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
-extern int redirect_output( int (*new_print_message_fn) (const char *message),
-                            int (*new_print_error_fn) (const char *message),
-                            int (*new_fprint_message_fn) (const char *format, va_list arg_ptr),
-                            int (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
+extern int redirect_output( void (*new_print_message_fn) (const char *message),
+                            void (*new_print_error_fn) (const char *message),
+                            void (*new_fprint_message_fn) (const char *format, va_list arg_ptr),
+                            void (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
                           )
 {
   if (new_print_message_fn == NULL || new_print_error_fn == NULL ||
