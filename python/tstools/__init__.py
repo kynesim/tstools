@@ -38,3 +38,7 @@ I can test most easily!
 # imported to tsools, so is probably not the best way to do it. Ho hum.
 from ts import *
 from es import *
+
+# Make tstools messages (normal and error) redirect to Python stdout
+import printing
+printing.setup_printing()

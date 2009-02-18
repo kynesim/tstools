@@ -46,7 +46,6 @@ from common cimport uint8_t, uint16_t, uint32_t, uint64_t
 from common cimport int8_t, int16_t, int32_t, int64_t
 from common cimport PID, offset_t, byte
 
-
 # Is this the best thing to do?
 class TSToolsException(Exception):
     pass

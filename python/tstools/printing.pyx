@@ -34,8 +34,7 @@ I can test most easily!
 #
 # ***** END LICENSE BLOCK *****
 
-import sys
-import array
+from ts import TSToolsException
 
 cdef extern from *:
     ctypedef char* const_char_ptr "const char*"
@@ -93,17 +92,38 @@ def setup_printing():
     cdef int err
     err = redirect_output(our_print_msg, our_print_msg,
                           our_format_msg, our_format_msg)
-    if err == 0:
-        print 'Setting output redirection OK'
+    if err:
+        raise TSToolsException, 'Setting output redirection FAILED'
+
+cdef void our_doctest_print_msg(const_char_ptr text):
+    print 'YY ' + text,
+
+cdef void our_doctest_format_msg(const_char_ptr format, va_list arg_ptr):
+    cdef int err
+    cdef char buffer[1000]
+    PyOS_vsnprintf(buffer, 1000, format, arg_ptr)
+    print 'XX ' + buffer,
+
+def setup_printing_for_doctest():
+    cdef int err
+    err = redirect_output(our_doctest_print_msg, our_doctest_print_msg,
+                          our_doctest_format_msg, our_doctest_format_msg)
+    if err:
+        raise TSToolsException, 'Setting doctest output redirection FAILED'
     else:
-        print 'Setting output redirection FAILED'
+        print 'Printing redirected for doctest'
 
 def test_printing():
-    setup_printing()
     print_msg('Message\n')
     print_err('Error\n')
     fprint_msg('Message "%s"\n','Fred')
-    fprint_msg('Error "%s"\n','Fred')
+    fprint_err('Error "%s"\n','Fred')
+
+cdef extern from *:
+    void test_C_printing()
+
+def test_c_printing():
+    test_C_printing()
 
 # ----------------------------------------------------------------------
 # vim: set filetype=python expandtab shiftwidth=4:
