@@ -4,10 +4,10 @@ Some tests for the Python binding of the TS tools
 We'd like the tstools C messages to get captured by doctest, so we can see
 them in our tests, so:
 
-    >>> from tstools import printing
-    >>> printing.setup_printing_for_doctest()
+    >>> import tstools
+    >>> tstools.setup_printing_for_doctest()
     Printing redirected for doctest
-    >>> printing.test_printing()
+    >>> tstools.test_printing()
     YY Message
     YY Error
     XX Message "Fred"
@@ -15,7 +15,7 @@ them in our tests, so:
 
 and again:
 
-    >>> printing.test_printing()
+    >>> tstools.test_printing()
     YY Message
     YY Error
     XX Message "Fred"
@@ -23,7 +23,7 @@ and again:
 
 and even:
 
-    >>> printing.test_c_printing()
+    >>> tstools.test_c_printing()
     YY C Message
     YY C Error
     XX C Message Fred
@@ -267,11 +267,6 @@ be overkill, but all seemed sensible at the time):
     Traceback (most recent call last):
     ...
     TSToolsException: Error seeking to (-1,) in file '../data/ed24p_11.video.es'
-    >>> printing.test_c_printing()
-    YY C Message
-    YY C Error
-    XX C Message Fred
-    XX C Error Fred
 
 Let's try proper seeking, though:
 

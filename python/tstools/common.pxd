@@ -55,6 +55,7 @@ cdef extern from "stdlib.h":
 # list, also applicable to Pyrex
 cdef extern from *:
     ctypedef void* const_void_ptr "const void*"
+    ctypedef char* const_char_ptr "const char*"
 
 # Copied from the Pyrex documentation...
 cdef extern from "Python.h":
@@ -85,6 +86,12 @@ cdef extern from "Python.h":
     # buffer_len to the buffer length. Returns -1 and sets a TypeError on
     # error.
     int PyObject_AsReadBuffer(object obj, const_void_ptr *buffer, Py_ssize_t *buffer_len) except -1
+
+    # Unfortunately, there are two common ways of implementing a va_list,
+    # and we just have to guess which is being used. For the moment, though,
+    # just take advantage of the fact that the following seems to work for
+    # our purposes...
+    ctypedef void * va_list
 
 cdef extern from "Python.h":
     FILE *PySys_GetFile(char *name, FILE *default)

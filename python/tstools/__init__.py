@@ -36,9 +36,7 @@ I can test most easily!
 
 # The following also makes available the "sys" and "array" modules as
 # imported to tsools, so is probably not the best way to do it. Ho hum.
-from ts import *
-from es import *
+from tstools import *
 
-# Make tstools messages (normal and error) redirect to Python stdout
-import printing
-printing.setup_printing()
+# Make messages come out via Python's stdout
+setup_printing()

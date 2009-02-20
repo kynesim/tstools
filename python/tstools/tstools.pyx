@@ -1,4 +1,4 @@
-"""tstools.pyx -- Pyrex bindings for the TS tools
+"""tstools.pyx -- Pyrex bindings for the tstools library
 
 This is being developed on a Mac, running OS X, and also tested on my Ubuntu
 system at work.
@@ -34,6 +34,33 @@ I can test most easily!
 #
 # ***** END LICENSE BLOCK *****
 
+"""
+On static libraries versus dynamic libraries
+============================================
+Up in the main C source directories, tstools builds a static library,
+libtstools.a, and the tstools applications are statically linked against that.
+This simplifies life in many ways, but particularly:
+
+1. Building shared/dynamic libraries in a portable manner is, well, hard
+   (Mac OS X is particularly different).
+2. Using applications built agains shared libraries means either putting the
+   libraries in "known" locations, or setting particular paths on which to look
+   for them. Neither of these is nice for the user to have to worrry about.
+
+Unfortunately, this complicates matters a little when wrapping the aforesaid
+static library with Pyrex/Cython. In an ideal world, I'd have a separate Python
+module (.pyx file) for each "chunk" of tstools functionality (es, ts, pes,
+etc.). However, if I link each of those against the static library, each gets
+its own copy of said library. Again, this might not be *too* much problem
+(space issues aside), but it totally fails if there is static data being used
+withing the library -- each Python module would get its own copy. See
+printing.c for why this is not a good thing...
+
+So, this means that tstools.pyx remains a monolithic wrapper for the whole of
+libtstools.a. I still think Pyrex/Cython is a better way to go than the other
+choices, but perhaps not as elegant as I'd wish.
+"""
+
 import sys
 import array
 
@@ -44,11 +71,433 @@ from common cimport PyString_FromStringAndSize, PyString_AsStringAndSize, \
                     PyObject_AsReadBuffer
 from common cimport uint8_t, uint16_t, uint32_t, uint64_t
 from common cimport int8_t, int16_t, int32_t, int64_t
-from common cimport PID, offset_t, byte
+from common cimport offset_t, byte, PID
+
+cimport cwrapper
+
+from cwrapper cimport ES, ES_p, ES_offset, ES_unit, ES_unit_p
+from cwrapper cimport TS_reader, TS_reader_p, pidint_list, pidint_list_p
+from cwrapper cimport pmt_stream, pmt_stream_p, pmt, pmt_p
 
 # Is this the best thing to do?
 class TSToolsException(Exception):
     pass
+
+# =============================================================================
+# Printing redirection
+# =============================================================================
+
+from common cimport const_char_ptr, va_list
+
+cdef extern from "Python.h":
+    # Write the output string described by format to sys.stdout. No exceptions
+    # are raised, even if truncation occurs (see below).  
+    #
+    # format should limit the total size of the formatted output string to 1000
+    # bytes or less – after 1000 bytes, the output string is truncated. In
+    # particular, this means that no unrestricted “%s” formats should occur;
+    # these should be limited using “%.<N>s” where <N> is a decimal number
+    # calculated so that <N> plus the maximum size of other formatted text does
+    # not exceed 1000 bytes. Also watch out for “%f”, which can print hundreds
+    # of digits for very large numbers.
+    #
+    # If a problem occurs, or sys.stdout is unset, the formatted message is
+    # written to the real (C level) stdout.
+    void PySys_WriteStdout(const_char_ptr format, ...)
+
+    # Output not more than size bytes to str according to the format string
+    # format and the variable argument list va. Unix man page vsnprintf(2).
+    int PyOS_vsnprintf(char *str, int size, const_char_ptr format, va_list va)
+
+cdef void our_print_msg(const_char_ptr text):
+    PySys_WriteStdout('%s',text)
+
+cdef void our_format_msg(const_char_ptr format, va_list arg_ptr):
+    cdef int err
+    cdef char buffer[1000]
+    PyOS_vsnprintf(buffer, 1000, format, arg_ptr)
+    PySys_WriteStdout('%s',buffer)
+
+def setup_printing():
+    cdef int err
+    err = cwrapper.redirect_output(our_print_msg, our_print_msg,
+                          our_format_msg, our_format_msg)
+    if err:
+        raise TSToolsException, 'Setting output redirection FAILED'
+
+cdef void our_doctest_print_msg(const_char_ptr text):
+    print 'YY ' + text,
+
+cdef void our_doctest_format_msg(const_char_ptr format, va_list arg_ptr):
+    cdef int err
+    cdef char buffer[1000]
+    PyOS_vsnprintf(buffer, 1000, format, arg_ptr)
+    print 'XX ' + buffer,
+
+def setup_printing_for_doctest():
+    cdef int err
+    err = cwrapper.redirect_output(our_doctest_print_msg, our_doctest_print_msg,
+                          our_doctest_format_msg, our_doctest_format_msg)
+    if err:
+        raise TSToolsException, 'Setting doctest output redirection FAILED'
+    else:
+        print 'Printing redirected for doctest'
+
+def test_printing():
+    cwrapper.print_msg('Message\n')
+    cwrapper.print_err('Error\n')
+    cwrapper.fprint_msg('Message "%s"\n','Fred')
+    cwrapper.fprint_err('Error "%s"\n','Fred')
+
+def test_c_printing():
+    cwrapper.test_C_printing()
+
+# =============================================================================
+# ES matters
+# =============================================================================
+
+cdef _hexify_C_byte_array(byte *bytes, int bytes_len):
+    """Return a representation of a (byte) array as a hex values string.
+
+    Doesn't leave any spaces between hex bytes.
+    """
+    words = []
+    for 0 <= ii < bytes_len:
+        words.append('\\x%02x'%bytes[ii])
+    return ''.join(words)
+
+cdef class ESOffset:
+    """An offset within an ES file.
+
+    If the ES unit was read directly from a raw ES file, then a simple file
+    offset is sufficient.
+
+    However, if we're reading from a PS or TS file (via the PES reading layer),
+    then we have the offset of the PES packet, and then the offset of the ES
+    unit therein.
+    
+    We *could* just use a tuple for this, but it's nice to have a bit more
+    documentation self-evident.
+    """
+
+    # Keep the original names, even though they're not very Pythonic
+    cdef readonly long long infile      # Hoping this is 64 bit...
+    cdef readonly int       inpacket
+
+    def __cinit__(self, infile=0, inpacket=0):
+        self.infile = infile
+        self.inpacket = inpacket
+
+    def __init__(self, infile=0, inpacket=0):
+        pass
+
+    def __str__(self):
+        """Return a fairly compact and (relatively) self-explanatory format
+        """
+        return '%d+%d'%(self.infile,self.inpacket)
+
+    def __repr__(self):
+        """Return something we could be recreated from.
+        """
+        return 'ESOffset(infile=%d,inpacket=%d)'%(self.infile,self.inpacket)
+
+    def formatted(self):
+        """Return a representation that is similar to that returned by the C tools.
+
+        Beware that this is <inpacket>+<infile>, which is reversed from the ``repr``.
+        """
+        return '%08d/%08d'%(self.inpacket,self.infile)
+
+    def report(self):
+        print 'Offset %d in packet at offset %d in file'%(self.inpacket,self.infile)
+
+    def __cmp__(self,other):
+        if self.infile > other.infile:
+            return 1
+        elif self.infile < other.infile:
+            return -1
+        elif self.inpacket > other.inpacket:
+            return 1
+        elif self.inpacket < other.inpacket:
+            return -1
+        else:
+            return 0
+
+cdef same_ES_unit(ES_unit_p this, ES_unit_p that):
+    """Two ES units do not need to be at the same place to be the same.
+    """
+    if this.data_len != that.data_len:
+        return False
+    for 0 <= ii < this.data_len:
+        if this.data[ii] != that.data[ii]:
+            return False
+    return True
+
+cdef class ESUnit       # Forward declaration
+cdef object compare_ESUnits(ESUnit this, ESUnit that, int op):
+    """op is 2 for ==, 3 for !=, other values not allowed.
+    """
+    if op == 2:     # ==
+        return same_ES_unit(this.unit, that.unit)
+    elif op == 3:   # !=
+        return not same_ES_unit(this.unit, that.unit)
+    else:
+        #return NotImplementedError
+        raise TypeError, 'ESUnit only supports == and != comparisons'
+
+cdef class ESUnit:
+    """A Python class representing an ES unit.
+    """
+
+    # XXX Or would I be better of with an array.array (or, eventually, bytearray)?
+    cdef ES_unit_p unit
+
+    # It appears to be recommended to make __cinit__ expand to take more
+    # arguments (if __init__ ever gains them), since both get the same
+    # things passed to them. Hmm, normally I'd trust myself, but let's
+    # try the recommended route
+    def __cinit__(self, data=None, *args,**kwargs):
+        cdef char       *buffer
+        cdef Py_ssize_t  length
+        if data:
+            PyString_AsStringAndSize(data, &buffer, &length)
+            retval = cwrapper.build_ES_unit_from_data(&self.unit, <byte *>buffer, length);
+            if retval < 0:
+                raise TSToolsException,'Error building ES unit from Python string'
+
+    def __init__(self,data=None):
+        pass
+
+    def report(self):
+        """Report (briefly) on an ES unit. This write to C stdout, which means
+        that Python has no control over the output. A proper Python version of
+        this will be provided eventually.
+        """
+        cwrapper.report_ES_unit(stdout, self.unit)
+
+    def __dealloc__(self):
+        cwrapper.free_ES_unit(&self.unit)
+
+    def __str__(self):
+        text = 'ES unit: start code %02x, len %4d:'%(self.unit.start_code,
+                                                    self.unit.data_len)
+        for 0 <= ii < min(self.unit.data_len,8):
+            text += ' %02x'%self.unit.data[ii]
+
+        if self.unit.data_len == 9:
+            text += ' %02x'%self.unit.data[8]
+        elif self.unit.data_len > 9:
+            text += '...'
+        return text
+
+    def __repr__(self):
+        return 'ESUnit("%s")'%_hexify_C_byte_array(self.unit.data,self.unit.data_len)
+
+    cdef __set_es_unit(self, ES_unit_p unit):
+        if self.unit == NULL:
+            raise ValueError,'ES unit already defined'
+        else:
+            self.unit = unit
+
+    def __richcmp__(self,other,op):
+        return compare_ESUnits(self,other,op)
+
+    def __getattr__(self,name):
+        if name == 'start_posn':
+            return ESOffset(self.unit.start_posn.infile,
+                            self.unit.start_posn.inpacket)
+        elif name == 'data':
+            # Cast the first parameter so that the C compiler is happy
+            # when compiling the (derived) tstools.c
+            return PyString_FromStringAndSize(<char *>self.unit.data, self.unit.data_len)
+        elif name == 'start_code':
+            return self.unit.start_code
+        elif name == 'PES_had_PTS':
+            return self.unit.PES_had_PTS
+        else:
+            raise AttributeError
+
+cdef class ESFile:
+    """A Python class representing an ES stream.
+
+    We support opening for read, or opening (creating) a new file
+    for write. For the moment, we don't support appending, and
+    support for trying to read and write the same file is undefined.
+
+    So, create a new ESFile as either:
+
+        * ESFile(filename,'r') or
+        * ESFile(filename,'w')
+
+    Note that there is always an implicit 'b' attached to the mode (i.e., the
+    file is accessed in binary mode).
+    """
+
+    cdef FILE *file_stream      # The corresponding C file stream
+    cdef int   fileno           # and file number
+    cdef ES_p  stream           # For reading an existing ES stream
+    cdef readonly object name
+    cdef readonly object mode
+
+    # It appears to be recommended to make __cinit__ expand to take more
+    # arguments (if __init__ ever gains them), since both get the same
+    # things passed to them. Hmm, normally I'd trust myself, but let's
+    # try the recommended route
+    def __cinit__(self,filename,mode='r',*args,**kwargs):
+        self.file_stream = fopen(filename,mode)
+        if self.file_stream == NULL:
+            raise TSToolsException,"Error opening file '%s'"\
+                    " with (actual) mode '%s': %s"%(filename,mode,strerror(errno))
+        self.fileno = fileno(self.file_stream)
+        if mode == 'r':
+            retval = cwrapper.build_elementary_stream_file(self.fileno,&self.stream)
+            if retval != 0:
+                raise TSToolsException,'Error attaching elementary stream to file %s'%filename
+
+    def __init__(self,filename,mode='r'):
+        # What should go in __init__ and what in __cinit__ ???
+        self.name = filename
+        self.mode = mode
+
+    def __dealloc__(self):
+        if self.file_stream != NULL:
+            retval = fclose(self.file_stream)
+            if retval != 0:
+                raise TSToolsException,"Error closing file '%s':"\
+                        " %s"%(self.name,strerror(errno))
+        if self.stream != NULL:
+            cwrapper.free_elementary_stream(&self.stream)
+
+    def __iter__(self):
+        return self
+
+    def __repr__(self):
+        if self.name:
+            if self.is_readable:
+                return "<ESFile '%s' open for read>"%self.name
+            else:
+                return "<ESFile '%s' open for write>"%self.name
+        else:
+            return "<ESFile, closed>"
+
+    def is_readable(self):
+        """This is a convenience method, whilst reading and writing are exclusive.
+        """
+        return self.mode == 'r' and self.stream != NULL
+
+    def is_writable(self):
+        """This is a convenience method, whilst reading and writing are exclusive.
+        """
+        return self.mode == 'w' and self.file_stream != NULL
+
+    cdef _next_ESUnit(self):
+        cdef ES_unit_p unit
+        # The C function assumes it has a valid ES stream passed to it
+        # = I don't think we're always called with such
+        if self.stream == NULL:
+            raise TSToolsException,'No ES stream to read'
+
+        retval = cwrapper.find_and_build_next_ES_unit(self.stream, &unit)
+        if retval == EOF:
+            raise StopIteration
+        elif retval != 0:
+            raise TSToolsException,'Error getting next ES unit from file %s'%self.name
+
+        # From http://www.philhassey.com/blog/2007/12/05/pyrex-from-confusion-to-enlightenment/
+        # Pyrex doesn't do type inference, so it doesn't detect that 'u' is allowed
+        # to hold an ES_unit_p. It's up to us to *tell* it, specifically, what type
+        # 'u' is going to be.
+        cdef ESUnit u
+        u = ESUnit()
+        u.unit = unit
+        return u
+
+    # For Pyrex classes, we define a __next__ instead of a next method
+    # in order to form our iterator
+    def __next__(self):
+        """Our iterator interface retrieves the ES units from the stream.
+        """
+        return self._next_ESUnit()
+
+    def seek(self,*args):
+        """Seek to the given 'offset', which should be the start of an ES unit.
+
+        'offset' may be a single integer (if the file is a raw ES file), an
+        ESOffset (for any sort of ES file), or a tuple of (infile,inpacket)
+
+        Returns an ESOffset according to where it sought to.
+        """
+        cdef ES_offset where
+        try:
+            if len(args) == 1:
+                try:
+                    where.infile = args[0].infile
+                    where.inpacket = args[0].inpacket
+                except:
+                    where.infile = args[0]
+                    where.inpacket = 0
+            elif len(args) == 2:
+                where.infile, where.inpacket = args
+            else:
+                raise TypeError
+        except:
+            raise TypeError,'Seek argument must be one integer, two integers or an ESOffset'
+        retval = cwrapper.seek_ES(self.stream,where)
+        if retval != 0:
+            raise TSToolsException,"Error seeking to %s in file '%s'"%(args,self.name)
+        else:
+            return ESOffset(where.infile,where.inpacket)
+
+    def read(self):
+        """Read the next ES unit from this stream.
+        """
+        try:
+            return self._next_ESUnit()
+        except StopIteration:
+            raise EOFError
+
+    def write(self, ESUnit unit):
+        """Write an ES unit to this stream.
+        """
+        if self.file_stream == NULL:
+            raise TSToolsException,'ESFile does not seem to have been opened for write'
+
+        retval = cwrapper.write_ES_unit(self.file_stream,unit.unit)
+        if retval != 0:
+            raise TSToolsException,'Error writing ES unit to file %s'%self.name
+
+    def close(self):
+        # Apparently we can't call the __dealloc__ method itself,
+        # but I think this is sensible to do here...
+        if self.file_stream != NULL:
+            retval = fclose(self.file_stream)
+            if retval != 0:
+                raise TSToolsException,"Error closing file '%s':"\
+                        " %s"%(filename,strerror(errno))
+        if self.stream != NULL:
+            cwrapper.free_elementary_stream(&self.stream)
+        # And obviously we're not available any more
+        self.file_stream = NULL
+        self.fileno = -1
+        self.name = None
+        self.mode = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, value, tb):
+        if tb is None:
+            # No exception, so just finish normally
+            self.close()
+        else:
+            # Exception occurred, so tidy up
+            self.close()
+            # And allow the exception to be re-raised
+            return False
+
+# =============================================================================
+# TS matters
+# =============================================================================
 
 def _hexify_array(bytes):
     """Return a representation of an array of bytes as a hex values string.
@@ -57,47 +506,6 @@ def _hexify_array(bytes):
     for val in bytes:
         words.append('\\x%02x'%val)
     return ''.join(words)
-
-cdef extern from "ts_defns.h":
-    struct _ts_reader:
-        pass
-    ctypedef _ts_reader      TS_reader
-    ctypedef _ts_reader     *TS_reader_p
-
-cdef extern from "pidint_defns.h":
-    struct _pidint_list:
-        int      *number
-        uint32_t *pid
-        int       length
-        int       size
-    ctypedef _pidint_list    pidint_list
-    ctypedef _pidint_list   *pidint_list_p
-    struct _pmt_stream:
-        byte         stream_type
-        uint32_t     elementary_PID
-        uint16_t     ES_info_length
-        byte        *ES_info
-    ctypedef _pmt_stream    pmt_stream
-    ctypedef _pmt_stream   *pmt_stream_p
-    struct _pmt:
-        uint16_t     program_number
-        byte         version_number
-        uint32_t     PCR_pid
-        uint16_t     program_info_length
-        byte        *program_info
-        int          num_streams
-        pmt_stream  *streams
-    ctypedef _pmt    pmt
-    ctypedef _pmt   *pmt_p
-
-cdef extern from "pidint_fns.h":
-    void free_pidint_list(pidint_list_p  *list)
-    void free_pmt(pmt_p  *pmt)
-
-    void report_pidint_list(pidint_list_p  list,
-                            char          *list_name,
-                            char          *int_name,
-                            int            pid_first)
 
 class PAT(object):
     """A Program Association Table.
@@ -299,39 +707,6 @@ class PMT(object):
             for stream in self.streams:
                 stream.report(indent=4)
 
-cdef extern from "ts_fns.h":
-    int open_file_for_TS_read(char *filename, TS_reader_p *tsreader)
-    int close_TS_reader(TS_reader_p *tsreader)
-    int seek_using_TS_reader(TS_reader_p tsreader, offset_t posn)
-    int prime_read_buffered_TS_packet(TS_reader_p tsreader, uint32_t pcr_pid)
-    int read_next_TS_packet(TS_reader_p tsreader, byte **packet)
-    int read_first_TS_packet_from_buffer(TS_reader_p tsreader,
-                                         uint32_t pcr_pid, uint32_t start_count,
-                                         byte **packet, uint32_t *pid,
-                                         uint64_t *pcr, uint32_t *count)
-    int read_next_TS_packet_from_buffer(TS_reader_p tsreader,
-                                        byte **packet, uint32_t *pid, uint64_t *pcr)
-    int split_TS_packet(byte *buf, PID *pid, int *payload_unit_start_indicator,
-                        byte **adapt, int *adapt_len,
-                        byte **payload, int *payload_len)
-    void get_PCR_from_adaptation_field(byte *adapt, int adapt_len, int*got_pcr,
-                                       uint64_t *pcr)
-    int build_psi_data(int verbose, byte *payload, int payload_len, PID pid,
-                       byte **data, int *data_len, int *data_used)
-    int find_pat(TS_reader_p tsreader, int max, int verbose, int quiet,
-                 int *num_read, pidint_list_p *prog_list)
-    int find_next_pmt(TS_reader_p tsreader, uint32_t pmt_pid, int program_number,
-                      int max, int verbose, int quiet,
-                      int *num_read, pmt_p *pmt)
-    int find_pmt(TS_reader_p tsreader, int max, int verbose, int quiet,
-                 int *num_read, pmt_p *pmt)
-    int extract_prog_list_from_pat(int verbose, byte *data, int data_len,
-                                   pidint_list_p *prog_list)
-    int extract_pmt(int verbose, byte *data, int data_len, uint32_t pid,
-                    pmt_p *pmt)
-    int print_descriptors(FILE *stream, char *leader1, char *leader2,
-                          byte *desc_data, int desc_data_len)
-
 
 DEF TS_PACKET_LEN = 188
 
@@ -422,7 +797,7 @@ cdef class TSPacket:
         cdef int            payload_len
         cdef int            retval
         PyObject_AsReadBuffer(self.data, &buffer, &length)
-        retval = split_TS_packet(<byte *>buffer,&pid,&self._pusi,
+        retval = cwrapper.split_TS_packet(<byte *>buffer,&pid,&self._pusi,
                                  <byte **>&adapt_buf,&adapt_len,
                                  <byte **>&payload_buf,&payload_len)
         if retval != 0:
@@ -447,7 +822,7 @@ cdef class TSPacket:
         cdef uint64_t       pcr
         if self._adapt:
             PyObject_AsReadBuffer(self._adapt, &adapt_buf, &adapt_len)
-            get_PCR_from_adaptation_field(<byte *>adapt_buf, adapt_len,
+            cwrapper.get_PCR_from_adaptation_field(<byte *>adapt_buf, adapt_len,
                                           &got_pcr, &pcr)
         else:
             got_pcr = 0
@@ -480,7 +855,7 @@ cdef pat_from_prog_list(pidint_list_p prog_list):
             pat[prog_list.number[ii]] = prog_list.pid[ii]
         return pat
     finally:
-        free_pidint_list(&prog_list)
+        cwrapper.free_pidint_list(&prog_list)
 
 cdef pmt_from_pmt_p(pmt_p pmt):
     """Convert a C PMT structure into a PMT instance.
@@ -507,7 +882,7 @@ cdef pmt_from_pmt_p(pmt_p pmt):
             this.add_stream(stream)
         return this
     finally:
-        free_pmt(&pmt)
+        cwrapper.free_pmt(&pmt)
 
 cdef class _PAT_accumulator:
     """This is just an accumulator for a single PAT's data.
@@ -542,7 +917,7 @@ cdef class _PAT_accumulator:
         """Add a bit more to our accumulating data.
         """
         cdef int retval
-        retval =  build_psi_data(False,payload_buf,payload_len,0,
+        retval =  cwrapper.build_psi_data(False,payload_buf,payload_len,0,
                                  &self.pat_data,&self.pat_data_len,
                                  &self.pat_data_used)
         return retval
@@ -557,7 +932,7 @@ cdef class _PAT_accumulator:
         """
         cdef pidint_list_p  prog_list
         cdef int            retval
-        retval = extract_prog_list_from_pat(False,
+        retval = cwrapper.extract_prog_list_from_pat(False,
                                             self.pat_data,self.pat_data_len,
                                             &prog_list)
         if retval:
@@ -593,7 +968,7 @@ cdef class _PMT_accumulator:
         """Add a bit more to our accumulating data.
         """
         cdef int retval
-        retval =  build_psi_data(False,payload_buf,payload_len,self.pid,
+        retval =  cwrapper.build_psi_data(False,payload_buf,payload_len,self.pid,
                                  &self.pmt_data,&self.pmt_data_len,
                                  &self.pmt_data_used)
         return retval
@@ -608,7 +983,7 @@ cdef class _PMT_accumulator:
         """
         cdef pmt_p  pmt
         cdef int    retval
-        retval = extract_pmt(False, self.pmt_data, self.pmt_data_len,
+        retval = cwrapper.extract_pmt(False, self.pmt_data, self.pmt_data_len,
                              self.pid, &pmt)
         if retval:
             raise TSToolsException,'Error extracting PMT'
@@ -683,7 +1058,7 @@ cdef class TSFile:
         self.PMT_data = {}
 
         if mode == 'r':
-            retval = open_file_for_TS_read(filename,&self.tsreader)
+            retval = cwrapper.open_file_for_TS_read(filename,&self.tsreader)
             if retval == 1:
                 raise TSToolsException,"Error opening file '%s'"\
                         " for TS reading: %s"%(filename,strerror(errno))
@@ -724,7 +1099,7 @@ cdef class TSFile:
             self._clear_all_pmt_data()
             self.PAT = None
             self.PMT = None
-            retval = close_TS_reader(&self.tsreader)
+            retval = cwrapper.close_TS_reader(&self.tsreader)
             if retval != 0:
                 raise TSToolsException,"Error closing file '%s':"\
                         " %s"%(self.name,strerror(errno))
@@ -770,7 +1145,7 @@ cdef class TSFile:
         cdef byte       *payload_buf
         cdef int         payload_len
         cdef int         retval
-        retval = split_TS_packet(buffer, &pid, &pusi,
+        retval = cwrapper.split_TS_packet(buffer, &pid, &pusi,
                                  &adapt_buf,&adapt_len,
                                  &payload_buf,&payload_len)
         if retval != 0:
@@ -889,7 +1264,7 @@ cdef class TSFile:
         cdef byte *buffer
         if self.tsreader == NULL:
             raise TSToolsException,'No TS stream to read'
-        retval = read_next_TS_packet(self.tsreader, &buffer)
+        retval = cwrapper.read_next_TS_packet(self.tsreader, &buffer)
         if retval == EOF:
             raise StopIteration
         elif retval == 1:
@@ -933,7 +1308,7 @@ cdef class TSFile:
         """
         self._clear_pat_data
         self.PAT = None
-        retval = seek_using_TS_reader(self.tsreader,offset)
+        retval = cwrapper.seek_using_TS_reader(self.tsreader,offset)
         if retval == 1:
             raise TSToolsException,'Error seeking to %d in file %s'%(offset,self.name)
 
@@ -973,7 +1348,7 @@ cdef class TSFile:
         cdef int            num_read
         if self.tsreader == NULL:
             raise TSToolsException,'No TS stream to read'
-        retval = find_pat(self.tsreader,max,verbose,quiet,&num_read,&prog_list)
+        retval = cwrapper.find_pat(self.tsreader,max,verbose,quiet,&num_read,&prog_list)
         if retval == EOF:       # No PAT found
             return (num_read,None)
         elif retval == 1:
@@ -1010,7 +1385,7 @@ cdef class TSFile:
         cdef unsigned  actual_prog_num
         if self.tsreader == NULL:
             raise TSToolsException,'No TS stream to read'
-        retval = find_next_pmt(self.tsreader,pmt_pid,program_number,max,verbose,quiet,
+        retval = cwrapper.find_next_pmt(self.tsreader,pmt_pid,program_number,max,verbose,quiet,
                                &num_read,&pmt)
         if retval == EOF:       # No PMT found
             return (num_read,None)
@@ -1108,7 +1483,7 @@ cdef class BufferedTSFile(TSFile):
         self.pcr_pid      = PMT.PCR_pid
 
         # Tell the read mechanism which PCR PID we want to use
-        retval = prime_read_buffered_TS_packet(self.tsreader,self.pcr_pid)
+        retval = cwrapper.prime_read_buffered_TS_packet(self.tsreader,self.pcr_pid)
         if retval == 1:
             raise TSToolsException,'Error priming PCR read ahead for file %s'%self.name
 
@@ -1138,10 +1513,10 @@ cdef class BufferedTSFile(TSFile):
             raise TSToolsException,'No TS stream to read'
 
         if self.got_first:
-            retval = read_next_TS_packet_from_buffer(self.tsreader, &buffer,
+            retval = cwrapper.read_next_TS_packet_from_buffer(self.tsreader, &buffer,
                                                      &pid, &pcr)
         else:
-            retval = read_first_TS_packet_from_buffer(self.tsreader, self.pcr_pid,
+            retval = cwrapper.read_first_TS_packet_from_buffer(self.tsreader, self.pcr_pid,
                                                       self.start_count,
                                                       &buffer,
                                                       &pid, &pcr, &count)
@@ -1181,4 +1556,3 @@ cdef class BufferedTSFile(TSFile):
 # mode:python
 # py-indent-offset:4
 # End:
-
