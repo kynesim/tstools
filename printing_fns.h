@@ -92,6 +92,8 @@ extern int redirect_output( void (*new_print_message_fn) (const char *message),
                             void (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
                           );
 
+// Just for the moment
+extern void test_C_printing(void);
 #endif // _printing_fns
 
 // Local Variables:

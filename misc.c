@@ -54,6 +54,7 @@
 #include "misc_fns.h"
 #include "es_fns.h"
 #include "pes_fns.h"
+#include "printing_fns.h"
 
 #define DEBUG_SEEK 1
 
@@ -297,14 +298,14 @@ extern int seek_file(int       filedes,
   offset_t  newposn = lseek(filedes,posn,SEEK_SET);
   if (newposn == -1)
   {
-    fprintf(stderr,"### Error moving (seeking) to position " OFFSET_T_FORMAT
-            " in file: %s\n",posn,strerror(errno));
+    fprint_err("### Error moving (seeking) to position " OFFSET_T_FORMAT
+               " in file: %s\n",posn,strerror(errno));
     return 1;
   }
   else if (newposn != posn)
   {
-    fprintf(stderr,"### Error moving (seeking) to position " OFFSET_T_FORMAT
-            " in file: actually moved to " OFFSET_T_FORMAT "\n",posn,newposn);
+    fprint_err("### Error moving (seeking) to position " OFFSET_T_FORMAT
+               " in file: actually moved to " OFFSET_T_FORMAT "\n",posn,newposn);
     return 1;
   }
   return 0;

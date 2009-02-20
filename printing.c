@@ -33,24 +33,38 @@
 #include "compat.h"
 #include "printing_fns.h"
 
+#define DEBUG 1
+
 // ============================================================
 // Default printing functions
 // ============================================================
 
 static void print_message_to_stdout(const char *message)
 {
+#if DEBUG
+  fputs("1>>",stdout);
+#endif
   (void) fputs(message,stdout);
 }
 static void print_message_to_stderr(const char *message)
 {
+#if DEBUG
+  fputs("2>>",stderr);
+#endif
   (void) fputs(message,stderr);
 }
 static void fprint_message_to_stdout(const char *format, va_list arg_ptr)
 {
+#if DEBUG
+  fputs("3>>",stdout);
+#endif
   (void) vfprintf(stdout, format, arg_ptr);
 }
 static void fprint_message_to_stderr(const char *format, va_list arg_ptr)
 {
+#if DEBUG
+  fputs("4>>",stderr);
+#endif
   (void) vfprintf(stderr, format, arg_ptr);
 }
 
@@ -58,11 +72,30 @@ static void fprint_message_to_stderr(const char *format, va_list arg_ptr)
 // Print redirection
 // ============================================================
 
-static void (*print_message_fn) (const char *message) = print_message_to_stdout;
-static void (*print_error_fn) (const char *message)   = print_message_to_stdout;
+struct print_fns
+{
+  void (*print_message_fn) (const char *message);
+  void (*print_error_fn) (const char *message);
 
-static void (*fprint_message_fn) (const char *format, va_list arg_ptr) = fprint_message_to_stdout;
-static void (*fprint_error_fn) (const char *format, va_list arg_ptr)   = fprint_message_to_stdout;
+  void (*fprint_message_fn) (const char *format, va_list arg_ptr);
+  void (*fprint_error_fn) (const char *format, va_list arg_ptr);
+};
+
+static struct print_fns fns = { print_message_to_stdout,
+                                print_message_to_stdout,
+                                fprint_message_to_stdout,
+                                fprint_message_to_stdout};
+
+#if DEBUG
+static void report_fns(const char *why)
+{
+  printf("Printing bound to (%s) m:%p, e:%p, fm:%p, fe:%p\n",why,
+         fns.print_message_fn,
+         fns.print_error_fn,
+         fns.fprint_message_fn,
+         fns.fprint_error_fn);
+}
+#endif
 
 
 // ============================================================
@@ -73,7 +106,11 @@ static void (*fprint_error_fn) (const char *format, va_list arg_ptr)   = fprint_
  */
 extern void print_msg(const char *text)
 {
-  print_message_fn(text);
+#if DEBUG
+  printf("m:%p %s",fns.print_message_fn,text);
+  report_fns("m");
+#endif
+  fns.print_message_fn(text);
 }
 
 
@@ -82,7 +119,11 @@ extern void print_msg(const char *text)
  */
 extern void print_err(const char *text)
 {
-  print_error_fn(text);
+#if DEBUG
+  printf("e:%p %s",fns.print_error_fn,text);
+  report_fns("e");
+#endif
+  fns.print_error_fn(text);
 }
 
 
@@ -93,7 +134,11 @@ extern void fprint_msg(const char *format, ...)
 {
   va_list va_arg;
   va_start(va_arg, format); 
-  fprint_message_fn(format, va_arg);
+#if DEBUG
+  printf("fm:%p %s",fns.fprint_message_fn,format);
+  report_fns("fm");
+#endif
+  fns.fprint_message_fn(format, va_arg);
   va_end(va_arg);
 }
 
@@ -105,13 +150,18 @@ extern void fprint_err(const char *format, ...)
 {
   va_list va_arg;
   va_start(va_arg, format); 
-  fprint_error_fn(format, va_arg);
+#if DEBUG
+  printf("fe:%p %s",fns.fprint_error_fn,format);
+  report_fns("fe");
+#endif
+  fns.fprint_error_fn(format, va_arg);
   va_end(va_arg);
 }
 
 // ============================================================
 // Choosing what the printing functions do
 // ============================================================
+
 /*
  * Calling this causes errors to go to stderr, and all other output
  * to go to stdout. This is the "traditional" mechanism used by
@@ -119,10 +169,14 @@ extern void fprint_err(const char *format, ...)
  */
 extern void redirect_output_traditional(void)
 {
-  print_message_fn  = &print_message_to_stdout;
-  print_error_fn    = &print_message_to_stderr;
-  fprint_message_fn = &fprint_message_to_stdout;
-  fprint_error_fn   = &fprint_message_to_stderr;
+  fns.print_message_fn  = &print_message_to_stdout;
+  fns.print_error_fn    = &print_message_to_stderr;
+  fns.fprint_message_fn = &fprint_message_to_stdout;
+  fns.fprint_error_fn   = &fprint_message_to_stderr;
+
+#if DEBUG
+  report_fns("traditional");
+#endif
 }
 
 
@@ -134,10 +188,14 @@ extern void redirect_output_traditional(void)
  */
 extern void redirect_output_stdout(void)
 {
-  print_message_fn  = &print_message_to_stdout;
-  print_error_fn    = &print_message_to_stdout;
-  fprint_message_fn = &fprint_message_to_stdout;
-  fprint_error_fn   = &fprint_message_to_stdout;
+  fns.print_message_fn  = &print_message_to_stdout;
+  fns.print_error_fn    = &print_message_to_stdout;
+  fns.fprint_message_fn = &fprint_message_to_stdout;
+  fns.fprint_error_fn   = &fprint_message_to_stdout;
+
+#if DEBUG
+  report_fns("stdout");
+#endif
 }
 
 
@@ -170,12 +228,24 @@ extern int redirect_output( void (*new_print_message_fn) (const char *message),
       new_fprint_message_fn == NULL || new_fprint_error_fn == NULL)
     return 1;
 
-  print_message_fn  = new_print_message_fn;
-  print_error_fn    = new_print_error_fn;
-  fprint_message_fn = new_fprint_message_fn;
-  fprint_error_fn   = new_fprint_error_fn;
+  fns.print_message_fn  = new_print_message_fn;
+  fns.print_error_fn    = new_print_error_fn;
+  fns.fprint_message_fn = new_fprint_message_fn;
+  fns.fprint_error_fn   = new_fprint_error_fn;
+
+#if DEBUG
+  report_fns("specific");
+#endif
 
   return 0;
+}
+
+extern void test_C_printing(void)
+{
+  print_msg("C Message\n");
+  print_err("C Error\n");
+  fprint_msg("C Message %s\n","Fred");
+  fprint_err("C Error %s\n","Fred");
 }
 
 

@@ -41,6 +41,7 @@
 #include "pes_fns.h"
 #include "tswrite_fns.h"
 #include "es_fns.h"
+#include "printing_fns.h"
 
 #define DEBUG 0
 
@@ -867,7 +868,7 @@ extern int seek_ES(ES_p       es,
     err = seek_file(es->input,where.infile);
     if (err)
     {
-      fprintf(stderr,"### Error seeking within ES file\n");
+      print_err("### Error seeking within ES file\n");
       return 1;
     }
   }
