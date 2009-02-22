@@ -158,6 +158,34 @@ extern void fprint_err(const char *format, ...)
   va_end(va_arg);
 }
 
+
+/*
+ * Prints the given formatted text, as a normal or error message.
+ * If `normal`, then as a normal message, else as an error
+ */
+extern void fprint_msg_or_err(int normal, const char *format, ...)
+{
+  va_list va_arg;
+  va_start(va_arg, format); 
+  if (normal)
+  {
+#if DEBUG
+    printf("?m:%p %s",fns.fprint_message_fn,format);
+    report_fns("?m");
+#endif
+    fns.fprint_message_fn(format, va_arg);
+  }
+  else
+  {
+#if DEBUG
+    printf("?e:%p %s",fns.fprint_error_fn,format);
+    report_fns("?e");
+#endif
+    fns.fprint_error_fn(format, va_arg);
+  }
+  va_end(va_arg);
+}
+
 // ============================================================
 // Choosing what the printing functions do
 // ============================================================
