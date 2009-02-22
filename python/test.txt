@@ -1,34 +1,6 @@
 Some tests for the Python binding of the TS tools
 =================================================
 
-We'd like the tstools C messages to get captured by doctest, so we can see
-them in our tests, so:
-
-    >>> import tstools
-    >>> tstools.setup_printing_for_doctest()
-    Printing redirected for doctest
-    >>> tstools.test_printing()
-    YY Message
-    YY Error
-    XX Message "Fred"
-    XX Error "Fred"
-
-and again:
-
-    >>> tstools.test_printing()
-    YY Message
-    YY Error
-    XX Message "Fred"
-    XX Error "Fred"
-
-and even:
-
-    >>> tstools.test_c_printing()
-    YY C Message
-    YY C Error
-    XX C Message Fred
-    XX C Error Fred
-
 Elementary streams -- basic functionality
 -----------------------------------------
 In this context, we take an elementary stream to be MPEG-1, MPEG-2 or H.264

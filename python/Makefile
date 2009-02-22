@@ -45,9 +45,9 @@ test:	setup
 
 .PHONY: clean
 clean:
+	python Setup.py clean
 	-rm tstools/*.so
-	-rm -rf build/
 
 .PHONY: distclean
 distclean: clean
-	-rm tstools/*.c tstools/*.dep
+	-rm tstools/*.c
