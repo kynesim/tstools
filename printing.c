@@ -33,7 +33,7 @@
 #include "compat.h"
 #include "printing_fns.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 // ============================================================
 // Default printing functions
@@ -69,7 +69,7 @@ static void fprint_message_to_stderr(const char *format, va_list arg_ptr)
 }
 
 // ============================================================
-// Print redirection
+// Print redirection defaults to all output going to stdout
 // ============================================================
 
 struct print_fns
