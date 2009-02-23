@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "compat.h"
+#include "printing_fns.h"
 #include "audio_fns.h"
 #include "adts_fns.h"
 #include "l2audio_fns.h"
@@ -47,7 +48,7 @@ extern int build_audio_frame(audio_frame_p  *frame)
   audio_frame_p  new = malloc(SIZEOF_AUDIO_FRAME);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate audio frame datastructure\n");
+    fprint_err("### Unable to allocate audio frame datastructure\n");
     return 1;
   }
 
@@ -110,8 +111,8 @@ extern int read_next_audio_frame(int            file,
   case AUDIO_AC3:
     return read_next_ac3_frame(file, frame);
   default:
-    fprintf(stderr,"### Unrecognised audio type %d - cannot get next audio frame\n",
-            audio_type);
+    fprint_err("### Unrecognised audio type %d - cannot get next audio frame\n",
+               audio_type);
     return 1;
   }
 }

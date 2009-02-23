@@ -335,12 +335,10 @@ extern void free_ES_unit_list(ES_unit_list_p  *list);
 /*
  * Report on an ES unit list's contents.
  *
- * - `stream` is where to write the information
  * - `name` is the name of the list (used in the header)
  * - `list` is the list to report on
  */
-extern void report_ES_unit_list(FILE              *stream,
-                                char              *name,
+extern void report_ES_unit_list(char              *name,
                                 ES_unit_list_p     list);
 
 /*

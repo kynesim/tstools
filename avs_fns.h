@@ -36,11 +36,6 @@
  */
 extern const char *avs_start_code_str(byte   start_code);
 /*
- * Print out information derived from the start code, to the given stream.
- */
-extern void print_avs_start_code_str(FILE  *stream,
-                                     byte   start_code);
-/*
  * Determine the picture coding type of an AVS ES unit
  *
  * P/B frames are distinguished by their picture coding types. For I frames,
@@ -185,12 +180,10 @@ extern int write_avs_frame_as_ES(FILE        *output,
 /*
  * Report on an AVS frame's contents.
  *
- * - `stream` is where to write the information
  * - `frame` is the frame to report on
  * - if `report_data`, then the component ES units will be printed out as well
  */
-extern void report_avs_frame(FILE        *stream,
-                             avs_frame_p  frame,
+extern void report_avs_frame(avs_frame_p  frame,
                              int          report_data);
 
 #endif // _avs_fns

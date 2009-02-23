@@ -224,12 +224,10 @@ extern int write_h262_picture_as_ES(FILE           *output,
 /*
  * Report on an H.262 picture's contents.
  *
- * - `stream` is where to write the information
  * - `picture` is the picture to report on
  * - if `report_data`, then the component ES units will be printed out as well
  */
-extern void report_h262_picture(FILE           *stream,
-                                h262_picture_p  picture,
+extern void report_h262_picture(h262_picture_p  picture,
                                 int             report_data);
 
 #endif // _h262_fns

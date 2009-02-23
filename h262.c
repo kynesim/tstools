@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "compat.h"
+#include "printing_fns.h"
 #include "h262_fns.h"
 #include "es_fns.h"
 #include "ts_fns.h"
@@ -1147,8 +1148,7 @@ extern int write_h262_picture_as_ES(FILE           *output,
  * - `picture` is the picture to report on
  * - if `report_data`, then the component ES units will be printed out as well
  */
-extern void report_h262_picture(FILE           *stream,
-                                h262_picture_p  picture,
+extern void report_h262_picture(h262_picture_p  picture,
                                 int             report_data)
 {
   if (picture->is_picture)
@@ -1162,7 +1162,7 @@ extern void report_h262_picture(FILE           *stream,
       printf(" (merged)");
 
     printf(" %s",H262_ASPECT_RATIO_INFO_STR(picture->aspect_ratio_info));
-    
+
     if (picture->is_real_afd)
       printf(" AFD ");
     else
@@ -1193,7 +1193,7 @@ extern void report_h262_picture(FILE           *stream,
     printf("Sequence end\n");
   }
   if (report_data)
-    report_ES_unit_list(stream,"ES units",picture->list);
+    report_ES_unit_list("ES units",picture->list);
 }
 
 // Local Variables:

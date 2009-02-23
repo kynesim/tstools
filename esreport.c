@@ -116,9 +116,9 @@ static void report_avs_frames(ES_p    es,
     count++;
 
     if (!quiet)
-      report_avs_frame(stdout,frame,FALSE);
+      report_avs_frame(frame,FALSE);
     else if (verbose)
-      report_avs_frame(stdout,frame,TRUE);
+      report_avs_frame(frame,TRUE);
 
     if (frame->is_frame)
     {
@@ -306,7 +306,7 @@ static void find_h262_fields(ES_p    es,
     {
       if (picture->picture_structure < 3)
       {
-        report_h262_picture(stdout,picture,verbose);
+        report_h262_picture(picture,verbose);
         num_fields ++;
       }
       else
@@ -400,9 +400,9 @@ static void report_h262_frames(ES_p    es,
     count++;
 
     if (!quiet)
-      report_h262_picture(stdout,picture,FALSE);
+      report_h262_picture(picture,FALSE);
     else if (verbose)
-      report_h262_picture(stdout,picture,TRUE);
+      report_h262_picture(picture,TRUE);
 
     if (picture->is_picture)
     {
@@ -554,7 +554,7 @@ static void report_h262_afds(ES_p    es,
       double seconds = total_seconds - 60*minutes;
       printf("%dm %4.1fs (frame %d @ %.2fs): ",minutes,seconds,
              frames,total_seconds);
-      report_h262_picture(stdout,picture,FALSE);
+      report_h262_picture(picture,FALSE);
       afd = picture->afd;
     }
 

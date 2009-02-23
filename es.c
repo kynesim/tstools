@@ -37,6 +37,7 @@
 #endif // _WIN32
 
 #include "compat.h"
+#include "printing_fns.h"
 #include "misc_fns.h"
 #include "pes_fns.h"
 #include "tswrite_fns.h"
@@ -1229,26 +1230,24 @@ extern void free_ES_unit_list(ES_unit_list_p  *list)
 /*
  * Report on an ES unit list's contents.
  *
- * - `stream` is where to write the information
  * - `name` is the name of the list (used in the header)
  * - `list` is the list to report on
  */
-extern void report_ES_unit_list(FILE              *stream,
-                                char              *name,
+extern void report_ES_unit_list(char              *name,
                                 ES_unit_list_p     list)
 {
-  fprintf(stream,"ES unit list '%s': ",name);
+  fprint_msg("ES unit list '%s': ",name);
   if (list->array == NULL)
-    fprintf(stream,"<empty>\n");
+    print_msg("<empty>\n");
   else
   {
     int ii;
-    fprintf(stream,"%d item%s (size %d)\n",list->length,
-            (list->length==1?"":"s"),list->size);
+    fprint_msg("%d item%s (size %d)\n",list->length,
+               (list->length==1?"":"s"),list->size);
     for (ii=0; ii<list->length; ii++)
     {
-      fprintf(stream,"    ");
-      report_ES_unit(stream,&(list->array[ii]));
+      print_msg("    ");
+      report_ES_unit(stdout,&(list->array[ii]));
     }
   }
 }
