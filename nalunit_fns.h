@@ -331,7 +331,7 @@ extern void free_nal_unit_list(nal_unit_list_p  *list,
 /*
  * Report on a NAL unit list's contents, to the given stream.
  */
-extern void report_nal_unit_list(FILE  *stream,
+extern void report_nal_unit_list(int    is_msg,
                                  char  *prefix,
                                  nal_unit_list_p  list);
 
@@ -340,7 +340,7 @@ extern void report_nal_unit_list(FILE  *stream,
  *
  * This is intended as a single line of information.
  */
-extern void report_nal(FILE       *stream,
+extern void report_nal(int         is_msg,
                        nal_unit_p  nal);
 
 #endif // _nalunit_fns

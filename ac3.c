@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "compat.h"
+#include "printing_fns.h"
 #include "misc_fns.h"
 #include "ac3_fns.h"
 
@@ -91,18 +92,18 @@ int read_next_ac3_frame(int            file,
     return EOF;
   else if (err)
   {
-    fprintf(stderr, "### Error reading syncinfo from AC3 file\n");
-    fprintf(stderr, "    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
+    fprint_err("### Error reading syncinfo from AC3 file\n"
+               "    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
     return 1;
   }
 
   if (sync_info[0] != 0x0b || sync_info[1] != 0x77)
   {
-    fprintf(stderr, "### AC3 frame does not start with 0x0b77"
-            " syncword - lost synchronisation?\n"
-            "    Found 0x%02x%02x instead of 0x0b77\n",
-            (unsigned)sync_info[0], (unsigned)sync_info[1]);
-    fprintf(stderr, "    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
+    fprint_err("### AC3 frame does not start with 0x0b77"
+               " syncword - lost synchronisation?\n"
+               "    Found 0x%02x%02x instead of 0x0b77\n",
+               (unsigned)sync_info[0], (unsigned)sync_info[1]);
+    fprint_err("    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
     return 1;
   }
 
@@ -110,17 +111,17 @@ int read_next_ac3_frame(int            file,
   if (fscod == 3)
   {
     // Bad sample rate code
-    fprintf(stderr, "### Bad sample rate code in AC3 syncinfo\n");
-    fprintf(stderr, "    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
+    fprint_err("### Bad sample rate code in AC3 syncinfo\n"
+               "    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
     return 1;
   }
 
   frmsizecod = sync_info[4] & 0x3f;
   if (frmsizecod > 37)
   {
-    fprintf(stderr, "### Bad frame size code %d in AC3 syncinfo\n",
-            frmsizecod);
-    fprintf(stderr, "    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
+    fprint_err("### Bad frame size code %d in AC3 syncinfo\n",
+                frmsizecod);
+    fprint_err("    (in frame starting at " OFFSET_T_FORMAT ")\n", posn);
     return 1;
   }
 
@@ -132,7 +133,7 @@ int read_next_ac3_frame(int            file,
   data = malloc(frame_length);
   if (data == NULL)
   {
-    fprintf(stderr, "### Unable to extend data buffer for AC3 frame\n");
+    print_err("### Unable to extend data buffer for AC3 frame\n");
     return 1;
   }
   for (i = 0; i < SYNCINFO_SIZE; i++)
@@ -143,9 +144,9 @@ int read_next_ac3_frame(int            file,
   if (err)
   {
     if (err == EOF)
-      fprintf(stderr, "### Unexpected EOF reading rest of AC3 frame\n");
+      print_err("### Unexpected EOF reading rest of AC3 frame\n");
     else
-      fprintf(stderr, "### Error reading rest of AC3 frame\n");
+      print_err("### Error reading rest of AC3 frame\n");
     free(data);
     return 1;
   }
