@@ -87,29 +87,6 @@ OBJDIR = obj
 LIBDIR = lib
 BINDIR = bin
 
-# All of our non-program source files
-SRCS = \
- accessunit.c \
- ac3.c \
- adts.c \
- avs.c \
- bitdata.c \
- es.c \
- fmtx.c \
- h222.c \
- h262.c \
- audio.c \
- l2audio.c \
- misc.c \
- nalunit.c \
- printing.c \
- ps.c \
- pes.c \
- pidint.c \
- ts.c \
- tswrite.c \
- pcap.c 
-
 # All of our non-program object modules
 OBJS = \
  accessunit.o \
@@ -170,9 +147,14 @@ TEST_OBJS = \
   $(OBJDIR)/test_es_unit_list.o
 
 # Our library
-LIB = $(LIBDIR)/libtstools.a
+STATIC_LIB = $(LIBDIR)/libtstools.a
 LIBOPTS = -L$(LIBDIR) -ltstools $(ARCH_FLAGS)
 
+ifeq ($(shell uname -s), Darwin)
+SHARED_LIB = $(LIBDIR)/libtstools.xxx
+else
+SHARED_LIB = $(LIBDIR)/libtstools.so
+endif
 # All of our programs (except the testing ones)
 PROGS = \
   $(BINDIR)/esfilter \
@@ -215,84 +197,89 @@ all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS)
 ts2ps:	$(TS2PS_PROG)
 
 ifeq ($(shell uname -s), Darwin)
-# Try getting a library containing universal objects on Mac
-$(LIB): $(OBJS)
-	libtool -static $(OBJS) -o $(LIB)
+# Make libraries containing universal objects on Mac
+$(STATIC_LIB): $(OBJS)
+	libtool -static $(OBJS) -o $(STATIC_LIB)
+$(SHARED_LIB): $(OBJS)
+	libtool -dynamic $(OBJS) -o $(SHARED_LIB)
 else
-$(LIB): $(LIB)($(OBJS))
+$(STATIC_LIB): $(STATIC_LIB)($(OBJS))
 endif
 
-$(BINDIR)/esfilter:	$(OBJDIR)/esfilter.o $(LIB)
+# Build all of the utilities with the static library, so that they can
+# be copied around, shared, etc., without having to think about it
+
+$(BINDIR)/esfilter:	$(OBJDIR)/esfilter.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/esfilter $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/ts2es:		$(OBJDIR)/ts2es.o $(LIB)
+$(BINDIR)/ts2es:		$(OBJDIR)/ts2es.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/ts2es $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/es2ts:		$(OBJDIR)/es2ts.o $(LIB)
+$(BINDIR)/es2ts:		$(OBJDIR)/es2ts.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/es2ts $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/esdots:		$(OBJDIR)/esdots.o $(LIB)
+$(BINDIR)/esdots:		$(OBJDIR)/esdots.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/esdots $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/esmerge:	$(OBJDIR)/esmerge.o $(LIB)
+$(BINDIR)/esmerge:	$(OBJDIR)/esmerge.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/esmerge $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/esreport:	$(OBJDIR)/esreport.o $(LIB)
+$(BINDIR)/esreport:	$(OBJDIR)/esreport.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/esreport $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/esreverse:	$(OBJDIR)/esreverse.o $(LIB)
+$(BINDIR)/esreverse:	$(OBJDIR)/esreverse.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/esreverse $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/stream_type:	$(OBJDIR)/stream_type.o $(LIB)
+$(BINDIR)/stream_type:	$(OBJDIR)/stream_type.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/stream_type $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/psreport:	$(OBJDIR)/psreport.o $(LIB)
+$(BINDIR)/psreport:	$(OBJDIR)/psreport.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/psreport $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/psdots:	$(OBJDIR)/psdots.o $(LIB)
+$(BINDIR)/psdots:	$(OBJDIR)/psdots.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/psdots $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/ps2ts:		$(OBJDIR)/ps2ts.o $(LIB)
+$(BINDIR)/ps2ts:		$(OBJDIR)/ps2ts.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/ps2ts $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/tsinfo:		$(OBJDIR)/tsinfo.o $(LIB)
+$(BINDIR)/tsinfo:		$(OBJDIR)/tsinfo.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsinfo $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/tsreport:	$(OBJDIR)/tsreport.o $(LIB)
+$(BINDIR)/tsreport:	$(OBJDIR)/tsreport.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsreport $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/tsserve:	$(OBJDIR)/tsserve.o $(LIB)
+$(BINDIR)/tsserve:	$(OBJDIR)/tsserve.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsserve $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/tsplay:		$(OBJDIR)/tsplay.o $(LIB)
+$(BINDIR)/tsplay:		$(OBJDIR)/tsplay.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsplay $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/test_ps:	$(OBJDIR)/test_ps.o $(LIB)
+$(BINDIR)/test_ps:	$(OBJDIR)/test_ps.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/test_ps $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(LIB)
+$(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/ts2ps $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(LIB)
+$(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(LIB)
+$(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/m2ts2ts $(LDFLAGS) $(LIBOPTS)
-$(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(LIB)
+$(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/pcapreport $(LDFLAGS) $(LIBOPTS)
 
 
 
 
-$(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(LIB)
+$(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/test_pes $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/test_printing:	$(OBJDIR)/test_printing.o $(LIB)
+$(BINDIR)/test_printing:	$(OBJDIR)/test_printing.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/test_printing $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/test_nal_unit_list: 	$(OBJDIR)/test_nal_unit_list.o $(LIB)
+$(BINDIR)/test_nal_unit_list: 	$(OBJDIR)/test_nal_unit_list.o $(STATIC_LIB)
 			$(CC) $< -o $(BINDIR)/test_nal_unit_list $(LDFLAGS) $(LIBOPTS)
-$(BINDIR)/test_es_unit_list:  	$(OBJDIR)/test_es_unit_list.o $(LIB)
+$(BINDIR)/test_es_unit_list:  	$(OBJDIR)/test_es_unit_list.o $(STATIC_LIB)
 			$(CC) $< -o $(BINDIR)/test_es_unit_list $(LDFLAGS) $(LIBOPTS)
 
 # Some header files depend upon others, so including one requires
@@ -314,13 +301,14 @@ AUDIO_H = adts_fns.h l2audio_fns.h ac3_fns.h audio_fns.h audio_defns.h adts_defn
 
 # Everyone depends upon the basic configuration file, and I assert they all
 # want (or may want) printing...
-$(LIB)($(OBJS)) $(TEST_OBJS) $(PROG_OBJS): compat.h printing_fns.h
+$(STATIC_LIB)($(OBJS)) $(SHARED_LIB)($(OBJS)) $(TEST_OBJS) $(PROG_OBJS): compat.h printing_fns.h
 
 # Which library modules depend on which header files is complex, so
 # lets just be simple
-$(LIB)($(OBJS)): $(ACCESSUNIT_H) $(NALUNIT_H) $(TS_H) $(ES_H) $(PES_H) \
-                 misc_fns.h printing_fns.h $(PS_H) $(H262_H) $(TSWRITE_H) $(AVS_H) \
-                 $(REVERSE_H) $(FILTER_H) $(AUDIO_H)
+$(STATIC_LIB)($(OBJS)) $(SHARED_LIB)($(OBJS)): \
+                 $(ACCESSUNIT_H) $(NALUNIT_H) $(TS_H) $(ES_H) $(PES_H) \
+                 misc_fns.h printing_fns.h $(PS_H) $(H262_H) \
+                 $(TSWRITE_H) $(AVS_H) $(REVERSE_H) $(FILTER_H) $(AUDIO_H)
 
 $(OBJDIR)/es2ts.o:        es2ts.c $(ES_H) $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
@@ -406,7 +394,7 @@ objclean:
 .PHONY: clean
 clean: objclean
 	-rm -f $(PROGS)
-	-rm -f $(LIB)
+	-rm -f $(STATIC_LIB)
 	-rm -f $(PROG_OBJS)
 
 .PHONY: distclean

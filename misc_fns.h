@@ -374,7 +374,7 @@ extern int host_value(char  *prefix,
  *
  * Returns 0 if it works, 1 if it fails.
  */
-extern int winsock_startup();
+extern int winsock_startup(void);
 /*
  * Convert a WinSock error number into a string and print it out on stderr
  */

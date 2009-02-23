@@ -67,7 +67,7 @@ static uint32_t crc_table[256];
 /*
  * Populate the (internal) CRC table. May safely be called more than once.
  */
-static void make_crc_table()
+static void make_crc_table(void)
 {
   int i, j;
   int already_done = 0;
@@ -909,7 +909,7 @@ extern int host_value(char  *prefix,
  *
  * Returns 0 if it works, 1 if it fails.
  */
-extern int winsock_startup()
+extern int winsock_startup(void)
 {
   // The code herein is borrowed from the example in the Windows Sockets
   // Version 2: Platform DSK documentation for WSAStartup.
@@ -1163,7 +1163,7 @@ extern void print_winsock_err(int err)
  *
  * Returns 0 if it works, 1 if it fails.
  */
-static int winsock_cleanup()
+static int winsock_cleanup(void)
 {
   int     err = WSACleanup();
   if (err != 0)

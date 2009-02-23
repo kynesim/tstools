@@ -50,6 +50,11 @@ extern void fprint_msg(const char *format, ...);
  * Prints the given formatted text, as an error message.
  */
 extern void fprint_err(const char *format, ...);
+/*
+ * Prints the given formatted text, as a normal or error message.
+ * If `normal`, then as a normal message, else as an error
+ */
+extern void fprint_msg_or_err(int normal, const char *format, ...);
 
 // ============================================================
 // Choosing what the printing functions do

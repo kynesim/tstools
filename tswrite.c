@@ -2676,7 +2676,7 @@ extern int tswrite_write(TS_writer_p  tswriter,
  * Write a usage string (to standard output) describing the tuning
  * options processed by tswrite_process_args.
  */
-extern void tswrite_help_tuning()
+extern void tswrite_help_tuning(void)
 {
   printf(
     "Output Tuning:\n"
@@ -2771,7 +2771,7 @@ extern void tswrite_help_tuning()
  * Write a usage string (to standard output) describing the testing
  * options processed by tswrite_process_args.
  */
-extern void tswrite_help_testing()
+extern void tswrite_help_testing(void)
 {
   printf(
     "Testing:\n"
@@ -2794,7 +2794,7 @@ extern void tswrite_help_testing()
  * Write a usage string (to standard output) describing the
  * debugging options processed by tswrite_process_args.
  */
-extern void tswrite_help_debug()
+extern void tswrite_help_debug(void)
 {
   printf(
     "Debugging:\n"
