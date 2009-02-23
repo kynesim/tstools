@@ -165,6 +165,66 @@ cdef extern from "ts_fns.h":
     int print_descriptors(FILE *stream, char *leader1, char *leader2,
                           byte *desc_data, int desc_data_len)
 
+cdef extern from 'nalunit_defns.h':
+    struct nal_unit_context
+        pass
+    ctypedef nal_unit_context *nal_unit_context_p
+    struct nal_unit
+        pass
+    ctypedef nal_unit *nal_unit_p
+    struct nal_unit_list
+        nal_unit_p  *array
+        int          length
+        int          size
+    ctypedef nal_unit_list *nal_unit_list_p
+
+cdef extern from 'accessunit_defns.h':
+    struct access_unit_context:
+        pass
+    ctypedef access_unit_context *access_unit_context_p
+    struct access_unit:
+        uint32_t        index
+        # Primary picture?
+        int             started_primary_picture
+        nal_unit_p      primary_start       # within nal_units
+        # Contents
+        nal_unit_list_p nal_units
+
+cdef extern from 'nalunit_fns.h':
+    int build_nal_unit_context(ES_p es, nal_unit_context_p *context)
+    void free_nal_unit_context(nal_unit_context_p *context)
+    int rewind_nal_unit_context(nal_unit_context_p context)
+    void free_nal_unit(nal_unit_p *nal)
+    int find_next_NAL_unit(nal_unit_context_p context, int verbose,
+                           nal_unit_p *nal)
+    int nal_is_slice(nal_unit_p nal)
+    int nal_is_pic_param_set(nal_unit_p nal)
+    int nal_is_seq_param_set(nal_unit_p nal)
+    int nal_is_redundant(nal_unit_p nal)
+    int nal_is_first_VCL_NAL(nal_unit_p nal, nal_unit_p last)
+
+    int build_nal_unit_list(nal_unit_list_p *list)
+    int append_to_nal_unit_list(nal_unit_list_p list, nal_unit_p nal)
+    void reset_nal_unit_list(nal_unit_list_p list, int deep)
+    void free_nal_unit_list(nal_unit_list_p *list, int deep)
+
+cdef extern from 'accessunit_fns.h':
+    int build_access_unit_context(ES_p es, access_unit_context_p *context)
+    void free_access_unit_context(access_unit_context_p *context)
+    int rewind_access_unit_context(access_unit_context_p context)
+    void free_access_unit(access_unit_p *acc_unit)
+    int get_access_unit_bounds(access_unit_p access_unit, ES_offset *start,
+                               uint32_t *length)
+    int all_slices_I(access_unit_p access_unit)
+    int all_slices_P(access_unit_p access_unit)
+    int all_slices_I_or_P(access_unit_p access_unit)
+    int all_slices_B(access_unit_p access_unit)
+    int get_next_access_unit(access_unit_context_p context, int quiet,
+                             int show_details, access_unit_p *ret_access_unit)
+    int get_next_h264_frame(access_unit_context_p context, int quiet,
+                            int show_details, access_unit_p *frame)
+    int access_unit_has_PTS(access_unit_p access_unit)
+
 cdef extern from 'printing_fns.h':
     void print_msg(const_char_ptr text)
     void print_err(const_char_ptr text)
