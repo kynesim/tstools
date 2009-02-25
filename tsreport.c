@@ -201,6 +201,10 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
   pcr_pid = pmt->PCR_pid;
 
+  // Tell the buffering mechanism we want to use it
+  err = prime_read_buffered_TS_packet(tsreader,pcr_pid);
+  if (err) return 1;
+
   for (ii=0; ii<pmt->num_streams; ii++)
   {
     uint32_t pid = pmt->streams[ii].elementary_PID;
