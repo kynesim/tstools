@@ -42,6 +42,7 @@
 #include <time.h>       // Sleeping and timing
 
 #include "compat.h"
+#include "printing_fns.h"
 #include "ts_fns.h"
 #include "ps_fns.h"
 #include "pes_fns.h"
@@ -376,6 +377,8 @@ static int find_PCR_PID(TS_reader_p  tsreader,
  * - if `pid_to_ignore` is non-zero, then any TS packets with that PID
  *   will not be written out (note: any PCR information in them may still
  *   be used)
+ * - if `override_pcr_pid` is non-zero, then it is the PID to use for PCRs,
+ *   ignoring any value found in a PMT
  * - if `max` is greater than zero, then at most `max` TS packets should
  *   be read from the input
  * - if `loop`, play the input file repeatedly (up to `max` TS packets
@@ -388,6 +391,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
 static int play_buffered_TS_packets(TS_reader_p  tsreader,
                                     TS_writer_p  tswriter,
                                     uint32_t     pid_to_ignore,
+                                    uint32_t     override_pcr_pid,
                                     int          max,
                                     int          loop,
                                     int          quiet,
@@ -412,13 +416,22 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
 
   // Before we can use PCRs for timing, we need to read a PMT which tells us
   // what our video stream is (so we can get our PCRs therefrom).
-  err = find_PCR_PID(tsreader,tswriter,&pcr_pid,&start_count,max,quiet);
-  if (err)
+  if (override_pcr_pid)
   {
-    fprintf(stderr,
-            "### Unable to find PCR PID for timing information\n"
-            "    Looked in first %d TS packets\n",max);
-    return 1;
+    pcr_pid = override_pcr_pid;
+    if (!quiet)
+      fprint_msg("Forcing use of PCR PID 0x%03x (%d)\n",pcr_pid,pcr_pid);
+  }
+  else
+  {
+    err = find_PCR_PID(tsreader,tswriter,&pcr_pid,&start_count,max,quiet);
+    if (err)
+    {
+      fprintf(stderr,
+              "### Unable to find PCR PID for timing information\n"
+              "    Looked in first %d TS packets\n",max);
+      return 1;
+    }
   }
 
   // Once we've found that, we're ready to play our data
@@ -613,6 +626,9 @@ static int play_TS_packets(TS_reader_p  tsreader,
  *   be used)
  * - if `scan_for_PCRs`, use a read-ahead buffer to find the *next* PCR,
  *   and thus allow exact timing of packets.
+ * - if we are using the PCR read-ahead buffer, and `override_pcr_pid` is
+ *   non-zero, then it is the PID to use for PCRs, ignoring any value found in
+ *   a PMT
  * - if `max` is greater than zero, then at most `max` TS packets should
  *   be read from the input
  * - if `loop`, play the input file repeatedly (up to `max` TS packets
@@ -626,6 +642,7 @@ static int play_TS_stream(int         input,
                           TS_writer_p tswriter,
                           uint32_t    pid_to_ignore,
                           int         scan_for_PCRs,
+                          uint32_t    override_pcr_pid,
                           int         max,
                           int         loop,
                           int         quiet,
@@ -639,7 +656,7 @@ static int play_TS_stream(int         input,
 
   if (scan_for_PCRs)
     err = play_buffered_TS_packets(tsreader,tswriter,pid_to_ignore,
-                                   max,loop,quiet,verbose);
+                                   override_pcr_pid,max,loop,quiet,verbose);
   else
     err = play_TS_packets(tsreader,tswriter,pid_to_ignore,
                           max,loop,quiet,verbose);
@@ -938,6 +955,10 @@ static void print_help_ts()
     "Transport Stream Switches:\n"
     "The following switches are only applicable if the input data is TS.\n"
     "\n"
+    "  -usepcr <pid>     Ignore the PCR PID specified in the PMT, and use\n"
+    "                    the given PCR PID instead. This currently only works\n"
+    "                    if PCR buffering (the default, see below) is being used.\n"
+    "\n"
     "  -ignore <pid>     Any TS packets with this PID will not be output\n"
     "                    (more accurately, any TS packets with this PID and with\n"
     "                    PCR information will be transmitted with PID 0x1FFF, and\n"
@@ -1084,6 +1105,7 @@ int main(int argc, char **argv)
 
   int       scan_for_PCRs = TRUE;
   uint32_t  pid_to_ignore = 0;
+  uint32_t  override_pcr_pid = 0;  // 0 means "use the PCR found in the PMT"
 
   // Program Stream specific options
   uint32_t pmt_pid = 0x66;
@@ -1236,6 +1258,13 @@ int main(int argc, char **argv)
       else if (!strcmp("-oldpace",argv[ii]))
       {
         scan_for_PCRs = FALSE;
+      }
+      else if (!strcmp("-usepcr",argv[ii]))
+      {
+        CHECKARG("tsplay",ii);
+        err = unsigned_value("tsplay",argv[ii],argv[ii+1],0,&override_pcr_pid);
+        if (err) return 1;
+        ii++;
       }
       else if (!strcmp("-loop",argv[ii]))
       {
@@ -1516,7 +1545,7 @@ int main(int argc, char **argv)
   if (is_TS)
   {
     err = play_TS_stream(input,tswriter,pid_to_ignore,scan_for_PCRs,
-                         max,loop,quiet,verbose);
+                         override_pcr_pid,max,loop,quiet,verbose);
   }
   else
     err = play_PS_stream(input,tswriter,pad_start,
