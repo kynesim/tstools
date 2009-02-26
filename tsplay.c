@@ -955,10 +955,6 @@ static void print_help_ts()
     "Transport Stream Switches:\n"
     "The following switches are only applicable if the input data is TS.\n"
     "\n"
-    "  -usepcr <pid>     Ignore the PCR PID specified in the PMT, and use\n"
-    "                    the given PCR PID instead. This currently only works\n"
-    "                    if PCR buffering (the default, see below) is being used.\n"
-    "\n"
     "  -ignore <pid>     Any TS packets with this PID will not be output\n"
     "                    (more accurately, any TS packets with this PID and with\n"
     "                    PCR information will be transmitted with PID 0x1FFF, and\n"
@@ -982,6 +978,15 @@ static void print_help_ts()
     "constant bitrate, but does not cope well if the bitrate varies greatly.\n"
     "\n"
     "Note that '-nopcrs' (see '-help tuning') also implies '-oldpace'.\n"
+    "\n"
+    "In order to buffer PCRs, the first PCR must be found. Normally this is done\n"
+    "by finding the first PAT/PMT, and reading the PCR PID from there. However,\n"
+    "sometimes it is useful to *tell* the program where to look for its first PCR:\n"
+    "\n"
+    "  -forcepcr <pid>   Specifies which PID to look for to find the first PCR.\n"
+    "\n"
+    "Note that after the first PCR is read, *all* TS packets are inspected for\n"
+    "PCRs, irrespective of PID.\n"
     );
 }
 
@@ -1259,7 +1264,7 @@ int main(int argc, char **argv)
       {
         scan_for_PCRs = FALSE;
       }
-      else if (!strcmp("-usepcr",argv[ii]))
+      else if (!strcmp("-forcepcr",argv[ii]))
       {
         CHECKARG("tsplay",ii);
         err = unsigned_value("tsplay",argv[ii],argv[ii+1],0,&override_pcr_pid);
