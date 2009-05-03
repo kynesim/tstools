@@ -745,7 +745,7 @@ static int report_ts(TS_reader_p  tsreader,
         {
           fprintf(stderr,"### Internal error: stream for PID %0x returned NULL"
                   " in PMT\n",pid);
-          report_pmt(stderr,"    ",pmt);
+          report_pmt(FALSE,"    ",pmt);
           free_pidint_list(&prog_list);
           free_pmt(&pmt);
           if (pmt_data) free(pmt_data);
@@ -904,7 +904,7 @@ static int report_ts(TS_reader_p  tsreader,
       pmt_data = NULL; pmt_data_len = 0; pmt_data_used = 0;
 #if 0
       printf("PMT data read as:\n");
-      report_pmt(stdout,"  ",pmt);
+      report_pmt(TRUE,"  ",pmt);
       printf("\n");
 #endif
     }

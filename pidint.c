@@ -33,6 +33,7 @@
 #include "compat.h"
 #include "pidint_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "ts_fns.h"
 #include "h222_defns.h"
 
@@ -49,14 +50,14 @@ extern int init_pidint_list(pidint_list_p  list)
   list->number = malloc(sizeof(int)*PIDINT_LIST_START_SIZE);
   if (list->number == NULL)
   {
-    fprintf(stderr,"### Unable to allocate array in program list datastructure\n");
+    print_err("### Unable to allocate array in program list datastructure\n");
     return 1;
   }
   list->pid = malloc(sizeof(uint32_t)*PIDINT_LIST_START_SIZE);
   if (list->pid == NULL)
   {
     free(list->number);
-    fprintf(stderr,"### Unable to allocate array in program list datastructure\n");
+    print_err("### Unable to allocate array in program list datastructure\n");
     return 1;
   }
   return 0;
@@ -73,7 +74,7 @@ extern int build_pidint_list(pidint_list_p  *list)
   pidint_list_p  new = malloc(SIZEOF_PIDINT_LIST);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate pid/int list datastructure\n");
+    print_err("### Unable to allocate pid/int list datastructure\n");
     return 1;
   }
 
@@ -95,7 +96,7 @@ extern int append_to_pidint_list(pidint_list_p  list,
 {
   if (list == NULL)
   {
-    fprintf(stderr,"### Unable to append to NULL pid/int list\n");
+    print_err("### Unable to append to NULL pid/int list\n");
     return 1;
   }
 
@@ -105,13 +106,13 @@ extern int append_to_pidint_list(pidint_list_p  list,
     list->number = realloc(list->number,newsize*sizeof(int));
     if (list->number == NULL)
     {
-      fprintf(stderr,"### Unable to extend pid/int list array\n");
+      print_err("### Unable to extend pid/int list array\n");
       return 1;
     }
     list->pid = realloc(list->pid,newsize*sizeof(uint32_t));
     if (list->pid == NULL)
     {
-      fprintf(stderr,"### Unable to extend pid/int list array\n");
+      print_err("### Unable to extend pid/int list array\n");
       return 1;
     }
     list->size = newsize;
@@ -134,15 +135,15 @@ extern int remove_from_pidint_list(pidint_list_p  list,
   int  ii;
   if (list == NULL)
   {
-    fprintf(stderr,"### Unable to remove entry from NULL pid/int list\n");
+    print_err("### Unable to remove entry from NULL pid/int list\n");
     return 1;
   }
 
   index = pid_index_in_pidint_list(list,pid);
   if (index == -1)
   {
-    fprintf(stderr,"### Cannot remove PID %04x from pid/int list"
-            " - it is not there\n",pid);
+    fprint_err("### Cannot remove PID %04x from pid/int list"
+               " - it is not there\n",pid);
     return 1;
   }
 
@@ -191,21 +192,21 @@ extern void report_pidint_list(pidint_list_p  list,
                                int            pid_first)
 {
   if (list == NULL)
-    printf("%s is NULL\n",list_name);
+    fprint_msg("%s is NULL\n",list_name);
   else if (list->length == 0)
-    printf("%s is empty\n",list_name);
+    fprint_msg("%s is empty\n",list_name);
   else
   {
     int ii;
-    printf("%s:\n",list_name);
+    fprint_msg("%s:\n",list_name);
     for (ii=0; ii<list->length; ii++)
     {
       if (pid_first)
-        printf("    PID %04x (%d) -> %s %d\n",
-               list->pid[ii],list->pid[ii],int_name,list->number[ii]);
+        fprint_msg("    PID %04x (%d) -> %s %d\n",
+                   list->pid[ii],list->pid[ii],int_name,list->number[ii]);
       else
-        printf("    %s %d -> PID %04x (%d)\n",
-               int_name,list->number[ii],list->pid[ii],list->pid[ii]);
+        fprint_msg("    %s %d -> PID %04x (%d)\n",
+                   int_name,list->number[ii],list->pid[ii],list->pid[ii]);
     }
   }
 }
@@ -313,21 +314,21 @@ extern int same_pidint_list(pidint_list_p  list1,
 extern void report_stream_list(pidint_list_p  list,
                                char           *prefix)
 {
-  if (prefix!=NULL) printf(prefix);
+  if (prefix!=NULL) print_msg(prefix);
   if (list == NULL)
-    printf("Program stream list is NULL\n");
+    print_msg("Program stream list is NULL\n");
   else if (list->length == 0)
-    printf("Program stream list is empty\n");
+    print_msg("Program stream list is empty\n");
   else
   {
     int ii;
-    printf("Program streams:\n");
+    print_msg("Program streams:\n");
     for (ii=0; ii<list->length; ii++)
     {
-      if (prefix!=NULL) printf(prefix);
-      printf("    PID %04x (%d) -> Stream type %3d (%s)\n",
-             list->pid[ii],list->pid[ii],list->number[ii],
-             h222_stream_type_str(list->number[ii]));
+      if (prefix!=NULL) print_msg(prefix);
+      fprint_msg("    PID %04x (%d) -> Stream type %3d (%s)\n",
+                 list->pid[ii],list->pid[ii],list->number[ii],
+                 h222_stream_type_str(list->number[ii]));
     }
   }
 }
@@ -345,7 +346,7 @@ static int init_pmt_streams(pmt_p  pmt)
   pmt->streams = malloc(SIZEOF_PMT_STREAM*PMT_STREAMS_START_SIZE);
   if (pmt->streams == NULL)
   {
-    fprintf(stderr,"### Unable to allocate streams in PMT datastructure\n");
+    print_err("### Unable to allocate streams in PMT datastructure\n");
     return 1;
   }
   return 0;
@@ -378,16 +379,16 @@ extern pmt_p build_pmt(uint16_t program_number, byte version_number,
 
   if (PCR_pid != 0x1FFF && (PCR_pid < 0x0010 || PCR_pid > 0x1ffe))
   {
-    fprintf(stderr,"### Error building PMT datastructure\n"
-            "    PCR PID %04x is outside legal program stream range\n",
-            PCR_pid);
+    fprint_err("### Error building PMT datastructure\n"
+               "    PCR PID %04x is outside legal program stream range\n",
+               PCR_pid);
     return NULL;
   }
 
   new = malloc(SIZEOF_PMT);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate PMT datastructure\n");
+    print_err("### Unable to allocate PMT datastructure\n");
     return NULL;
   }
 
@@ -422,8 +423,8 @@ extern int set_pmt_program_info(pmt_p    pmt,
 {
   if (program_info_length > PMT_MAX_INFO_LENGTH)
   {
-    fprintf(stderr,"### Program info length %d is more than %d\n",
-            program_info_length,PMT_MAX_INFO_LENGTH);
+    fprint_err("### Program info length %d is more than %d\n",
+               program_info_length,PMT_MAX_INFO_LENGTH);
     return 1;
   }
   if (pmt->program_info == NULL)
@@ -431,7 +432,7 @@ extern int set_pmt_program_info(pmt_p    pmt,
     pmt->program_info = malloc(program_info_length);
     if (pmt->program_info == NULL)
     {
-      fprintf(stderr,"### Unable to allocate program info in PMT datastructure\n");
+      print_err("### Unable to allocate program info in PMT datastructure\n");
       return 1;
     }
   }
@@ -441,7 +442,7 @@ extern int set_pmt_program_info(pmt_p    pmt,
     pmt->program_info = realloc(pmt->program_info,program_info_length);
     if (pmt->program_info == NULL)
     {
-      fprintf(stderr,"### Unable to extend program info in PMT datastructure\n");
+      print_err("### Unable to extend program info in PMT datastructure\n");
       return 1;
     }
   }
@@ -465,22 +466,22 @@ extern int add_stream_to_pmt(pmt_p      pmt,
 {
   if (pmt == NULL)
   {
-    fprintf(stderr,"### Unable to append to NULL PMT datastructure\n");
+    print_err("### Unable to append to NULL PMT datastructure\n");
     return 1;
   }
 
   if (elementary_PID < 0x0010 || elementary_PID > 0x1ffe)
   {
-    fprintf(stderr,"### Error adding stream to PMT\n"
-            "    Elementary PID %04x is outside legal program stream range\n",
-            elementary_PID);
+    fprint_err("### Error adding stream to PMT\n"
+               "    Elementary PID %04x is outside legal program stream range\n",
+               elementary_PID);
     return 1;
   }
 
   if (ES_info_length > PMT_MAX_INFO_LENGTH)
   {
-    fprintf(stderr,"### ES info length %d is more than %d\n",
-            ES_info_length,PMT_MAX_INFO_LENGTH);
+    fprint_err("### ES info length %d is more than %d\n",
+               ES_info_length,PMT_MAX_INFO_LENGTH);
     return 1;
   }
 
@@ -490,7 +491,7 @@ extern int add_stream_to_pmt(pmt_p      pmt,
     pmt->streams = realloc(pmt->streams,newsize*SIZEOF_PMT_STREAM);
     if (pmt->streams == NULL)
     {
-      fprintf(stderr,"### Unable to extend PMT streams array\n");
+      print_err("### Unable to extend PMT streams array\n");
       return 1;
     }
     pmt->streams_size = newsize;
@@ -503,7 +504,7 @@ extern int add_stream_to_pmt(pmt_p      pmt,
     pmt->streams[pmt->num_streams].ES_info = malloc(ES_info_length);
     if (pmt->streams[pmt->num_streams].ES_info == NULL)
     {
-      fprintf(stderr,"### Unable to allocate PMT stream ES info\n");
+      print_err("### Unable to allocate PMT stream ES info\n");
       return 1;
     }
     memcpy(pmt->streams[pmt->num_streams].ES_info,ES_info,ES_info_length);
@@ -539,15 +540,15 @@ extern int remove_stream_from_pmt(pmt_p         pmt,
   int  ii;
   if (pmt == NULL)
   {
-    fprintf(stderr,"### Unable to remove entry from NULL PMT datastructure\n");
+    print_err("### Unable to remove entry from NULL PMT datastructure\n");
     return 1;
   }
 
   index = pid_index_in_pmt(pmt,pid);
   if (index == -1)
   {
-    fprintf(stderr,"### Cannot remove PID %04x from PMT datastructure"
-            " - it is not there\n",pid);
+    fprint_err("### Cannot remove PID %04x from PMT datastructure"
+               " - it is not there\n",pid);
     return 1;
   }
 
@@ -713,54 +714,54 @@ extern int same_pmt(pmt_p  pmt1,
 /*
  * Report on a PMT datastructure.
  *
- * - `stream` is the stream to write to
+ * - if `is_msg`, report as a message, otherwise as an error
  * - `prefix` is NULL or a string to put before each line printed
  * - `pmt` is the PMT to report on
  */
-extern void report_pmt(FILE   *stream,
+extern void report_pmt(int     is_msg,
                        char   *prefix,
                        pmt_p   pmt)
 {
-  if (prefix!=NULL) fprintf(stream,prefix);
+  if (prefix!=NULL) fprint_msg_or_err(is_msg,prefix);
   if (pmt == NULL)
   {
-    fprintf(stream,"PMT is NULL\n");
+    fprint_msg_or_err(is_msg,"PMT is NULL\n");
     return;
   }
   else
-    fprintf(stream,"Program %d, version %d, PCR PID %04x (%d)\n",
-            pmt->program_number,pmt->version_number,pmt->PCR_pid,pmt->PCR_pid);
+    fprint_msg_or_err(is_msg,"Program %d, version %d, PCR PID %04x (%d)\n",
+                      pmt->program_number,pmt->version_number,pmt->PCR_pid,pmt->PCR_pid);
 
   if (pmt->program_info_length > 0)
   {
-    if (prefix!=NULL) fprintf(stream,prefix);
-    print_data(stream==stdout,"   Program info",pmt->program_info,
+    if (prefix!=NULL) fprint_msg_or_err(is_msg,prefix);
+    print_data(is_msg,"   Program info",pmt->program_info,
                pmt->program_info_length,pmt->program_info_length);
-    print_descriptors(stream,prefix,"   ",pmt->program_info,
+    print_descriptors(is_msg,prefix,"   ",pmt->program_info,
                       pmt->program_info_length);
   }
   if (pmt->num_streams > 0)
   {
     int ii;
-    if (prefix!=NULL) fprintf(stream,prefix);
-    fprintf(stream,"Program streams:\n");
+    if (prefix!=NULL) fprint_msg_or_err(is_msg,prefix);
+    fprint_msg_or_err(is_msg,"Program streams:\n");
     for (ii=0; ii<pmt->num_streams; ii++)
     {
-      if (prefix!=NULL) fprintf(stream,prefix);
-      fprintf(stream,"  PID %04x (%4d) -> Stream type %02x (%3d) %s\n",
-              pmt->streams[ii].elementary_PID,
-              pmt->streams[ii].elementary_PID,
-              pmt->streams[ii].stream_type,
-              pmt->streams[ii].stream_type,
-              h222_stream_type_str(pmt->streams[ii].stream_type));
+      if (prefix!=NULL) fprint_msg_or_err(is_msg,prefix);
+      fprint_msg_or_err(is_msg,"  PID %04x (%4d) -> Stream type %02x (%3d) %s\n",
+                        pmt->streams[ii].elementary_PID,
+                        pmt->streams[ii].elementary_PID,
+                        pmt->streams[ii].stream_type,
+                        pmt->streams[ii].stream_type,
+                        h222_stream_type_str(pmt->streams[ii].stream_type));
       if (pmt->streams[ii].ES_info_length > 0)
       {
-        if (prefix!=NULL) fprintf(stream,prefix);
-        print_data(stream==stdout,"      ES info",
+        if (prefix!=NULL) fprint_msg_or_err(is_msg,prefix);
+        print_data(is_msg,"      ES info",
                    pmt->streams[ii].ES_info,
                    pmt->streams[ii].ES_info_length,
                    pmt->streams[ii].ES_info_length);
-        print_descriptors(stream,prefix,"      ",
+        print_descriptors(is_msg,prefix,"      ",
                           pmt->streams[ii].ES_info,
                           pmt->streams[ii].ES_info_length);
       }

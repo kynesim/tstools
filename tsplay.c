@@ -342,7 +342,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       }
 
       if (!quiet)
-        report_pmt(stdout,"  ",pmt);
+        report_pmt(TRUE,"  ",pmt);
       *pcr_pid = pmt->PCR_pid;
       free_pmt(&pmt);
       if (!quiet)

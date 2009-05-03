@@ -105,36 +105,35 @@ extern void free_access_unit(access_unit_p  *acc_unit)
 }
 
 /*
- * Report on this access unit, on the given output stream.
+ * Report on this access unit
  */
-extern void report_access_unit(FILE          *stream,
-                               access_unit_p  access_unit)
+extern void report_access_unit(access_unit_p  access_unit)
 {
   int ii;
-  fprintf(stream,"Access unit %u",access_unit->index);
+  fprint_msg("Access unit %u",access_unit->index);
   if (access_unit->started_primary_picture)
-    fprintf(stream," (%s)",access_unit->primary_start->start_reason);
-  fprintf(stream,":\n");
+    fprint_msg(" (%s)",access_unit->primary_start->start_reason);
+  print_msg(":\n");
   if (access_unit->field_pic_flag)
-    fprintf(stream,"  %s field of frame %u\n",
-            (access_unit->bottom_field_flag==1?"Bottom":"Top"),
-            access_unit->frame_num);
+    fprint_msg("  %s field of frame %u\n",
+               (access_unit->bottom_field_flag==1?"Bottom":"Top"),
+               access_unit->frame_num);
   else
-    fprintf(stream,"  Frame %u\n",access_unit->frame_num);
+    fprint_msg("  Frame %u\n",access_unit->frame_num);
 
   if (access_unit->ignored_broken_NAL_units)
-    fprintf(stream,"  Ignored %d broken NAL unit%s\n",
-            access_unit->ignored_broken_NAL_units,
-            (access_unit->ignored_broken_NAL_units==1?"":"s"));
+    fprint_msg("  Ignored %d broken NAL unit%s\n",
+               access_unit->ignored_broken_NAL_units,
+               (access_unit->ignored_broken_NAL_units==1?"":"s"));
   
   for (ii=0; ii<access_unit->nal_units->length; ii++)
   {
     nal_unit_p nal = access_unit->nal_units->array[ii];
     if (nal == NULL)
-      fprintf(stream,"     <null>\n");
+      print_msg("     <null>\n");
     else
     {
-      fprintf(stream,"    %c",((access_unit->primary_start == nal)?'*':' '));
+      fprint_msg("    %c",((access_unit->primary_start == nal)?'*':' '));
       report_nal(TRUE,nal);
     }
   }
@@ -672,20 +671,20 @@ static inline int end_access_unit(access_unit_context_p context,
 {
   if (show_details)
   {
-    report_access_unit(stdout,access_unit);
+    report_access_unit(access_unit);
     if (context->pending_nal)
     {
-      printf("... pending: ");
+      print_msg("... pending: ");
       report_nal(TRUE,context->pending_nal);
     }
     if (context->end_of_sequence)
     {
-      printf("--> EndOfSequence ");
+      print_msg("--> EndOfSequence ");
       report_nal(TRUE,context->end_of_sequence);
     }
     if (context->end_of_stream)
     {
-      printf("--> EndOfStream ");
+      print_msg("--> EndOfStream ");
       report_nal(TRUE,context->end_of_stream);
     }
   }
@@ -904,9 +903,9 @@ static int maybe_remember_access_unit(reverse_data_p  reverse_data,
                  access_unit->index);
       return 1;
     }
-    if (verbose) printf("REMEMBER IDR %5d at " OFFSET_T_FORMAT_08
-                        "/%04d for %5d\n",access_unit->index,
-                        start_posn.infile,start_posn.inpacket,num_bytes);
+    if (verbose) fprint_msg("REMEMBER IDR %5d at " OFFSET_T_FORMAT_08
+                            "/%04d for %5d\n",access_unit->index,
+                            start_posn.infile,start_posn.inpacket,num_bytes);
   }
   return 0;
 }
@@ -1056,7 +1055,7 @@ extern int get_next_access_unit(access_unit_context_p context,
       else if (nal_is_redundant(nal))
       {
         // pass
-        // printf("   ignoring redundant NAL unit\n");
+        // print_msg("   ignoring redundant NAL unit\n");
         free_nal_unit(&nal);
       }
       else
@@ -1270,8 +1269,8 @@ static int get_next_field_of_pair(access_unit_context_p  context,
   access_unit_p  second;
 
   if (show_details || context->nac->show_nal_details)
-    printf("@@ Looking for second field (%s time)\n",
-           (first_time?"first":"second"));
+    fprint_msg("@@ Looking for second field (%s time)\n",
+               (first_time?"first":"second"));
   
   // We assume (hope) the next picture will be our second half
   err = get_next_non_empty_access_unit(context,quiet,show_details,&second);
@@ -1294,7 +1293,7 @@ static int get_next_field_of_pair(access_unit_context_p  context,
   {
     // They appear to be matching fields - make a frame from them
     if (show_details || context->nac->show_nal_details)
-      printf("@@ Merging two field access units\n");
+      print_msg("@@ Merging two field access units\n");
     err = merge_access_unit_nals(*access_unit,&second); // (frees `second`)
     if (err)
     {
@@ -1302,7 +1301,7 @@ static int get_next_field_of_pair(access_unit_context_p  context,
       return 1;
     }
     if (show_details)
-      report_access_unit(stdout,*access_unit);
+      report_access_unit(*access_unit);
   }
   else if (first_time)
   {

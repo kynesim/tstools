@@ -79,10 +79,9 @@ extern int rewind_access_unit_context(access_unit_context_p  context);
 extern void free_access_unit(access_unit_p  *acc_unit);
 
 /*
- * Report on this access unit, on the given output stream.
+ * Report on this access unit
  */
-extern void report_access_unit(FILE          *stream,
-                               access_unit_p  access_unit);
+extern void report_access_unit(access_unit_p  access_unit);
 
 /*
  * Retrieve the bounds of this access unit in the file it was read from.

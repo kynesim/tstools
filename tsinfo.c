@@ -263,7 +263,7 @@ static int report_streams(TS_reader_p tsreader,
       else if (!verbose)
         printf("\nPacket %d is PMT with PID %04x (%d)\n",ii+1,pid,pid);
 
-      report_pmt(stdout,"  ",this_pmt);
+      report_pmt(TRUE,"  ",this_pmt);
 
       free_pmt(&last_pmt);
       last_pmt = this_pmt;

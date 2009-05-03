@@ -748,7 +748,7 @@ static void find_h264_fields(ES_p    es,
 
     if (access_unit->field_pic_flag == 1)
     {
-      report_access_unit(stdout,access_unit);
+      report_access_unit(access_unit);
       num_fields ++;
     }
     else
@@ -823,7 +823,7 @@ static void report_h264_frames(ES_p  es,
       break;
 
     if (!quiet)
-      report_access_unit(stdout,access_unit);
+      report_access_unit(access_unit);
 
     if (count_sizes)
     {

@@ -41,6 +41,7 @@
 #include "ts_fns.h"
 #include "tswrite_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "pidint_fns.h"
 #include "pes_fns.h"
 
@@ -1005,7 +1006,7 @@ extern int write_pmt(TS_writer_p output,
   if (section_length > 1021)
   {
     fprintf(stderr,"### PMT data is too long - will not fit in 1021 bytes\n");
-    report_pmt(stderr,"    ",pmt);
+    report_pmt(FALSE,"    ",pmt);
     return 1;
   }
 
@@ -2193,7 +2194,7 @@ extern int extract_prog_list_from_pat(int            verbose,
  * Print out information about program descriptors
  * (either from the PMT program info, or the PMT/stream ES info)
  *
- * - `stream` is the stream to print on
+ * - if `is_msg` then print as a message, otherwise as an error
  * - `leader1` and `leader2` are the text to write at the start of each line
  *   (either or both may be NULL)
  * - `desc_data` is the data containing the descriptors
@@ -2203,7 +2204,7 @@ extern int extract_prog_list_from_pat(int            verbose,
  *
  * If you want to interpret more descriptors then ITU-T J.94 is the standard
  */
-extern int print_descriptors(FILE  *stream,
+extern int print_descriptors(int    is_msg,
                              char  *leader1,
                              char  *leader2,
                              byte  *desc_data,
@@ -2224,8 +2225,8 @@ extern int print_descriptors(FILE  *stream,
     if (this_length > data_len)
     {
       // Not much we can do - try giving up?
-      fprintf(stream,"Descriptor %x says length %d, but only %d bytes left\n",
-             tag,this_length,data_len);
+      fprint_msg_or_err(is_msg,"Descriptor %x says length %d, but only %d bytes left\n",
+                        tag,this_length,data_len);
       return 1;  // Hmm - well, maybe
     }
 
@@ -2249,63 +2250,63 @@ extern int print_descriptors(FILE  *stream,
             tag==18?"IBP":
             tag>19 && tag<64?"Reserved":NULL);
 
-    if (leader1 != NULL) fputs(leader1,stream);
-    if (leader2 != NULL) fputs(leader2,stream);
+    if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
+    if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
     if (name != NULL)
-      print_data(stream==stdout,name,data,this_length,100);
+      print_data(is_msg,name,data,this_length,100);
     else
     {
       switch (tag)
       {
         uint32_t temp_u;
       case 5:
-        fprintf(stream,"Registration ");
+        fprint_msg_or_err(is_msg,"Registration ");
         if (this_length >= 4)
         {
           for (ii=0; ii<4; ii++)
           {
             if (isprint(data[ii]))
-              putc(data[ii],stream);
+              fprint_msg_or_err(is_msg,"%c",data[ii]);
             else
-              fprintf(stream,"<%02x>",data[ii]);
+              fprint_msg_or_err(is_msg,"<%02x>",data[ii]);
           }
           if (this_length > 4)
             for (ii=4; ii < this_length; ii++)
-              fprintf(stream," %02x",data[ii]);
+              fprint_msg_or_err(is_msg," %02x",data[ii]);
         }
-        fprintf(stream,"\n");
+        fprint_msg_or_err(is_msg,"\n");
         break;
       case 9:           // I see this in data, so might as well "explain" it
-        fprintf(stream,"Conditional access: ");
+        fprint_msg_or_err(is_msg,"Conditional access: ");
         temp_u = (data[0] << 8) | data[1];
-        fprintf(stream,"id %04x (%d) ",temp_u,temp_u);
+        fprint_msg_or_err(is_msg,"id %04x (%d) ",temp_u,temp_u);
         temp_u = ((data[2] & 0x1F) << 8) | data[3];
-        fprintf(stream,"PID %04x (%d) ",temp_u,temp_u);
+        fprint_msg_or_err(is_msg,"PID %04x (%d) ",temp_u,temp_u);
         if (data_len > 4)
-          print_data(stream==stdout,"data",&data[4],data_len-4,data_len-4);
+          print_data(is_msg,"data",&data[4],data_len-4,data_len-4);
         else
-          fprintf(stream,"\n");
+          fprint_msg_or_err(is_msg,"\n");
         break;
       case 10:            // We'll assume the length is a multiple of 4
-        fprintf(stream,"Languages: ");
+        fprint_msg_or_err(is_msg,"Languages: ");
         for (ii = 0; ii < this_length/4; ii++)
         {
           byte audio_type;
-          if (ii > 0) fprintf(stream,", ");
-          putc(*(data+(ii*4)+0),stream);
-          putc(*(data+(ii*4)+1),stream);
-          putc(*(data+(ii*4)+2),stream);
+          if (ii > 0) fprint_msg_or_err(is_msg,", ");
+          fprint_msg_or_err(is_msg,"%c",*(data+(ii*4)+0));
+          fprint_msg_or_err(is_msg,"%c",*(data+(ii*4)+1));
+          fprint_msg_or_err(is_msg,"%c",*(data+(ii*4)+2));
           audio_type = *(data+(ii*4)+3);
           switch (audio_type)
           {
-          case 0: /*fprintf(stream,"/undefined");*/ break;  // clearer to say nowt?
-          case 1: fprintf(stream,"/clean effects"); break;
-          case 2: fprintf(stream,"/hearing impaired"); break;
-          case 3: fprintf(stream,"/visual impaired commentary"); break;
-          default: fprintf(stream,"/reserved:0x%02x",audio_type); break;
+          case 0: /*fprint_msg_or_err(is_msg,"/undefined");*/ break;  // clearer to say nowt?
+          case 1: fprint_msg_or_err(is_msg,"/clean effects"); break;
+          case 2: fprint_msg_or_err(is_msg,"/hearing impaired"); break;
+          case 3: fprint_msg_or_err(is_msg,"/visual impaired commentary"); break;
+          default: fprint_msg_or_err(is_msg,"/reserved:0x%02x",audio_type); break;
           }
         }
-        fprintf(stream,"\n");
+        fprint_msg_or_err(is_msg,"\n");
         break;
       case 0x56:  // teletext
         for (ii = 0; ii < this_length; ii += 5)
@@ -2313,42 +2314,42 @@ extern int print_descriptors(FILE  *stream,
           int jj;
           int teletext_type, teletext_magazine, teletext_page;
           if (ii == 0)
-            fprintf(stream,"Teletext: ");
+            fprint_msg_or_err(is_msg,"Teletext: ");
           else
           {
-            if (leader1 != NULL) fputs(leader1,stream);
-            if (leader2 != NULL) fputs(leader2,stream);
-            fprintf(stream,"          ");
+            if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
+            if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
+            fprint_msg_or_err(is_msg,"          ");
           }
-          fprintf(stream,"language=");
+          fprint_msg_or_err(is_msg,"language=");
           for (jj=ii; jj<ii+3; jj++)
           {
             if (isprint(data[jj]))
-              putc(data[jj],stream);
+              fprint_msg_or_err(is_msg,"%c",data[jj]);
             else
-              fprintf(stream,"<%02x>",data[jj]);
+              fprint_msg_or_err(is_msg,"<%02x>",data[jj]);
           }
           teletext_type = (data[ii+3] & 0xF8) >> 3;
           teletext_magazine = (data[ii+3] & 0x07);
           teletext_page = data[ii+4];
-          fprintf(stream,", type=");
+          fprint_msg_or_err(is_msg,", type=");
           switch (teletext_type)
           {
-          case 1: fprintf(stream,"Initial"); break;
-          case 2: fprintf(stream,"Subtitles"); break;
-          case 3: fprintf(stream,"Additional info"); break;
-          case 4: fprintf(stream,"Programme schedule"); break;
-          case 5: fprintf(stream,"Hearing impaired subtitles"); break;
-          default: fprintf(stream,"%x (reserved)",teletext_type); break;
+          case 1: fprint_msg_or_err(is_msg,"Initial"); break;
+          case 2: fprint_msg_or_err(is_msg,"Subtitles"); break;
+          case 3: fprint_msg_or_err(is_msg,"Additional info"); break;
+          case 4: fprint_msg_or_err(is_msg,"Programme schedule"); break;
+          case 5: fprint_msg_or_err(is_msg,"Hearing impaired subtitles"); break;
+          default: fprint_msg_or_err(is_msg,"%x (reserved)",teletext_type); break;
           }
-          fprintf(stream,", magazine %d, page %x",teletext_magazine,teletext_page);
-          fprintf(stream,"\n");
+          fprint_msg_or_err(is_msg,", magazine %d, page %x",teletext_magazine,teletext_page);
+          fprint_msg_or_err(is_msg,"\n");
         }
         break;
 
       case 0x59:
       {
-        fprintf(stream, "subtitling_descriptor:\n");
+        fprint_msg_or_err(is_msg, "subtitling_descriptor:\n");
 
         for (ii = 0; ii + 8 <= this_length; ii += 8)
         {
@@ -2360,34 +2361,33 @@ extern int print_descriptors(FILE  *stream,
           lang[1] = data[ii + 1];
           lang[2] = data[ii + 2];
           lang[3] = 0;
-          if (leader1 != NULL) fputs(leader1,stream);
-          if (leader2 != NULL) fputs(leader2,stream);
-          fprintf(stream, 
-            "  language='%s', subtitling_type=%u\n",
+          if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
+          if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
+          fprint_msg_or_err(is_msg,"  language='%s', subtitling_type=%u\n",
             lang, subtitling_type);
-          if (leader1 != NULL) fputs(leader1,stream);
-          if (leader2 != NULL) fputs(leader2,stream);
-          fprintf(stream, 
+          if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
+          if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
+          fprint_msg_or_err(is_msg, 
             "    composition_page_id=%u, ancillary_page_id=%u\n",
             composition_page_id, ancillary_page_id);
         }
         if (ii < this_length)
-          fprintf(stream, "### %d spare bytes at end of descriptor\n", this_length - ii);
+          fprint_msg_or_err(is_msg, "### %d spare bytes at end of descriptor\n", this_length - ii);
         break;
       }
 
       case 0x6A:
-        print_data(stream==stdout,"DVB AC-3",data,this_length,100);
+        print_data(is_msg,"DVB AC-3",data,this_length,100);
         break;
       case 0x81:
-        print_data(stream==stdout,"ATSC AC-3",data,this_length,100);
+        print_data(is_msg,"ATSC AC-3",data,this_length,100);
       default:
         // Report the tag number as decimal since that is how H.222
         // describes it in table 2-39
         {
           char    temp_c[50]; // twice as much as I need...
           sprintf(temp_c,"Descriptor tag %02x (%3d)",tag,tag);
-          print_data(stream==stdout,temp_c,data,this_length,100);
+          print_data(is_msg,temp_c,data,this_length,100);
         }
         break;
       }
@@ -2671,7 +2671,7 @@ extern int extract_pmt(int            verbose,
   if (verbose && program_info_length > 0)
   {
     printf("  Program info:\n");
-    print_descriptors(stdout,"    ",NULL,&data[12],program_info_length);
+    print_descriptors(TRUE,"    ",NULL,&data[12],program_info_length);
   }
 
   // 32 bits at the end of a program association section is reserved for a CRC
@@ -2724,7 +2724,7 @@ extern int extract_pmt(int            verbose,
       printf("    PID %04x -> Stream %02x %s\n",pid,stream_type,
              h222_stream_type_str(stream_type));
       if (ES_info_length > 0)
-        print_descriptors(stdout,"        ",NULL,&stream_data[5],ES_info_length);
+        print_descriptors(TRUE,"        ",NULL,&stream_data[5],ES_info_length);
     }
     err = add_stream_to_pmt(*pmt,pid,stream_type,ES_info_length,
                             stream_data+5);
@@ -2903,7 +2903,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
   if (verbose && program_info_length > 0)
   {
     printf("  Program info:\n");
-    print_descriptors(stdout,"    ",NULL,&data[12],program_info_length);
+    print_descriptors(TRUE,"    ",NULL,&data[12],program_info_length);
   }
 
   // 32 bits at the end of a program association section is reserved for a CRC
@@ -2949,7 +2949,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
       buf[SARRAYSIZE-1] = '\0';
       printf("    Stream %02x %-40s -> PID %04x\n",stream_type,buf,pid);
       if (ES_info_length > 0)
-        print_descriptors(stdout,"        ",NULL,&stream_data[5],ES_info_length);
+        print_descriptors(TRUE,"        ",NULL,&stream_data[5],ES_info_length);
     }
     // For the moment, we shan't bother to remember the extra info.
     err = append_to_pidint_list(*stream_list,pid,stream_type);
@@ -3442,7 +3442,7 @@ extern int find_pmt(TS_reader_p     tsreader,
   {
     printf("\n");
     printf("Program map\n");
-    report_pmt(stdout,"  ",*pmt);
+    report_pmt(TRUE,"  ",*pmt);
     printf("\n");
   }
   return 0;

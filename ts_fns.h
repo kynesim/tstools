@@ -549,7 +549,7 @@ extern void report_payload(int         show_data,
  * Print out information about program descriptors
  * (either from the PMT program info, or the PMT/stream ES info)
  *
- * - `stream` is the stream to print on
+ * - if `is_msg` then print as a message, otherwise as an error
  * - `leader1` and `leader2` are the text to write at the start of each line
  *   (either or both may be NULL)
  * - `desc_data` is the data containing the descriptors
@@ -557,7 +557,7 @@ extern void report_payload(int         show_data,
  *
  * Returns 0 if all went well, 1 if something went wrong
  */
-extern int print_descriptors(FILE  *stream,
+extern int print_descriptors(int    is_msg,
                              char  *leader1,
                              char  *leader2,
                              byte  *desc_data,
