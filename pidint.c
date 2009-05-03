@@ -734,7 +734,7 @@ extern void report_pmt(FILE   *stream,
   if (pmt->program_info_length > 0)
   {
     if (prefix!=NULL) fprintf(stream,prefix);
-    print_data(stream,"   Program info",pmt->program_info,
+    print_data(stream==stdout,"   Program info",pmt->program_info,
                pmt->program_info_length,pmt->program_info_length);
     print_descriptors(stream,prefix,"   ",pmt->program_info,
                       pmt->program_info_length);
@@ -756,7 +756,7 @@ extern void report_pmt(FILE   *stream,
       if (pmt->streams[ii].ES_info_length > 0)
       {
         if (prefix!=NULL) fprintf(stream,prefix);
-        print_data(stream,"      ES info",
+        print_data(stream==stdout,"      ES info",
                    pmt->streams[ii].ES_info,
                    pmt->streams[ii].ES_info_length,
                    pmt->streams[ii].ES_info_length);

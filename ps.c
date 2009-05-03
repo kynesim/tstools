@@ -746,7 +746,7 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
   {
 #if DEBUG
     printf("ISO/IEC 11171-1/MPEG-1 pack header\n");
-    print_data(stdout,"Pack header",hdr->data,8,8);
+    print_data(TRUE,"Pack header",hdr->data,8,8);
 #endif
     hdr->pack_stuffing_length = 0;          // since it doesn't exist
     hdr->scr =
@@ -784,7 +784,7 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
       return err;
     }
 #if DEBUG
-    print_data(stdout,"Pack header",hdr->data,10,10);
+    print_data(TRUE,"Pack header",hdr->data,10,10);
 #endif
     hdr->scr_base  =
       (((uint64_t)(hdr->data[0] & 0x38)) << 27) |

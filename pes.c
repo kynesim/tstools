@@ -1079,7 +1079,7 @@ static int start_new_PES_packet(PES_reader_p       reader,
 #if DEBUG_PES_ASSEMBLY
   printf(": start new %s PES packet, payload_len = %d\n",
          (pid==reader->video_pid?"video":"audio"),payload_len);
-  print_data(stdout,"Data",payload,payload_len,payload_len);
+  print_data(TRUE,"Data",payload,payload_len,payload_len);
 #endif
   
   if (payload_len < 6)
@@ -1168,7 +1168,7 @@ static int start_new_PES_packet(PES_reader_p       reader,
     {
 #if 0
       int from = payload_len - extra;
-      print_data(stderr,"   End of data",payload+from,extra,extra);
+      print_data(FALSE,"   End of data",payload+from,extra,extra);
 #endif
       fprintf(stderr,"    In %s PES packet, PID %x, starting at "
               OFFSET_T_FORMAT "\n",(pid==reader->video_pid?"video":"audio"),
@@ -1264,7 +1264,7 @@ static int continue_PES_packet(PES_reader_p       reader,
     {
 #if 0
       int from = payload_len - extra;
-      print_data(stderr,"   End of data",payload+from,extra,extra);
+      print_data(FALSE,"   End of data",payload+from,extra,extra);
 #endif
       fprintf(stderr,"    In %s PES packet, PID %x, starting at "
               OFFSET_T_FORMAT "\n",(pid==reader->video_pid?"video":"audio"),
@@ -1525,7 +1525,7 @@ static int read_next_PES_packet_from_TS(PES_reader_p       reader,
                 " with TS packet at " OFFSET_T_FORMAT "\n",
                 (payload_unit_start_indicator?"starting":"continuing"),
                 pid,reader->posn);
-        print_data(stderr,"    Data",payload,payload_len,20);
+        print_data(FALSE,"    Data",payload,payload_len,20);
         return 1;
       }
       if (finished)
@@ -2538,12 +2538,12 @@ static inline void setup_PES_as_ES(PES_packet_data_p  packet)
   packet->es_data = packet->data + offset;
   packet->es_data_len = packet->data_len - offset;
 #if 0 // XXX
-  print_data(stdout,"      ",packet->es_data,packet->es_data_len,20);
+  print_data(TRUE,"      ",packet->es_data,packet->es_data_len,20);
 #endif
 
 #ifdef DEBUG
   if (reader->give_info)
-    print_data(stdout,".. ES data",packet->es_data,packet->es_data_len,20);
+    print_data(TRUE,".. ES data",packet->es_data,packet->es_data_len,20);
 #endif
 
   return;
@@ -2854,7 +2854,7 @@ extern int report_PES_data_array(char   *prefix,
   case STREAM_ID_DSMCC_STREAM:
   case STREAM_ID_H222_E_STREAM:
     printf("\n    Just data bytes\n");
-    print_data(stdout,"    ",bytes,packet_length,20);
+    print_data(TRUE,"    ",bytes,packet_length,20);
     return 0;  // Just data bytes
   case STREAM_ID_PADDING_STREAM:
     printf("\n");
@@ -2944,7 +2944,7 @@ extern int report_PES_data_array(char   *prefix,
       bytes += 3 + PES_header_data_length;
       if (prefix && strlen(prefix) > 0)
         printf("%s",prefix);
-      print_data(stdout,"    ",bytes,packet_length-3-PES_header_data_length,20);
+      print_data(TRUE,"    ",bytes,packet_length-3-PES_header_data_length,20);
     }
   }
   else
@@ -3001,7 +3001,7 @@ extern int report_PES_data_array(char   *prefix,
         bytes += posn;
         if (prefix && strlen(prefix) > 0)
           printf("%s",prefix);
-        print_data(stdout,"    ",bytes,packet_length-posn,20);
+        print_data(TRUE,"    ",bytes,packet_length-posn,20);
       }
     }
   }
@@ -3074,7 +3074,7 @@ extern void report_PES_data_array2(int         stream_type,
     case STREAM_ID_DSMCC_STREAM:
     case STREAM_ID_H222_E_STREAM:
       printf("    Just data bytes\n");
-      print_data(stdout,"    Data",payload+6,payload_len-6,1000);
+      print_data(TRUE,"    Data",payload+6,payload_len-6,1000);
       return;  // Just data bytes
     case STREAM_ID_PADDING_STREAM:
       printf("    Padding stream\n");
@@ -3217,7 +3217,7 @@ extern void report_PES_data_array2(int         stream_type,
     }
   }
   if (show_data_len)
-    print_data(stdout,"    Data",data,data_len,show_data_len);
+    print_data(TRUE,"    Data",data,data_len,show_data_len);
 }
 
 /*

@@ -714,7 +714,7 @@ static int read_seq_param_set_data(nal_unit_p   nal,
             " parameter set NAL unit at " OFFSET_T_FORMAT "/%d\n",
             reserved_zero_5bits,
             nal->unit.start_posn.infile,nal->unit.start_posn.inpacket);
-    print_data(stderr,"   Data",nal->bit_data->data,nal->bit_data->data_len,
+    print_data(FALSE,"   Data",nal->bit_data->data,nal->bit_data->data_len,
                20);
     // Should we carry on or give up? On the whole, if this is broken
     // we can't really trust the rest of its data...

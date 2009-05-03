@@ -53,16 +53,15 @@
 extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len);
 
 /*
- * Print out the bottom N bits from a byte on the given stream
+ * Print out the bottom N bits from a byte
  */
-extern void print_bits(FILE   *stream,
-                       int     num_bits,
+extern void print_bits(int     num_bits,
                        byte    value);
 
 /*
  * Print out (the first `max`) bytes of a byte array.
  *
- * - `stream` is the stream to print on.
+ * - if `is_msg` then print as a message, otherwise as an error
  * - `name` is identifying text to start the report with.
  * - `data` is the byte data to print. This may be NULL.
  * - `length` is its length
@@ -75,7 +74,7 @@ extern void print_bits(FILE   *stream,
  * where no more than `max` bytes are to be printed (and "..." is printed
  * if not all bytes were shown).
  */
-extern void print_data(FILE *stream,
+extern void print_data(int   is_msg,
                        char *name,
                        byte  data[],
                        int   length,
@@ -83,7 +82,6 @@ extern void print_data(FILE *stream,
 /*
  * Print out (the last `max`) bytes of a byte array.
  *
- * - `stream` is the stream to print on.
  * - `name` is identifying text to start the report with.
  * - `data` is the byte data to print. This may be NULL.
  * - `length` is its length
@@ -96,8 +94,7 @@ extern void print_data(FILE *stream,
  * where no more than `max` bytes are to be printed (and "..." is printed
  * if not all bytes were shown).
  */
-extern void print_end_of_data(FILE *stream,
-                              char *name,
+extern void print_end_of_data(char *name,
                               byte  data[],
                               int   length,
                               int   max);

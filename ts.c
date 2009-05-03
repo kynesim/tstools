@@ -329,7 +329,7 @@ static int write_some_TS_PES_packet(TS_writer_p  output,
     printf("TS_PES ");
   else
     printf("       ");
-  print_data(stdout,"",data,data_len,20);
+  print_data(TRUE,"",data,data_len,20);
 #endif
 
   // We always start with a sync_byte to identify this as a
@@ -638,8 +638,8 @@ extern int write_PES_as_TS_PES_packet(TS_writer_p output,
 #endif
 
 #if 0   // XXX
-  print_data(stdout,"TS_PES",data,data_len,20);
-  print_end_of_data(stdout,"      ",data,data_len,20);
+  print_data(TRUE,"TS_PES",data,data_len,20);
+  print_end_of_data("      ",data,data_len,20);
 #endif  // XXX
 
 #if MPEG1_AS_ES
@@ -2037,7 +2037,7 @@ extern void report_payload(int         show_data,
   if (payload_unit_start_indicator)
     report_PES_data_array2(stream_type,payload,payload_len, show_data?1000:0);
   else if (show_data)
-    print_data(stdout,"Data",payload,payload_len,1000);
+    print_data(TRUE,"Data",payload,payload_len,1000);
 }
 
 /*
@@ -2082,7 +2082,7 @@ extern int extract_prog_list_from_pat(int            verbose,
     return 1;
   }
 
-  if (DEBUG) print_data(stdout,"Data",data,data_len,1000);
+  if (DEBUG) print_data(TRUE,"Data",data,data_len,1000);
 
   // The table id in a PAT should be 0
   table_id = data[0];
@@ -2158,7 +2158,7 @@ extern int extract_prog_list_from_pat(int            verbose,
   program_data = data + 8;
   program_data_len = data_len - 8 - 4; // The "-4" is for the CRC
 
-  //print_data(stdout,"Rest:",program_data,program_data_len,1000);
+  //print_data(TRUE,"Rest:",program_data,program_data_len,1000);
 
   err = build_pidint_list(prog_list);
   if (err) return 1;
@@ -2252,7 +2252,7 @@ extern int print_descriptors(FILE  *stream,
     if (leader1 != NULL) fputs(leader1,stream);
     if (leader2 != NULL) fputs(leader2,stream);
     if (name != NULL)
-      print_data(stream,name,data,this_length,100);
+      print_data(stream==stdout,name,data,this_length,100);
     else
     {
       switch (tag)
@@ -2282,7 +2282,7 @@ extern int print_descriptors(FILE  *stream,
         temp_u = ((data[2] & 0x1F) << 8) | data[3];
         fprintf(stream,"PID %04x (%d) ",temp_u,temp_u);
         if (data_len > 4)
-          print_data(stream,"data",&data[4],data_len-4,data_len-4);
+          print_data(stream==stdout,"data",&data[4],data_len-4,data_len-4);
         else
           fprintf(stream,"\n");
         break;
@@ -2377,17 +2377,17 @@ extern int print_descriptors(FILE  *stream,
       }
 
       case 0x6A:
-        print_data(stream,"DVB AC-3",data,this_length,100);
+        print_data(stream==stdout,"DVB AC-3",data,this_length,100);
         break;
       case 0x81:
-        print_data(stream,"ATSC AC-3",data,this_length,100);
+        print_data(stream==stdout,"ATSC AC-3",data,this_length,100);
       default:
         // Report the tag number as decimal since that is how H.222
         // describes it in table 2-39
         {
           char    temp_c[50]; // twice as much as I need...
           sprintf(temp_c,"Descriptor tag %02x (%3d)",tag,tag);
-          print_data(stream,temp_c,data,this_length,100);
+          print_data(stream==stdout,temp_c,data,this_length,100);
         }
         break;
       }
@@ -2463,16 +2463,16 @@ extern int build_psi_data(int            verbose,
       return 1;
     }
 
-    // if (DEBUG) print_data(stdout,"PMT",payload,payload_len,1000);
+    // if (DEBUG) print_data(TRUE,"PMT",payload,payload_len,1000);
     packet_data = payload + pointer + 1;
     packet_data_len = payload_len - pointer - 1;
-    if (DEBUG) print_data(stdout,"Data",packet_data,packet_data_len,1000);
+    if (DEBUG) print_data(TRUE,"Data",packet_data,packet_data_len,1000);
 
     section_length = ((packet_data[1] & 0xF) << 8) | packet_data[2];
 
 #if 0 // XXX
       printf("===========================================\n");
-      print_data(stdout,"build_pmt_data(new)",packet_data,packet_data_len,packet_data_len);
+      print_data(TRUE,"build_pmt_data(new)",packet_data,packet_data_len,packet_data_len);
 #endif
 
     *data_len = section_length + 3;
@@ -2500,11 +2500,11 @@ extern int build_psi_data(int            verbose,
     int space_left = *data_len - *data_used;
     packet_data = payload;
     packet_data_len = payload_len;
-    if (DEBUG) print_data(stdout,"Data",packet_data,packet_data_len,1000);
+    if (DEBUG) print_data(TRUE,"Data",packet_data,packet_data_len,1000);
 
 #if 0 // XXX
     printf("===========================================\n");
-    print_data(stdout,"build_pmt_data(old)",packet_data,packet_data_len,100);
+    print_data(TRUE,"build_pmt_data(old)",packet_data,packet_data_len,100);
 #endif
     if (space_left > packet_data_len)
     {
@@ -2569,7 +2569,7 @@ extern int extract_pmt(int            verbose,
     return 1;
   }
 
-  if (DEBUG) print_data(stdout,"Data",data,data_len,1000);
+  if (DEBUG) print_data(TRUE,"Data",data,data_len,1000);
 
   // Check the table id (maybe this should be done by our caller?)
   table_id = data[0];
@@ -2583,7 +2583,7 @@ extern int extract_pmt(int            verbose,
       if (verbose)
       {
         printf("    'PMT' with PID %04x is user private table %02x\n",pid,table_id);
-        print_data(stdout,"    Data",data,data_len,20);
+        print_data(TRUE,"    Data",data,data_len,20);
       }
     }
     else
@@ -2596,7 +2596,7 @@ extern int extract_pmt(int            verbose,
                 table_id,(table_id==0x00?"PAT":
                           table_id==0x01?"CAT":
                           table_id==0xFF?"Forbidden":"???"));
-      print_data(stderr,"    Data",data,data_len,20);
+      print_data(FALSE,"    Data",data,data_len,20);
     }
     // Best we can do is to pretend it didn't happen
     *pmt = build_pmt(0,0,0);  // empty "PMT" with program number 0, PCR PID 0
@@ -2697,7 +2697,7 @@ extern int extract_pmt(int            verbose,
   stream_data = data + 12 + program_info_length;
   stream_data_len = data_len - 12 - program_info_length - 4; // "-4" == CRC
 
-  //print_data(stdout,"Rest:",stream_data,stream_data_len,1000);
+  //print_data(TRUE,"Rest:",stream_data,stream_data_len,1000);
 
   *pmt = build_pmt(program_number,version_number,pcr_pid);
   if (*pmt == NULL) return 1;
@@ -2799,10 +2799,10 @@ extern int extract_stream_list_from_pmt(int            verbose,
     return 1;
   }
 
-  // if (DEBUG) print_data(stdout,"PMT",payload,payload_len,1000);
+  // if (DEBUG) print_data(TRUE,"PMT",payload,payload_len,1000);
   data = payload + pointer + 1;
   data_len = payload_len - pointer - 1;
-  if (DEBUG) print_data(stdout,"Data",data,data_len,1000);
+  if (DEBUG) print_data(TRUE,"Data",data,data_len,1000);
 
   // Check the table id (maybe this should be done by our caller?)
   table_id = data[0];
@@ -2816,7 +2816,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
       if (verbose)
       {
         printf("    'PMT' with PID %04x is user private table %02x\n",pid,table_id);
-        print_data(stdout,"    Data",data,data_len,20);
+        print_data(TRUE,"    Data",data,data_len,20);
       }
     }
     else
@@ -2829,7 +2829,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
                 table_id,(table_id==0x00?"PAT":
                           table_id==0x01?"CAT":
                           table_id==0xFF?"Forbidden":"???"));
-      print_data(stderr,"    Data",data,data_len,20);
+      print_data(FALSE,"    Data",data,data_len,20);
     }
     // Best we can do is to pretend it didn't happen
     *program_number = 0;
@@ -2928,7 +2928,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
   stream_data = data + 12 + program_info_length;
   stream_data_len = data_len - 12 - program_info_length - 4; // "-4" == CRC
 
-  //print_data(stdout,"Rest:",stream_data,stream_data_len,1000);
+  //print_data(TRUE,"Rest:",stream_data,stream_data_len,1000);
 
   err = build_pidint_list(stream_list);
   if (err) return 1;

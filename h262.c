@@ -161,21 +161,20 @@ extern void free_h262_item(h262_item_p  *item)
 }
 
 /*
- * Print out useful information about this MPEG2 item, on the given stream.
+ * Print out useful information about this MPEG2 item
  */
-extern void report_h262_item(FILE   *stream,
-                             h262_item_p  item)
+extern void report_h262_item(h262_item_p  item)
 {
-  fprintf(stream,OFFSET_T_FORMAT_08 "/%04d: MPEG2 item %02x (",
-          item->unit.start_posn.infile,
-          item->unit.start_posn.inpacket,item->unit.start_code);
-  print_h262_start_code_str(stream,item->unit.start_code);
-  fprintf(stream,")");
+  fprint_msg(OFFSET_T_FORMAT_08 "/%04d: MPEG2 item %02x (",
+             item->unit.start_posn.infile,
+             item->unit.start_posn.inpacket,item->unit.start_code);
+  print_h262_start_code_str(stdout,item->unit.start_code); // XXX Fix
+  print_msg(")");
   if (item->unit.start_code == 0)
-    fprintf(stream," %d (%s)",item->picture_coding_type,
-            H262_PICTURE_CODING_STR(item->picture_coding_type));
-  fprintf(stream," size %d",item->unit.data_len);
-  fprintf(stream,"\n");
+    fprint_msg(" %d (%s)",item->picture_coding_type,
+               H262_PICTURE_CODING_STR(item->picture_coding_type));
+  fprint_msg(" size %d",item->unit.data_len);
+  print_msg("\n");
 }
 
 // ------------------------------------------------------------
@@ -845,7 +844,7 @@ extern int get_next_h262_single_picture(h262_context_p  context,
         if (verbose)
         {
           printf("__ fake AFD ");
-          print_bits(stdout,4,(*picture)->afd);
+          print_bits(4,(*picture)->afd);
           printf(", i.e., %s",SHORT_AFD_STR((*picture)->afd));
           printf("\n");
         }
@@ -1167,7 +1166,7 @@ extern void report_h262_picture(h262_picture_p  picture,
       printf(" AFD ");
     else
       printf(" afd ");
-    print_bits(stdout,4,picture->afd);
+    print_bits(4,picture->afd);
     printf(", i.e., %s",SHORT_AFD_STR(picture->afd));
     printf("\n");
   }

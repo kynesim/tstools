@@ -1034,7 +1034,7 @@ static int back_to_normal(stream_context  stream,
         printf("   last item starts at " OFFSET_T_FORMAT "/%d,\n",
                stream.u.h262->last_item->unit.start_posn.infile,
                stream.u.h262->last_item->unit.start_posn.inpacket);
-        print_data(stdout,"   last item",
+        print_data(TRUE,"   last item",
                    stream.u.h262->last_item->unit.data,
                    stream.u.h262->last_item->unit.data_len,20);
       }
@@ -1046,7 +1046,7 @@ static int back_to_normal(stream_context  stream,
         printf("   last item starts at " OFFSET_T_FORMAT "/%d,\n",
                stream.u.h264->pending_nal->unit.start_posn.infile,
                stream.u.h264->pending_nal->unit.start_posn.inpacket);
-        print_data(stdout,"   pending NAL unit",
+        print_data(TRUE,"   pending NAL unit",
                    stream.u.h264->pending_nal->unit.data,
                    stream.u.h264->pending_nal->unit.data_len,20);
       }
@@ -1122,7 +1122,7 @@ static int back_to_normal(stream_context  stream,
     if (extra_info)
     {
       printf(".. so output %d bytes at end of PES packet\n",length_wanted);
-      print_data(stdout,".. end bytes",&reader->packet->es_data[start_offset],
+      print_data(TRUE,".. end bytes",&reader->packet->es_data[start_offset],
                  length_wanted,20);
     }
 

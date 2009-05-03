@@ -694,8 +694,7 @@ int main(int argc, char **argv)
 dump_out:
           if (ctx.dump_data || (ctx.dump_extra && !sent_to_output))
           {
-            print_data(stdout, "data", 
-                       data, len, len);
+            print_data(TRUE, "data", data, len, len);
           }
           free(allocated); allocated = data = NULL;
         }

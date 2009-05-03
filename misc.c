@@ -120,7 +120,7 @@ extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len)
 /*
  * Print out (the first `max`) bytes of a byte array.
  *
- * - `stream` is the stream to print on.
+ * - if `is_msg` then print as a message, otherwise as an error
  * - `name` is identifying text to start the report with.
  * - `data` is the byte data to print. This may be NULL.
  * - `length` is its length
@@ -133,7 +133,7 @@ extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len)
  * where no more than `max` bytes are to be printed (and "..." is printed
  * if not all bytes were shown).
  */
-extern void print_data(FILE *stream,
+extern void print_data(int   is_msg,
                        char *name,
                        byte  data[],
                        int   length,
@@ -143,29 +143,28 @@ extern void print_data(FILE *stream,
 
   if (length == 0)
   {
-    fprintf(stream,"%s (0 bytes)\n",name);
+    fprint_msg_or_err(is_msg,"%s (0 bytes)\n",name);
     return;
   }
 
 #define MAX_LINE_LENGTH    80
 
-  fprintf(stream,"%s (%d byte%s):",name,length,(length==1?"":"s"));
+  fprint_msg_or_err(is_msg,"%s (%d byte%s):",name,length,(length==1?"":"s"));
   if (data == NULL)
-    fprintf(stream," <null>");  // Shouldn't happen, but let's be careful.
+    fprint_msg_or_err(is_msg," <null>");  // Shouldn't happen, but let's be careful.
   else
   {
     for (ii = 0; ii < (length<max?length:max); ii++)
-      fprintf(stream," %02x",data[ii]);
+      fprint_msg_or_err(is_msg," %02x",data[ii]);
     if (max < length)
-      fprintf(stream,"...");
+      fprint_msg_or_err(is_msg,"...");
   }
-  fprintf(stream,"\n");
+  fprint_msg_or_err(is_msg,"\n");
 }
 
 /*
  * Print out (the last `max`) bytes of a byte array.
  *
- * - `stream` is the stream to print on.
  * - `name` is identifying text to start the report with.
  * - `data` is the byte data to print. This may be NULL.
  * - `length` is its length
@@ -178,8 +177,7 @@ extern void print_data(FILE *stream,
  * where no more than `max` bytes are to be printed (and "..." is printed
  * if not all bytes were shown).
  */
-extern void print_end_of_data(FILE *stream,
-                              char *name,
+extern void print_end_of_data(char *name,
                               byte  data[],
                               int   length,
                               int   max)
@@ -187,35 +185,34 @@ extern void print_end_of_data(FILE *stream,
   int ii;
   if (length == 0)
   {
-    fprintf(stream,"%s (0 bytes)\n",name);
+    fprint_msg("%s (0 bytes)\n",name);
     return;
   }
 
-  fprintf(stream,"%s (%d byte%s):",name,length,(length==1?"":"s"));
+  fprint_msg("%s (%d byte%s):",name,length,(length==1?"":"s"));
   if (data == NULL)
-    fprintf(stream," <null>");  // Shouldn't happen, but let's be careful.
+    print_msg(" <null>");  // Shouldn't happen, but let's be careful.
   else
   {
     if (max < length)
-      fprintf(stream," ...");
+      print_msg(" ...");
     for (ii = (length<max?0:length-max); ii < length; ii++)
-      fprintf(stream," %02x",data[ii]);
+      fprint_msg(" %02x",data[ii]);
   }
-  fprintf(stream,"\n");
+  print_msg("\n");
 }
 
 /*
- * Print out the bottom N bits from a byte on the given stream
+ * Print out the bottom N bits from a byte
  */
-extern void print_bits(FILE   *stream,
-                       int     num_bits,
+extern void print_bits(int     num_bits,
                        byte    value)
 {
   int   ii;
   byte  masks[8] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
   for (ii = 8-num_bits; ii < 8; ii++)
   {
-    fprintf(stream,"%d",((value & masks[ii]) >> (8-ii-1)));
+    fprint_msg("%d",((value & masks[ii]) >> (8-ii-1)));
   }
 }
 
@@ -268,8 +265,8 @@ extern int read_bytes(int    input,
       return EOF;
     else if (length == -1)
     {
-      fprintf(stderr,"### Error reading %d bytes: %s\n",num_bytes,
-              strerror(errno));
+      fprint_err("### Error reading %d bytes: %s\n",num_bytes,
+                 strerror(errno));
       return 1;
     }
     total += length;
@@ -332,8 +329,8 @@ extern offset_t tell_file(int    filedes)
   offset_t  newposn = lseek(filedes,0,SEEK_CUR);
 #endif
   if (newposn == -1)
-    fprintf(stderr,"### Error determining current position in file: %s\n",
-            strerror(errno));
+    fprint_err("### Error determining current position in file: %s\n",
+               strerror(errno));
   return newposn;
 }
 
@@ -373,8 +370,8 @@ extern int open_binary_file(char  *filename,
     filedes = open(filename,flags);
   }
   if (filedes == -1)
-    fprintf(stderr,"### Error opening file %s for %s: %s\n",
-            filename,(for_write?"write":"read"),strerror(errno));
+    fprint_err("### Error opening file %s for %s: %s\n",
+               filename,(for_write?"write":"read"),strerror(errno));
   return filedes;
 }
 
@@ -395,7 +392,7 @@ extern int close_file(int  filedes)
   err = close(filedes);
   if (err)
   {
-    fprintf(stderr,"### Error closing file: %s\n",strerror(errno));
+    fprint_err("### Error closing file: %s\n",strerror(errno));
     return 1;
   }
   else
@@ -456,22 +453,22 @@ extern int open_input_as_ES(char   *name,
   {
     if (use_stdin)
     {
-      fprintf(stderr,"### Cannot use standard input to read PES\n");
+      print_err("### Cannot use standard input to read PES\n");
       return 1;
     }
 
     err = open_PES_reader(name,!quiet,!quiet,&reader);
     if (err)
     {
-      fprintf(stderr,"### Error trying to build PES reader for input"
-              " file %s\n",name);
+      fprint_err("### Error trying to build PES reader for input"
+                 " file %s\n",name);
       return 1;
     }
     err = build_elementary_stream_PES(reader,es);
     if (err)
     {
-      fprintf(stderr,"### Error trying to build ES reader from PES reader\n"
-              "    for input file %s\n",name);
+      fprint_err("### Error trying to build ES reader from PES reader\n"
+                 "    for input file %s\n",name);
       (void) close_PES_reader(&reader);
       return 1;
     }
@@ -510,7 +507,7 @@ extern int open_input_as_ES(char   *name,
       err = decide_ES_video_type(*es,FALSE,FALSE,&video_type);
       if (err)
       {
-        fprintf(stderr,"### Error deciding on stream type for file %s\n",name);
+        fprint_err("### Error deciding on stream type for file %s\n",name);
         close_elementary_stream(es);
         return 1;
       }
@@ -548,7 +545,7 @@ extern int close_input_as_ES(char   *name,
     int err = close_PES_reader(&(*es)->reader);
     if (err)
     {
-      fprintf(stderr,"### Error closing PES reader for file %s\n",name);
+      fprint_err("### Error closing PES reader for file %s\n",name);
       close_elementary_stream(es);
       return 1;
     }
@@ -587,34 +584,32 @@ extern int unsigned_value(char      *prefix,
   val = strtoul(arg,&ptr,base);
   if (errno)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
+      fprint_err("%s: ",prefix);
     if (errno == ERANGE && val == 0)
-      fprintf(stderr,"String cannot be converted to (long) unsigned integer in %s %s\n",
-              cmd,arg);
+      fprint_err("String cannot be converted to (long) unsigned integer in %s %s\n",
+                 cmd,arg);
     else if (errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
-      fprintf(stderr,"Number is too big (overflows) in %s %s\n",cmd,arg);
+      fprint_err("Number is too big (overflows) in %s %s\n",cmd,arg);
     else
-      fprintf(stderr,"Cannot read number in %s %s (%s)\n",
-              cmd,arg,strerror(errno));
+      fprint_err("Cannot read number in %s %s (%s)\n",
+                 cmd,arg,strerror(errno));
     return 1;
   }
   if (ptr[0] != '\0')
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
+      fprint_err("%s: ",prefix);
     if (ptr-arg == 0)
-      fprintf(stderr,
-              "Argument to %s should be a number, in %s %s\n",
-            cmd,cmd,arg);
+      fprint_err("Argument to %s should be a number, in %s %s\n",
+                 cmd,cmd,arg);
     else
-      fprintf(stderr,
-              "Unexpected characters ('%s') after the %.*s in %s %s\n",
-              ptr,
-              (int)(ptr-arg),arg,
-              cmd,arg);
+      fprint_err("Unexpected characters ('%s') after the %.*s in %s %s\n",
+                 ptr,
+                 (int)(ptr-arg),arg,
+                 cmd,arg);
     return 1;
   }
 
@@ -651,54 +646,52 @@ extern int int_value(char *prefix,
   val = strtol(arg,&ptr,base);
   if (errno)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
+      fprint_err("%s: ",prefix);
     if (errno == ERANGE && val == 0)
-      fprintf(stderr,"String cannot be converted to (long) integer in %s %s\n",
-              cmd,arg);
+      fprint_err("String cannot be converted to (long) integer in %s %s\n",
+                 cmd,arg);
     else if (errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
-      fprintf(stderr,"Number is too big (overflows) in %s %s\n",cmd,arg);
+      fprint_err("Number is too big (overflows) in %s %s\n",cmd,arg);
     else
-      fprintf(stderr,"Cannot read number in %s %s (%s)\n",
-              cmd,arg,strerror(errno));
+      fprint_err("Cannot read number in %s %s (%s)\n",
+                 cmd,arg,strerror(errno));
     return 1;
   }
   if (ptr[0] != '\0')
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
+      fprint_err("%s: ",prefix);
     if (ptr-arg == 0)
-      fprintf(stderr,
-              "Argument to %s should be a number, in %s %s\n",
-            cmd,cmd,arg);
+      fprint_err("Argument to %s should be a number, in %s %s\n",
+                 cmd,cmd,arg);
     else
-      fprintf(stderr,
-              "Unexpected characters ('%s') after the %.*s in %s %s\n",
-              ptr,
-              (int)(ptr-arg),arg,
-              cmd,arg);
+      fprint_err("Unexpected characters ('%s') after the %.*s in %s %s\n",
+                 ptr,
+                 (int)(ptr-arg),arg,
+                 cmd,arg);
     return 1;
   }
 
   if (val > INT_MAX || val < INT_MIN)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,"Value %ld (in %s %s) is too large (to fit into 'int')\n",
-            val,cmd,arg);
+      fprint_err("%s: ",prefix);
+    fprint_err("Value %ld (in %s %s) is too large (to fit into 'int')\n",
+               val,cmd,arg);
     return 1;
   }
 
   if (positive && val < 0)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,"Value %ld (in %s %s) is less than zero\n",
-            val,cmd,arg);
+      fprint_err("%s: ",prefix);
+    fprint_err("Value %ld (in %s %s) is less than zero\n",
+               val,cmd,arg);
     return 1;
   }
 
@@ -737,11 +730,11 @@ extern int int_value_in_range(char *prefix,
 
   if (temp > maximum || temp < minimum)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,"Value %d (in %s %s) is not in range %d..%d (0x%x..0x%x)\n",
-            temp,cmd,arg,minimum,maximum,minimum,maximum);
+      fprint_err("%s: ",prefix);
+    fprint_err("Value %d (in %s %s) is not in range %d..%d (0x%x..0x%x)\n",
+               temp,cmd,arg,minimum,maximum,minimum,maximum);
     return 1;
   }
   *value = temp;
@@ -763,10 +756,10 @@ extern int int_value_in_range(char *prefix,
  * explaining will have been written to stderr).
  */
 extern int double_value(char   *prefix,
-                           char   *cmd,
-                           char   *arg,
-                           int     positive,
-                           double *value)
+                        char   *cmd,
+                        char   *arg,
+                        int     positive,
+                        double *value)
 {
   char    *ptr;
   double   val;
@@ -774,39 +767,38 @@ extern int double_value(char   *prefix,
   val = strtod(arg,&ptr);
   if (errno)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
+      fprint_err("%s: ",prefix);
     if (errno == ERANGE && val == 0)
-      fprintf(stderr,"String cannot be converted to (double) float in %s %s\n",
-              cmd,arg);
+      fprint_err("String cannot be converted to (double) float in %s %s\n",
+                 cmd,arg);
     else if (errno == ERANGE && (val == HUGE_VAL || val == -HUGE_VAL))
-      fprintf(stderr,"Number is too big (overflows) in %s %s\n",cmd,arg);
+      fprint_err("Number is too big (overflows) in %s %s\n",cmd,arg);
     else
-      fprintf(stderr,"Cannot read number in %s %s (%s)\n",
-              cmd,arg,strerror(errno));
+      fprint_err("Cannot read number in %s %s (%s)\n",
+                 cmd,arg,strerror(errno));
     return 1;
   }
   if (ptr[0] != '\0')
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,
-            "Unexpected characters ('%s') after the %.*s in %s %s\n",
-            ptr,
-            (int)(ptr-arg),arg,
-            cmd,arg);
+      fprint_err("%s: ",prefix);
+    fprint_err("Unexpected characters ('%s') after the %.*s in %s %s\n",
+               ptr,
+               (int)(ptr-arg),arg,
+               cmd,arg);
     return 1;
   }
 
   if (positive && val < 0)
   {
-    fprintf(stderr,"### ");
+    print_err("### ");
     if (prefix != NULL)
-      fprintf(stderr,"%s: ",prefix);
-    fprintf(stderr,"Value %f (in %s %s) is less than zero\n",
-            val,cmd,arg);
+      fprint_err("%s: ",prefix);
+    fprint_err("Value %f (in %s %s) is less than zero\n",
+               val,cmd,arg);
     return 1;
   }
 
@@ -855,41 +847,40 @@ extern int host_value(char  *prefix,
     if (errno)
     {
       p[0] = ':';
-      fprintf(stderr,"### ");
+      print_err("### ");
       if (prefix != NULL)
-        fprintf(stderr,"%s: ",prefix);
+        fprint_err("%s: ",prefix);
       if (cmd)
-        fprintf(stderr,"Cannot read port number in %s %s (%s)\n",
-                cmd,arg,strerror(errno));
+        fprint_err("Cannot read port number in %s %s (%s)\n",
+                   cmd,arg,strerror(errno));
       else
-        fprintf(stderr,"Cannot read port number in %s (%s)\n",
-                arg,strerror(errno));
+        fprint_err("Cannot read port number in %s (%s)\n",
+                   arg,strerror(errno));
       return 1;
     }
     if (ptr[0] != '\0')
     {
       p[0] = ':';
-      fprintf(stderr,"### ");
+      print_err("### ");
       if (prefix != NULL)
-        fprintf(stderr,"%s: ",prefix);
+        fprint_err("%s: ",prefix);
       if (cmd)
-        fprintf(stderr,"Unexpected characters in port number in %s %s\n",
-                cmd,arg);
+        fprint_err("Unexpected characters in port number in %s %s\n",
+                   cmd,arg);
       else
-        fprintf(stderr,"Unexpected characters in port number in %s\n",
-                arg);
+        fprint_err("Unexpected characters in port number in %s\n",arg);
       return 1;
     }
     if (*port < 0)
     {
       p[0] = ':';
-      fprintf(stderr,"### ");
+      print_err("### ");
       if (prefix != NULL)
-        fprintf(stderr,"%s: ",prefix);
+        fprint_err("%s: ",prefix);
       if (cmd)
-        fprintf(stderr,"Negative port number in %s %s\n",cmd,arg);
+        fprint_err("Negative port number in %s %s\n",cmd,arg);
       else
-        fprintf(stderr,"Negative port number in %s\n",arg);
+        fprint_err("Negative port number in %s\n",arg);
       return 1;
     }
   }
@@ -923,7 +914,7 @@ extern int winsock_startup(void)
   if (err != 0)
   {
     // We could not find a usable WinSock DLL
-    fprintf(stderr,"### Unable to find a usable WinSock DLL\n");
+    print_err("### Unable to find a usable WinSock DLL\n");
     return 1;
   }
  
@@ -933,8 +924,8 @@ extern int winsock_startup(void)
   // requested.
    if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2 )
   {
-    fprintf(stderr,"### WinSock DLL was version %d.%d, not 2.2 or more\n",
-            LOBYTE(wsaData.wVersion),HIBYTE(wsaData.wVersion));
+    fprint_err("### WinSock DLL was version %d.%d, not 2.2 or more\n",
+               LOBYTE(wsaData.wVersion),HIBYTE(wsaData.wVersion));
     WSACleanup();
     return 1;
   }
@@ -949,211 +940,211 @@ extern void print_winsock_err(int err)
   switch (err)
   {
   case WSABASEERR:
-    fprintf(stderr,"(WSABASEERR) No Error");
+    print_err("(WSABASEERR) No Error");
     break;
 
   case WSAEINTR:
-    fprintf(stderr,"(WSAEINTR) Interrupted system call");
+    print_err("(WSAEINTR) Interrupted system call");
     break;
 
   case WSAEBADF:
-    fprintf(stderr,"(WSAEBADF) Bad file number");
+    print_err("(WSAEBADF) Bad file number");
     break;
 
   case WSAEACCES:
-    fprintf(stderr,"(WSAEACCES) Permission denied");
+    print_err("(WSAEACCES) Permission denied");
     break;
 
   case WSAEFAULT:
-    fprintf(stderr,"(WSAEFAULT) Bad address");
+    print_err("(WSAEFAULT) Bad address");
     break;
 
   case WSAEINVAL:
-    fprintf(stderr,"(WSAEINVAL) Invalid argument");
+    print_err("(WSAEINVAL) Invalid argument");
     break;
 
   case WSAEMFILE:
-    fprintf(stderr,"(WSAEMFILE) Too many open files");
+    print_err("(WSAEMFILE) Too many open files");
     break;
 
   case WSAEWOULDBLOCK:
-    fprintf(stderr,"(WSAEWOULDBLOCK) Operation would block");
+    print_err("(WSAEWOULDBLOCK) Operation would block");
     break;
 
   case WSAEINPROGRESS:
-    fprintf(stderr,"(WSAEINPROGRESS) A transaction is still in progress");
+    print_err("(WSAEINPROGRESS) A transaction is still in progress");
     break;
 
   case WSAEALREADY:
-    fprintf(stderr,"(WSAEALREADY) Operation already in progress");
+    print_err("(WSAEALREADY) Operation already in progress");
     break;
 
   case WSAENOTSOCK:
-    fprintf(stderr,"(WSAENOTSOCK) Socket operation on non-socket");
+    print_err("(WSAENOTSOCK) Socket operation on non-socket");
     break;
 
   case WSAEDESTADDRREQ:
-    fprintf(stderr,"(WSAEDESTADDRREQ) Destination address required");
+    print_err("(WSAEDESTADDRREQ) Destination address required");
     break;
 
   case WSAEMSGSIZE:
-    fprintf(stderr,"(WSAEMSGSIZE) Message too long");
+    print_err("(WSAEMSGSIZE) Message too long");
     break;
 
   case WSAEPROTOTYPE:
-    fprintf(stderr,"(WSAEPROTOTYPE) Protocol wrong type for socket");
+    print_err("(WSAEPROTOTYPE) Protocol wrong type for socket");
     break;
 
   case WSAENOPROTOOPT:
-    fprintf(stderr,"(WSAENOPROTOOPT) Bad protocol option");
+    print_err("(WSAENOPROTOOPT) Bad protocol option");
     break;
 
   case WSAEPROTONOSUPPORT:
-    fprintf(stderr,"(WSAEPROTONOSUPPORT) Protocol not supported");
+    print_err("(WSAEPROTONOSUPPORT) Protocol not supported");
     break;
 
   case WSAESOCKTNOSUPPORT:
-    fprintf(stderr,"(WSAESOCKTNOSUPPORT) Socket type not supported");
+    print_err("(WSAESOCKTNOSUPPORT) Socket type not supported");
     break;
 
   case WSAEOPNOTSUPP:
-    fprintf(stderr,"(WSAEOPNOTSUPP) Operation not supported on socket");
+    print_err("(WSAEOPNOTSUPP) Operation not supported on socket");
     break;
 
   case WSAEPFNOSUPPORT:
-    fprintf(stderr,"(WSAEPFNOSUPPORT) Protocol family not supported");
+    print_err("(WSAEPFNOSUPPORT) Protocol family not supported");
     break;
 
   case WSAEAFNOSUPPORT:
-    fprintf(stderr,"(WSAEAFNOSUPPORT) Address family not supported by protocol family");
+    print_err("(WSAEAFNOSUPPORT) Address family not supported by protocol family");
     break;
 
   case WSAEADDRINUSE:
-    fprintf(stderr,"(WSAEADDRINUSE) Address already in use");
+    print_err("(WSAEADDRINUSE) Address already in use");
     break;
 
   case WSAEADDRNOTAVAIL:
-    fprintf(stderr,"(WSAEADDRNOTAVAIL) Can't assign requested address");
+    print_err("(WSAEADDRNOTAVAIL) Can't assign requested address");
     break;
 
   case WSAENETDOWN:
-    fprintf(stderr,"(WSAENETDOWN) Network is down");
+    print_err("(WSAENETDOWN) Network is down");
     break;
 
   case WSAENETUNREACH:
-    fprintf(stderr,"(WSAENETUNREACH) Network is unreachable");
+    print_err("(WSAENETUNREACH) Network is unreachable");
     break;
 
   case WSAENETRESET:
-    fprintf(stderr,"(WSAENETRESET) Net dropped connection or reset");
+    print_err("(WSAENETRESET) Net dropped connection or reset");
     break;
 
   case WSAECONNABORTED:
-    fprintf(stderr,"(WSAECONNABORTED) Software caused connection abort");
+    print_err("(WSAECONNABORTED) Software caused connection abort");
     break;
 
   case WSAECONNRESET:
-    fprintf(stderr,"(WSAECONNRESET) Connection reset by peer");
+    print_err("(WSAECONNRESET) Connection reset by peer");
     break;
 
   case WSAENOBUFS:
-    fprintf(stderr,"(WSAENOBUFS) No buffer space available");
+    print_err("(WSAENOBUFS) No buffer space available");
     break;
 
   case WSAEISCONN:
-    fprintf(stderr,"(WSAEISCONN) Socket is already connected");
+    print_err("(WSAEISCONN) Socket is already connected");
     break;
 
   case WSAENOTCONN:
-    fprintf(stderr,"(WSAENOTCONN) Socket is not connected");
+    print_err("(WSAENOTCONN) Socket is not connected");
     break;
 
   case WSAESHUTDOWN:
-    fprintf(stderr,"(WSAESHUTDOWN) Can't send after socket shutdown");
+    print_err("(WSAESHUTDOWN) Can't send after socket shutdown");
     break;
 
   case WSAETOOMANYREFS:
-    fprintf(stderr,"(WSAETOOMANYREFS) Too many references, can't splice");
+    print_err("(WSAETOOMANYREFS) Too many references, can't splice");
     break;
 
   case WSAETIMEDOUT:
-    fprintf(stderr,"(WSAETIMEDOUT) Connection timed out");
+    print_err("(WSAETIMEDOUT) Connection timed out");
     break;
 
   case WSAECONNREFUSED:
-    fprintf(stderr,"(WSAECONNREFUSED) Connection refused");
+    print_err("(WSAECONNREFUSED) Connection refused");
     break;
 
   case WSAELOOP:
-    fprintf(stderr,"(WSAELOOP) Too many levels of symbolic links");
+    print_err("(WSAELOOP) Too many levels of symbolic links");
     break;
 
   case WSAENAMETOOLONG:
-    fprintf(stderr,"(WSAENAMETOOLONG) File name too long");
+    print_err("(WSAENAMETOOLONG) File name too long");
     break;
 
   case WSAEHOSTDOWN:
-    fprintf(stderr,"(WSAEHOSTDOWN) Host is down");
+    print_err("(WSAEHOSTDOWN) Host is down");
     break;
 
   case WSAEHOSTUNREACH:
-    fprintf(stderr,"(WSAEHOSTUNREACH) No Route to Host");
+    print_err("(WSAEHOSTUNREACH) No Route to Host");
     break;
 
   case WSAENOTEMPTY:
-    fprintf(stderr,"(WSAENOTEMPTY) Directory not empty");
+    print_err("(WSAENOTEMPTY) Directory not empty");
     break;
 
   case WSAEPROCLIM:
-    fprintf(stderr,"(WSAEPROCLIM) Too many processes");
+    print_err("(WSAEPROCLIM) Too many processes");
     break;
 
   case WSAEUSERS:
-    fprintf(stderr,"(WSAEUSERS) Too many users");
+    print_err("(WSAEUSERS) Too many users");
     break;
 
   case WSAEDQUOT:
-    fprintf(stderr,"(WSAEDQUOT) Disc Quota Exceeded");
+    print_err("(WSAEDQUOT) Disc Quota Exceeded");
     break;
 
   case WSAESTALE:
-    fprintf(stderr,"(WSAESTALE) Stale NFS file handle");
+    print_err("(WSAESTALE) Stale NFS file handle");
     break;
 
   case WSASYSNOTREADY:
-    fprintf(stderr,"(WSASYSNOTREADY) Network SubSystem is unavailable");
+    print_err("(WSASYSNOTREADY) Network SubSystem is unavailable");
     break;
 
   case WSAVERNOTSUPPORTED:
-    fprintf(stderr,"(WSAVERNOTSUPPORTED) WINSOCK DLL Version out of range");
+    print_err("(WSAVERNOTSUPPORTED) WINSOCK DLL Version out of range");
     break;
 
   case WSANOTINITIALISED:
-    fprintf(stderr,"(WSANOTINITIALISED) Successful WSASTARTUP not yet performed");
+    print_err("(WSANOTINITIALISED) Successful WSASTARTUP not yet performed");
     break;
 
   case WSAEREMOTE:
-    fprintf(stderr,"(WSAEREMOTE) Too many levels of remote in path");
+    print_err("(WSAEREMOTE) Too many levels of remote in path");
     break;
 
   case WSAHOST_NOT_FOUND:
-    fprintf(stderr,"(WSAHOST_NOT_FOUND) Host not found");
+    print_err("(WSAHOST_NOT_FOUND) Host not found");
     break;
 
   case WSATRY_AGAIN:
-    fprintf(stderr,"(WSATRY_AGAIN) Non-Authoritative Host not found");
+    print_err("(WSATRY_AGAIN) Non-Authoritative Host not found");
     break;
 
   case WSANO_RECOVERY:
-    fprintf(stderr,"(WSANO_RECOVERY) Non-Recoverable errors: FORMERR, REFUSED, NOTIMP");
+    print_err("(WSANO_RECOVERY) Non-Recoverable errors: FORMERR, REFUSED, NOTIMP");
     break;
 
   case WSANO_DATA:
-    fprintf(stderr,"(WSANO_DATA) Valid name, no data record of requested type");
+    print_err("(WSANO_DATA) Valid name, no data record of requested type");
     break;
     
   default:
-    fprintf(stderr,"winsock error %d",err);
+    fprint_err("winsock error %d",err);
     break;
   }
 }
@@ -1169,9 +1160,9 @@ static int winsock_cleanup(void)
   if (err != 0)
   {
     err = WSAGetLastError();
-    fprintf(stderr,"### Error cleaning up WinSock: ");
+    print_err("### Error cleaning up WinSock: ");
     print_winsock_err(err);
-    fprintf(stderr,"\n");
+    print_err("\n");
     return 1;
   }
   return 0;
@@ -1228,15 +1219,15 @@ extern int connect_socket(char *hostname,
   if (output == INVALID_SOCKET)
   {
       err = WSAGetLastError();
-      fprintf(stderr,"### Unable to create socket: ");
+      print_err("### Unable to create socket: ");
       print_winsock_err(err);
-      fprintf(stderr,"\n");
+      print_err("\n");
     return -1;
   }
 #else  // _WIN32      
   if (output == -1)
   {
-    fprintf(stderr,"### Unable to create socket: %s\n",strerror(errno));
+    fprint_err("### Unable to create socket: %s\n",strerror(errno));
     return -1;
   }
 #endif // _WIN32
@@ -1258,9 +1249,9 @@ extern int connect_socket(char *hostname,
       if (hp == NULL)
       {
         err = WSAGetLastError();
-        fprintf(stderr,"### Unable to resolve host %s: ",hostname);
+        fprint_err("### Unable to resolve host %s: ",hostname);
         print_winsock_err(err);
-        fprintf(stderr,"\n");
+        print_err("\n");
         return -1;
       }
       memcpy(&ipaddr.sin_addr.s_addr, hp->h_addr, hp->h_length);
@@ -1272,7 +1263,7 @@ extern int connect_socket(char *hostname,
   hp = gethostbyname(hostname);
   if (hp == NULL)
   {
-    fprintf(stderr,"### Unable to resolve host %s: %s\n",
+    fprint_err("### Unable to resolve host %s: %s\n",
             hostname,hstrerror(h_errno));
     return -1;
   }
@@ -1295,17 +1286,16 @@ extern int connect_socket(char *hostname,
     if (result == SOCKET_ERROR)
     {
       err = WSAGetLastError();
-      fprintf(stderr,"### Error setting socket for IP_MULTICAST_TTL: ");
+      print_err("### Error setting socket for IP_MULTICAST_TTL: ");
       print_winsock_err(err);
-      fprintf(stderr,"\n");
+      print_err("\n");
       return -1;
     }
 #else // _WIN32
     if (result < 0)
     {    
-      fprintf(stderr,
-              "### Error setting socket for IP_MULTICAST_TTL: %s\n",
-              strerror(errno));
+      fprint_err("### Error setting socket for IP_MULTICAST_TTL: %s\n",
+                 strerror(errno));
       return -1;
     }
 #endif // _WIN32
@@ -1314,17 +1304,17 @@ extern int connect_socket(char *hostname,
     {
 #ifdef _WIN32
       unsigned long addr;
-      fprintf(stderr,"!!! Specifying the multicast interface is not supported on "
-                     "some versions of Windows\n");
+      print_err("!!! Specifying the multicast interface is not supported on "
+                "some versions of Windows\n");
       // Also, choosing an invalid address is not (may not be) detected on Windows
       addr = inet_addr(multicast_ifaddr);
       if (addr == INADDR_NONE)
       {
         err = WSAGetLastError();
-        fprintf(stderr,"### Error translating '%s' as a dotted IP address: ",
-            multicast_ifaddr);
+        fprint_err("### Error translating '%s' as a dotted IP address: ",
+                   multicast_ifaddr);
         print_winsock_err(err);
-        fprintf(stderr,"\n");
+        print_err("\n");
         return -1;
       }
 #else  // _WIN32
@@ -1337,16 +1327,16 @@ extern int connect_socket(char *hostname,
       if (result == SOCKET_ERROR)
       {
         err = WSAGetLastError();
-        fprintf(stderr,"### Unable to set multicast interface %s: ");
+        fprint_err("### Unable to set multicast interface %s: ");
         print_winsock_err(err);
-        fprintf(stderr,"\n");
+        print_err("\n");
         return -1;
       }
 #else // _WIN32      
       if (result < 0)
       {
-        fprintf(stderr,"### Unable to set multicast interface %s: %s\n",
-                multicast_ifaddr,strerror(errno));
+        fprint_err("### Unable to set multicast interface %s: %s\n",
+                   multicast_ifaddr,strerror(errno));
         return -1;
       }
 #endif // _WIN32
@@ -1358,16 +1348,16 @@ extern int connect_socket(char *hostname,
   if (result == SOCKET_ERROR)
   {
       err = WSAGetLastError();
-      fprintf(stderr,"### Unable to connect to host %s: ",hostname);
+      fprint_err("### Unable to connect to host %s: ",hostname);
       print_winsock_err(err);
-      fprintf(stderr,"\n");
+      print_err("\n");
     return -1;
   }
 #else  // _WIN32      
   if (result < 0)
   {
-    fprintf(stderr,"### Unable to connect to host %s: %s\n",
-            hostname,strerror(errno));
+    fprint_err("### Unable to connect to host %s: %s\n",
+               hostname,strerror(errno));
     return -1;
   }
 #endif // _WIN32
@@ -1386,9 +1376,9 @@ extern int disconnect_socket(SOCKET  socket)
   if (err != 0)
   {
     err = WSAGetLastError();
-    fprintf(stderr,"### Error closing output: ");
+    print_err("### Error closing output: ");
     print_winsock_err(err);
-    fprintf(stderr,"\n");
+    print_err("\n");
     return 1;
   }
 
@@ -1402,7 +1392,7 @@ extern int disconnect_socket(int  socket)
   int err = close(socket);
   if (err == EOF)
   {
-    fprintf(stderr,"### Error closing output: %s\n",strerror(errno));
+    fprint_err("### Error closing output: %s\n",strerror(errno));
     return 1;
   }
   return 0;

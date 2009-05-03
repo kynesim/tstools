@@ -83,7 +83,7 @@ extern int read_next_adts_frame(int            file,
 
 #if DEBUG
   print_msg("ADTS frame\n");
-  print_data(stdout,"Start",header,JUST_ENOUGH,JUST_ENOUGH);
+  print_data(TRUE,"Start",header,JUST_ENOUGH,JUST_ENOUGH);
 #endif
 
   if (header[0] != 0xFF || (header[1] & 0xF0) != 0xF0)
@@ -150,7 +150,7 @@ extern int read_next_adts_frame(int            file,
     return 1;
   }
 #if DEBUG
-  print_data(stdout,"Again",data,frame_length,20);
+  print_data(TRUE,"Again",data,frame_length,20);
 #endif
 
   err = build_audio_frame(frame);

@@ -250,7 +250,7 @@ static void report_ES_units(ES_p    es,
       report_ES_unit(stdout,&unit);
 
     if (verbose)
-      print_data(stdout,"        Data",
+      print_data(TRUE,"        Data",
                  unit.data,unit.data_len,10);
     
     if (max > 0 && count >= max)
@@ -604,10 +604,10 @@ static void report_h262_items(ES_p    es,
     count++;
 
     if (!quiet)
-      report_h262_item(stdout,item);
+      report_h262_item(item);
 
     if (verbose)
-      print_data(stdout,"        Data",
+      print_data(TRUE,"        Data",
                  item->unit.data,item->unit.data_len,10);
     free_h262_item(&item);
     

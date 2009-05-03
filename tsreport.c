@@ -920,10 +920,10 @@ static int report_ts(TS_reader_p  tsreader,
                      payload_unit_start_indicator);
       if (!show_data && payload_unit_start_indicator)
       {
-        print_data(stdout,"  Data",payload,payload_len,20);
+        print_data(TRUE,"  Data",payload,payload_len,20);
       }
 #if 0   // XXX
-        print_end_of_data(stdout,"      ",payload,payload_len,20);
+        print_end_of_data("      ",payload,payload_len,20);
 #endif
     }
   }
@@ -987,8 +987,8 @@ static int report_single_pid(TS_reader_p  tsreader,
              (payload_unit_start_indicator?" [pusi]":""));
 
       if (adapt_len > 0)
-        print_data(stdout,"    Adapt",adapt,adapt_len,adapt_len);
-      print_data(stdout,  "  Payload",payload,payload_len,payload_len);
+        print_data(TRUE,"    Adapt",adapt,adapt_len,adapt_len);
+      print_data(TRUE,  "  Payload",payload,payload_len,payload_len);
     }
   }
   printf("Read %d TS packet%s, %d with PID %0x\n",

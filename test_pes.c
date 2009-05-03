@@ -228,7 +228,7 @@ static int test1(PES_reader_p  reader,
              packet->posn,packet->data[3]);
       print_stream_id(stdout,packet->data[3]);
       printf(")\n");
-      print_data(stdout,"   Data",packet->data,packet->data_len,20);
+      print_data(TRUE,"   Data",packet->data,packet->data_len,20);
 
       err = report_PES_data_array("",packet->data,packet->data_len,FALSE);
       if (err) return 1;
@@ -248,7 +248,7 @@ static int test1(PES_reader_p  reader,
            packet->posn,packet->data[3]);
     print_stream_id(stdout,packet->data[3]);
     printf(")\n");
-    print_data(stdout,"   Data",packet->data,packet->data_len,20);
+    print_data(TRUE,"   Data",packet->data,packet->data_len,20);
   }
 
   old_data = malloc(packet->data_len);
@@ -286,7 +286,7 @@ static int test1(PES_reader_p  reader,
            packet->posn,packet->data[3]);
     print_stream_id(stdout,packet->data[3]);
     printf(")\n");
-    print_data(stdout,"   Data",packet->data,packet->data_len,20);
+    print_data(TRUE,"   Data",packet->data,packet->data_len,20);
   }
   if (packet->data_len != old_data_len)
   {
@@ -299,8 +299,8 @@ static int test1(PES_reader_p  reader,
   else if (memcmp(packet->data,old_data,packet->data_len))
   {
     fprintf(stderr,"### Test1: packet data differs\n");
-    print_data(stderr,"    Packet 1",old_data,old_data_len,50);
-    print_data(stderr,"    Packet 2",packet->data,packet->data_len,50);
+    print_data(FALSE,"    Packet 1",old_data,old_data_len,50);
+    print_data(FALSE,"    Packet 2",packet->data,packet->data_len,50);
     free(old_data);
     return 1;
   }

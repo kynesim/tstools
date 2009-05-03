@@ -251,10 +251,10 @@ static int report_ps(PS_reader_p  ps,
                posn,count,stream_id);
         print_stream_id(stdout,stream_id);
         printf(")\n");
-        print_data(stdout,"          Packet",
+        print_data(TRUE,"          Packet",
                    packet.data,packet.data_len,20);
 #if 1 // XXX
-        print_end_of_data(stdout,"                ",packet.data,packet.data_len,20);
+        print_end_of_data("                ",packet.data,packet.data_len,20);
 #endif
         if (IS_AUDIO_STREAM_ID(stream_id) || IS_VIDEO_STREAM_ID(stream_id))
 #if 1 // XXX

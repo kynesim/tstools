@@ -234,7 +234,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
         }
         data = &payload[offset];
         data_len = payload_len-offset;
-        if (verbose) print_data(stdout,"data",data,data_len,1000);
+        if (verbose) print_data(TRUE,"data",data,data_len,1000);
       }
       else
       {
@@ -247,7 +247,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
 
         data = payload;
         data_len = payload_len;
-        if (verbose) print_data(stdout,"Data",payload,payload_len,1000);
+        if (verbose) print_data(TRUE,"Data",payload,payload_len,1000);
 
         if (got_pes_packet_len)
         {
@@ -255,7 +255,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
           if (data_len > pes_packet_len)
           {
             data_len = pes_packet_len;
-            if (verbose) print_data(stdout,"Reduced data",data,data_len,1000);
+            if (verbose) print_data(TRUE,"Reduced data",data,data_len,1000);
             pes_packet_len = 0;
           }
           else

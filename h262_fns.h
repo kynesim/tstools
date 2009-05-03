@@ -61,10 +61,9 @@ extern int build_h262_item(h262_item_p  *item);
  */
 extern void free_h262_item(h262_item_p  *item);
 /*
- * Print out useful information about this MPEG2 item, on the given stream.
+ * Print out useful information about this MPEG2 item
  */
-extern void report_h262_item(FILE   *stream,
-                             h262_item_p  item);
+extern void report_h262_item(h262_item_p  item);
 // ------------------------------------------------------------
 // MPEG2 item *data* stuff
 // ------------------------------------------------------------
