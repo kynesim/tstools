@@ -47,6 +47,7 @@
 #include "accessunit_fns.h"
 #include "h262_fns.h"
 #include "avs_fns.h"
+#include "printing_fns.h"
 #include "misc_fns.h"
 #include "version.h"
 
@@ -78,13 +79,14 @@ static void h262_item_dot(h262_item_p  item,
     *delta_gop = (frames - temp_frames)/frame_rate; // time between two GOPs [in seconds]
     temp_frames = frames;
     if (show_gop_time && temp_frames)
-      printf(": %2.4fs\n", *delta_gop);
+      fprint_msg(": %2.4fs\n", *delta_gop);
   }
 
   if (item->unit.start_code == 0x00)
   {
     if (frames % ((int)frame_rate*60) == 0) 
-      printf("\n %d minute%s\n",frames/(int)(frame_rate*60),(frames/(int)(frame_rate*60)==1?"":"s")); 
+      fprint_msg("\n %d minute%s\n",frames/(int)(frame_rate*60),
+                 (frames/(int)(frame_rate*60)==1?"":"s")); 
     frames++;
   }
 
@@ -116,7 +118,7 @@ static void h262_item_dot(h262_item_p  item,
     }
     break;
   }
-  printf(str);
+  print_msg(str);
   fflush(stdout);
 }
 
@@ -143,27 +145,27 @@ static int report_h262_file_as_dots(ES_p    es,
   double time_gop_tot = 0.0;
 
   if (verbose)
-    printf("\n"
-           "Each character represents a single H.262 item\n"
-           "Pictures are represented according to their picture coding\n"
-           "type, and the slices within a picture are not shown.\n"
-           "    i means an I picture\n"
-           "    p means a  P picture\n"
-           "    b means a  B picture\n"
-           "    d means a  D picture (these should not occur in MPEG-2)\n"
-           "    x means some other picture (such should not occur)\n"
-           "Other items are represented as follows:\n"
-           "    [ means a  Sequence header\n"
-           "    > means a  Group Start header\n"
-           "    E means an Extension start header\n"
-           "    U means a  User data header\n"
-           "    X means a  Sequence Error\n"
-           "    ] means a  Sequence End\n"
-           "    R means a  Reserved item\n"
-           "    ? means something else. This may indicate that the stream\n"
-           "      is not an ES representing H.262 (it might, for instance\n"
-           "      be PES)\n"
-           "\n");
+    print_msg("\n"
+              "Each character represents a single H.262 item\n"
+              "Pictures are represented according to their picture coding\n"
+              "type, and the slices within a picture are not shown.\n"
+              "    i means an I picture\n"
+              "    p means a  P picture\n"
+              "    b means a  B picture\n"
+              "    d means a  D picture (these should not occur in MPEG-2)\n"
+              "    x means some other picture (such should not occur)\n"
+              "Other items are represented as follows:\n"
+              "    [ means a  Sequence header\n"
+              "    > means a  Group Start header\n"
+              "    E means an Extension start header\n"
+              "    U means a  User data header\n"
+              "    X means a  Sequence Error\n"
+              "    ] means a  Sequence End\n"
+              "    R means a  Reserved item\n"
+              "    ? means something else. This may indicate that the stream\n"
+              "      is not an ES representing H.262 (it might, for instance\n"
+              "      be PES)\n"
+              "\n");
   
   for (;;)
   {
@@ -173,7 +175,7 @@ static int report_h262_file_as_dots(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error copying NAL units\n");
+      print_err("### Error copying NAL units\n");
       return err;
     }
     count++;
@@ -192,8 +194,8 @@ static int report_h262_file_as_dots(ES_p    es,
     if (max > 0 && count >= max)
       break;
   }
-  printf("\nFound %d MPEG2 item%s\n",count,(count==1?"":"s"));
-  printf("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f (frame rate = %2.2f)\n",time_gop_max,
+  fprint_msg("\nFound %d MPEG2 item%s\n",count,(count==1?"":"s"));
+  fprint_msg("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f (frame rate = %2.2f)\n",time_gop_max,
          time_gop_min,time_gop_tot/(gops-1), frame_rate);
   return 0;
 }
@@ -218,25 +220,25 @@ static int report_avs_file_as_dots(ES_p    es,
   avs_context_p  context;
 
   if (verbose)
-    printf("\n"
-           "Each character represents a single AVS item\n"
-           "Frames are represented according to their picture coding\n"
-           "type, and the slices within a frame are not shown.\n"
-           "    i means an I frame\n"
-           "    p means a  P frame\n"
-           "    b means a  B frame\n"
-           "    _ means a (stray) slice, normally only at the start of a stream\n"
-           "    ! means something else (this should not be possible)\n"
-           "Other items are represented as follows:\n"
-           "    [ means a  Sequence header\n"
-           "    E means an Extension start header\n"
-           "    U means a  User data header\n"
-           "    ] means a  Sequence End\n"
-           "    V means a  Video edit item\n"
-           "    ? means something else. This may indicate that the stream\n"
-           "      is not an ES representing AVS (it might, for instance\n"
-           "      be PES)\n"
-           "\n");
+    print_msg("\n"
+              "Each character represents a single AVS item\n"
+              "Frames are represented according to their picture coding\n"
+              "type, and the slices within a frame are not shown.\n"
+              "    i means an I frame\n"
+              "    p means a  P frame\n"
+              "    b means a  B frame\n"
+              "    _ means a (stray) slice, normally only at the start of a stream\n"
+              "    ! means something else (this should not be possible)\n"
+              "Other items are represented as follows:\n"
+              "    [ means a  Sequence header\n"
+              "    E means an Extension start header\n"
+              "    U means a  User data header\n"
+              "    ] means a  Sequence End\n"
+              "    V means a  Video edit item\n"
+              "    ? means something else. This may indicate that the stream\n"
+              "      is not an ES representing AVS (it might, for instance\n"
+              "      be PES)\n"
+              "\n");
   
   err = build_avs_context(es,&context);
   if (err) return err;
@@ -258,32 +260,32 @@ static int report_avs_file_as_dots(ES_p    es,
     {
       frames ++;
       if (avs_frame->picture_coding_type == AVS_I_PICTURE_CODING)
-        printf("i");
+        print_msg("i");
       else if (avs_frame->picture_coding_type == AVS_P_PICTURE_CODING)
-        printf("p");
+        print_msg("p");
       else if (avs_frame->picture_coding_type == AVS_B_PICTURE_CODING)
-        printf("b");
+        print_msg("b");
       else
-        printf("!");
+        print_msg("!");
       // Give a *rough* guide as to timing -- assume a constant frame rate
       if (frames % (int)(frame_rate*60) == 0)
-        printf("\n%d minute%s\n",frames/(25*60),(frames/(25*60)==1?"":"s"));
+        fprint_msg("\n%d minute%s\n",frames/(25*60),(frames/(25*60)==1?"":"s"));
     }
     else if (avs_frame->start_code < 0xB0)
-      printf("_");                      // slice -- shouldn't happen
+      print_msg("_");                      // slice -- shouldn't happen
     else
     {
       switch (avs_frame->start_code)
       {
       case 0xB0:        // sequence header
         frame_rate = avs_frame_rate(avs_frame->frame_rate_code);
-        printf("[");
+        print_msg("[");
         break;
-      case 0xB1: printf("]"); break;
-      case 0xB2: printf("U"); break;
-      case 0xB5: printf("E"); break;
-      case 0xB7: printf("V"); break;
-      default:   /*printf("?");*/ printf("<%x>",avs_frame->start_code); break;
+      case 0xB1: print_msg("]"); break;
+      case 0xB2: print_msg("U"); break;
+      case 0xB5: print_msg("E"); break;
+      case 0xB7: print_msg("V"); break;
+      default:   /*print_msg("?");*/ fprint_msg("<%x>",avs_frame->start_code); break;
       }
     }
 
@@ -293,13 +295,13 @@ static int report_avs_file_as_dots(ES_p    es,
 
     if (max > 0 && frames >= max)
     {
-      printf("\nStopping because %d frames have been read\n",frames);
+      fprint_msg("\nStopping because %d frames have been read\n",frames);
       break;
     }
   }
   
-  printf("\nFound %d frame%s in %d AVS item%s\n",
-         frames,(frames==1?"":"s"),count,(count==1?"":"s"));
+  fprint_msg("\nFound %d frame%s in %d AVS item%s\n",
+             frames,(frames==1?"":"s"),count,(count==1?"":"s"));
   free_avs_context(&context);
   return 0;
 }
@@ -320,7 +322,7 @@ static char choose_nal_type(access_unit_p access_unit, int *gop_start_found)
   //        The value recovery_frame_cnt is never considered (as if it was 0).
 
   if (access_unit->primary_start == NULL)
-    printf("_");
+    print_msg("_");
   else if (access_unit->primary_start->nal_ref_idc == 0)
   {
     if (all_slices_I(access_unit))
@@ -360,8 +362,8 @@ static char choose_nal_type(access_unit_p access_unit, int *gop_start_found)
               // recovery point. This is technically legal but not supported
               // in our research of random access point. 
               if (temp_nal_unit->u.sei_recovery.recovery_frame_cnt != 0)  
-                printf("!!! recovery_frame_cnt = %d\n",
-                       temp_nal_unit->u.sei_recovery.recovery_frame_cnt); 
+                fprint_msg("!!! recovery_frame_cnt = %d\n",
+                           temp_nal_unit->u.sei_recovery.recovery_frame_cnt); 
             }
           }
         }
@@ -405,22 +407,22 @@ static int dots_by_access_unit(ES_p  es,
   char char_nal_type = 'a';
 
   if (verbose)
-  printf("\n"
-         "Each character represents a single access unit\n"
-         "\n"
-         "    D       means an IDR.\n"
-         "    d       means an IDR that is not all I slices.\n"
-         "    I, P, B means all slices of the primary picture are I, P or B,\n"
-         "            and this is a reference picture.\n"
-         "    i, p, b means all slices of the primary picture are I, P or B,\n"
-         "            and this is NOT a reference picture.\n"
-         "    X or x  means that not all slices are of the same type.\n"
-         "    ?       means some other type of access unit.\n"
-         "    _       means that the access unit doesn't contain a primary picture.\n"
-         "\n"
-         "If -hasheos was specified:\n"
-         "    # means an EOS (end-of-stream) NAL unit.\n"
-         "\n");
+    print_msg("\n"
+              "Each character represents a single access unit\n"
+              "\n"
+              "    D       means an IDR.\n"
+              "    d       means an IDR that is not all I slices.\n"
+              "    I, P, B means all slices of the primary picture are I, P or B,\n"
+              "            and this is a reference picture.\n"
+              "    i, p, b means all slices of the primary picture are I, P or B,\n"
+              "            and this is NOT a reference picture.\n"
+              "    X or x  means that not all slices are of the same type.\n"
+              "    ?       means some other type of access unit.\n"
+              "    _       means that the access unit doesn't contain a primary picture.\n"
+              "\n"
+              "If -hasheos was specified:\n"
+              "    # means an EOS (end-of-stream) NAL unit.\n"
+              "\n");
 
   err = build_access_unit_context(es,&context);
   if (err) return err;
@@ -454,15 +456,16 @@ static int dots_by_access_unit(ES_p  es,
         size_gop_tot += size_gop;
         gops++;
         if (show_gop_time)
-          printf(": %2.4f\n", (double)size_gop/frame_rate ); // that's the time duration of a "GOP"
-                                                     // (if the frame rate is 25fps)
+          fprint_msg(": %2.4f\n",
+                     (double)size_gop/frame_rate ); // that's the time duration of a "GOP"
+        // (if the frame rate is 25fps)
       }
       is_first_k_frame = FALSE;
       k_frame = access_unit_count;
     }
 
-    printf("%c", char_nal_type);
-	access_unit_count++;
+    fprint_msg("%c", char_nal_type);
+    access_unit_count++;
 
     fflush(stdout);
     free_access_unit(&access_unit);
@@ -472,33 +475,33 @@ static int dots_by_access_unit(ES_p  es,
     {
       if (hash_eos)
       {
-        printf("#");
+        print_msg("#");
         // This should be enough to allow us to keep on after the EOS
         context->end_of_stream = FALSE;
         context->no_more_data = FALSE;
       }
       else
       {
-        printf("\nStopping because found end-of-stream NAL unit\n");
+        print_msg("\nStopping because found end-of-stream NAL unit\n");
         break;
       }
     }
 
     if (max > 0 && context->nac->count >= max)
     {
-      printf("\nStopping because %d NAL units have been read\n",
-             context->nac->count);
+      fprint_msg("\nStopping because %d NAL units have been read\n",
+                 context->nac->count);
       break;
     }
   }
   
-  printf("\nFound %d NAL unit%s in %d access unit%s\n",
-         context->nac->count,(context->nac->count==1?"":"s"),
-         access_unit_count,(access_unit_count==1?"":"s"));
+  fprint_msg("\nFound %d NAL unit%s in %d access unit%s\n",
+             context->nac->count,(context->nac->count==1?"":"s"),
+             access_unit_count,(access_unit_count==1?"":"s"));
   if (gops) //only if there is more than 1 gop
-    printf("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f (frame rate = %2.2f)\n",
-           (double)size_gop_max/frame_rate, (double)size_gop_min/frame_rate,
-           (double)size_gop_tot/(frame_rate*gops), frame_rate);
+    fprint_msg("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f (frame rate = %2.2f)\n",
+               (double)size_gop_max/frame_rate, (double)size_gop_min/frame_rate,
+               (double)size_gop_tot/(frame_rate*gops), frame_rate);
   free_access_unit_context(&context);
   return 0;
 }
@@ -527,53 +530,53 @@ static int report_file_as_ES_dots(ES_p    es,
 
   if (verbose)
   {
-    printf("\n"
-           "Each character represents a single ES unit\n");
+    print_msg("\n"
+              "Each character represents a single ES unit\n");
     switch (what_data)
     {
     case VIDEO_H262:
-      printf("Pictures are represented according to their picture coding\n"
-             "type, and the slices within a picture are not shown.\n"
-             "    i means an I picture\n"
-             "    p means a  P picture\n"
-             "    b means a  B picture\n"
-             "    d means a  D picture (these should not occur in MPEG-2)\n"
-             "    ! means some other picture (such should not occur)\n"
-             "Other items are represented as follows:\n"
-             "    [ means a  Sequence header\n"
-             "    > means a  Group Start header\n"
-             "    E means an Extension start header\n"
-             "    U means a  User data header\n"
-             "    X means a  Sequence Error\n"
-             "    ] means a  Sequence End\n"
-             "    R means a  Reserved item\n");
+      print_msg("Pictures are represented according to their picture coding\n"
+                "type, and the slices within a picture are not shown.\n"
+                "    i means an I picture\n"
+                "    p means a  P picture\n"
+                "    b means a  B picture\n"
+                "    d means a  D picture (these should not occur in MPEG-2)\n"
+                "    ! means some other picture (such should not occur)\n"
+                "Other items are represented as follows:\n"
+                "    [ means a  Sequence header\n"
+                "    > means a  Group Start header\n"
+                "    E means an Extension start header\n"
+                "    U means a  User data header\n"
+                "    X means a  Sequence Error\n"
+                "    ] means a  Sequence End\n"
+                "    R means a  Reserved item\n");
       break;
     case VIDEO_H264:
-      printf("### esdots: -es is not yet supported for H.264\n");
+      print_msg("### esdots: -es is not yet supported for H.264\n");
       return 1;
       //break;
     case VIDEO_AVS:
-      printf("Frames are represented according to their picture coding\n"
-             "type, and the slices within a frame are not shown.\n"
-             "    i means an I frame\n"
-             "    p means a  P frame\n"
-             "    b means a  B frame\n"
-             "    _ means a slice\n"
-             "    ! means something else (this should not be possible)\n"
-             "Other items are represented as follows:\n"
-             "    [ means a  Sequence header\n"
-             "    E means an Extension start header\n"
-             "    U means a  User data header\n"
-             "    ] means a  Sequence End\n"
-             "    V means a  Video edit item\n");
+      print_msg("Frames are represented according to their picture coding\n"
+                "type, and the slices within a frame are not shown.\n"
+                "    i means an I frame\n"
+                "    p means a  P frame\n"
+                "    b means a  B frame\n"
+                "    _ means a slice\n"
+                "    ! means something else (this should not be possible)\n"
+                "Other items are represented as follows:\n"
+                "    [ means a  Sequence header\n"
+                "    E means an Extension start header\n"
+                "    U means a  User data header\n"
+                "    ] means a  Sequence End\n"
+                "    V means a  Video edit item\n");
     default:
-      printf("### esdots: Unexpected type of data\n");
+      print_msg("### esdots: Unexpected type of data\n");
       return 1;
     }
-    printf("    ? means something else. This may indicate that the stream\n"
-           "      is not an ES representing AVS (it might, for instance\n"
-           "      be PES)\n"
-           "\n");
+    print_msg("    ? means something else. This may indicate that the stream\n"
+              "      is not an ES representing AVS (it might, for instance\n"
+              "      be PES)\n"
+              "\n");
   }
     
   for (;;)
@@ -594,27 +597,27 @@ static int report_file_as_ES_dots(ES_p    es,
         picture_coding_type = (unit.data[5] & 0x38) >> 3;
         switch (picture_coding_type)
         {
-        case 1: printf("i"); break;
-        case 2: printf("p"); break;
-        case 3: printf("b"); break;
-        case 4: printf("d"); break;
-        default: printf("!"); break;
+        case 1: print_msg("i"); break;
+        case 2: print_msg("p"); break;
+        case 3: print_msg("b"); break;
+        case 4: print_msg("d"); break;
+        default: print_msg("!"); break;
         }
         break;
-      case 0xB0: printf("R"); break; // Reserved
-      case 0xB1: printf("R"); break; // Reserved
-      case 0xB2: printf("U"); break; // User data
-      case 0xB3: printf("["); break; // SEQUENCE HEADER
-      case 0xB4: printf("X"); break; // Sequence error
-      case 0xB5: printf("E"); break; // Extension start
-      case 0xB6: printf("R"); break; // Reserved
-      case 0xB7: printf("]"); break; // SEQUENCE END
-      case 0xB8: printf(">"); break; // Group start
+      case 0xB0: print_msg("R"); break; // Reserved
+      case 0xB1: print_msg("R"); break; // Reserved
+      case 0xB2: print_msg("U"); break; // User data
+      case 0xB3: print_msg("["); break; // SEQUENCE HEADER
+      case 0xB4: print_msg("X"); break; // Sequence error
+      case 0xB5: print_msg("E"); break; // Extension start
+      case 0xB6: print_msg("R"); break; // Reserved
+      case 0xB7: print_msg("]"); break; // SEQUENCE END
+      case 0xB8: print_msg(">"); break; // Group start
       default:
         if (unit.start_code >= 0x01 && unit.start_code <= 0xAF)
-          printf("_");
+          print_msg("_");
         else
-          printf("?");
+          print_msg("?");
         break;
       }
       break;
@@ -624,25 +627,25 @@ static int report_file_as_ES_dots(ES_p    es,
       switch (unit.start_code)
       {
       case 0xB3:
-        printf("i"); break;
+        print_msg("i"); break;
       case 0xB6:
         switch (avs_picture_coding_type(&unit))
         {
-        case AVS_P_PICTURE_CODING: printf("p"); break;
-        case AVS_B_PICTURE_CODING: printf("b"); break;
-        default: printf("!"); break;
+        case AVS_P_PICTURE_CODING: print_msg("p"); break;
+        case AVS_B_PICTURE_CODING: print_msg("b"); break;
+        default: print_msg("!"); break;
         }
         break;
-      case 0xB0: printf("["); break;
-      case 0xB1: printf("]"); break;
-      case 0xB2: printf("U"); break;
-      case 0xB5: printf("E"); break;
-      case 0xB7: printf("V"); break;
+      case 0xB0: print_msg("["); break;
+      case 0xB1: print_msg("]"); break;
+      case 0xB2: print_msg("U"); break;
+      case 0xB5: print_msg("E"); break;
+      case 0xB7: print_msg("V"); break;
       default:
         if (unit.start_code < 0xB0)
-          printf("_");
+          print_msg("_");
         else
-          printf("?");
+          print_msg("?");
         break;
       }
     default: /* shouldn't happen */ break;
@@ -653,24 +656,24 @@ static int report_file_as_ES_dots(ES_p    es,
 
     if (max > 0 && count >= max)
     {
-      printf("\nStopping because %d ES units have been read\n",count);
+      fprint_msg("\nStopping because %d ES units have been read\n",count);
       break;
     }
   }
   clear_ES_unit(&unit);
   
-  printf("\nFound %d ES units%s\n",count,(count==1?"":"s"));
+  fprint_msg("\nFound %d ES units%s\n",count,(count==1?"":"s"));
   return 0;
 }
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: esdots [switches] [<infile>]\n"
     "\n"
     );
   REPORT_VERSION("esdots");
-  printf(
+  print_msg(
     "\n"
     "  Present the content of an H.264 (MPEG-4/AVC), H.262 (MPEG-2) or AVS\n"
     "  elementary stream as a sequence of characters, representing access\n"
@@ -800,8 +803,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### esdots: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### esdots: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -809,7 +812,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name)
       {
-        fprintf(stderr,"### esdots: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### esdots: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else
@@ -823,7 +826,7 @@ int main(int argc, char **argv)
   
   if (!had_input_name)
   {
-    fprintf(stderr,"### esdots: No input file specified\n");
+    print_err("### esdots: No input file specified\n");
     return 1;
   }
 
@@ -831,7 +834,7 @@ int main(int argc, char **argv)
                          force_stream_type,want_data,&is_data,&es);
   if (err)
   {
-    fprintf(stderr,"### esdots: Error opening input file\n");
+    print_err("### esdots: Error opening input file\n");
     return 1;
   }
 
@@ -845,12 +848,12 @@ int main(int argc, char **argv)
     err = report_avs_file_as_dots(es,max,verbose);
   else
   {
-    fprintf(stderr,"### esdots: Unexpected type of video data\n");
+    print_err("### esdots: Unexpected type of video data\n");
   }
 
   if (err)
   {
-    fprintf(stderr,"### esdots: Error producing 'dots'\n");
+    print_err("### esdots: Error producing 'dots'\n");
     (void) close_input_as_ES(input_name,&es);
     return 1;
   }
@@ -858,7 +861,7 @@ int main(int argc, char **argv)
   err = close_input_as_ES(input_name,&es);
   if (err)
   {
-    fprintf(stderr,"### esdots: Error closing input file\n");
+    print_err("### esdots: Error closing input file\n");
     return 1;
   }
   return 0;

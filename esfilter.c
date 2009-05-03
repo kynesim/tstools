@@ -47,6 +47,7 @@
 #include "accessunit_fns.h"
 #include "h262_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "tswrite_fns.h"
 #include "filter_fns.h"
 #include "version.h"
@@ -94,7 +95,7 @@ static int copy_h262(ES_p        es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error copying NAL units\n");
+      print_err("### Error copying NAL units\n");
       return err;
     }
     count++;
@@ -107,7 +108,7 @@ static int copy_h262(ES_p        es,
       err = write_ES_unit(output.es_output,&(item->unit));
     if (err)
     {
-      fprintf(stderr,"### Error writing MPEG2 item\n");
+      print_err("### Error writing MPEG2 item\n");
       return err;
     }
 
@@ -117,7 +118,7 @@ static int copy_h262(ES_p        es,
       break;
   }
   if (!quiet)
-    printf("Copied %d MPEG2 item%s\n",count,(count==1?"":"s"));
+    fprint_msg("Copied %d MPEG2 item%s\n",count,(count==1?"":"s"));
   return 0;
 }
 
@@ -141,7 +142,7 @@ static int write_h262_picture(WRITER          output,
     err = write_h262_picture_as_ES(output.es_output,picture);
   if (err)
   {
-    fprintf(stderr,"### Error writing out H.262 picture\n");
+    print_err("### Error writing out H.262 picture\n");
     return err;
   }
   return 0;
@@ -185,14 +186,14 @@ static int strip_h262(ES_p    es,
   err = build_h262_context(es,&h262);
   if (err)
   {
-    fprintf(stderr,"### Unable to build H.262 picture reading context\n");
+    print_err("### Unable to build H.262 picture reading context\n");
     return 1;
   }
   
   err = build_h262_filter_context_strip(&fcontext,h262,keep_p);
   if (err)
   {
-    fprintf(stderr,"### Unable to build filter context\n");
+    print_err("### Unable to build filter context\n");
     free_h262_context(&h262);
     return 1;
   }
@@ -206,12 +207,12 @@ static int strip_h262(ES_p    es,
                                        &seq_hdr,&picture,&delta_pictures_seen);
     if (err == EOF)
     {
-      if (!quiet) printf("EOF\n");
+      if (!quiet) print_msg("EOF\n");
       break;
     }
     else if (err)
     {
-      fprintf(stderr,"### Error getting next stripped picture\n");
+      print_err("### Error getting next stripped picture\n");
       free_h262_filter_context(&fcontext);
       free_h262_context(&h262);
       return 1;
@@ -225,7 +226,7 @@ static int strip_h262(ES_p    es,
       err = write_h262_picture(output,as_TS,seq_hdr);
       if (err)
       {
-        fprintf(stderr,"### Error writing picture\n");
+        print_err("### Error writing picture\n");
         free_h262_picture(&picture);
         free_h262_filter_context(&fcontext);
         free_h262_context(&h262);
@@ -236,7 +237,7 @@ static int strip_h262(ES_p    es,
     err = write_h262_picture(output,as_TS,picture);
     if (err)
     {
-      fprintf(stderr,"### Error writing picture\n");
+      print_err("### Error writing picture\n");
       free_h262_picture(&picture);
       free_h262_filter_context(&fcontext);
       free_h262_context(&h262);
@@ -247,7 +248,7 @@ static int strip_h262(ES_p    es,
     if (max > 0 && count >= max)
     {
       if (!quiet)
-        printf("Ending after %d pictures\n",count);
+        fprint_msg("Ending after %d pictures\n",count);
       break;
     }
   }
@@ -257,9 +258,9 @@ static int strip_h262(ES_p    es,
   
   if (!quiet)
   {
-    printf("Found %d frames, kept %d (%.1f%%)\n",
-           pictures_seen,pictures_kept,
-           100.0*pictures_kept/pictures_seen);
+    fprint_msg("Found %d frames, kept %d (%.1f%%)\n",
+               pictures_seen,pictures_kept,
+               100.0*pictures_kept/pictures_seen);
   }
   return 0;
 }
@@ -310,14 +311,14 @@ static int filter_h262(ES_p        es,
   err = build_h262_context(es,&h262);
   if (err)
   {
-    fprintf(stderr,"### Unable to build H.262 picture reading context\n");
+    print_err("### Unable to build H.262 picture reading context\n");
     return 1;
   }
 
   err = build_h262_filter_context(&fcontext,h262,frequency);
   if (err)
   {
-    fprintf(stderr,"### Unable to build filter context\n");
+    print_err("### Unable to build filter context\n");
     free_h262_context(&h262);
     return 1;
   }
@@ -334,7 +335,7 @@ static int filter_h262(ES_p        es,
     }
     else if (err)
     {
-      fprintf(stderr,"### Error getting next filtered picture\n");
+      print_err("### Error getting next filtered picture\n");
       free_h262_picture(&last_picture);
       free_h262_filter_context(&fcontext);
       free_h262_context(&h262);
@@ -357,7 +358,7 @@ static int filter_h262(ES_p        es,
       err = write_h262_picture(output,as_TS,seq_hdr);
       if (err)
       {
-        fprintf(stderr,"### Error writing sequence header\n");
+        print_err("### Error writing sequence header\n");
         free_h262_picture(&this_picture);
         free_h262_picture(&last_picture);
         free_h262_filter_context(&fcontext);
@@ -371,7 +372,7 @@ static int filter_h262(ES_p        es,
       err = write_h262_picture(output,as_TS,this_picture);
       if (err)
       {
-        fprintf(stderr,"### Error writing picture\n");
+        print_err("### Error writing picture\n");
         free_h262_picture(&this_picture);
         free_h262_picture(&last_picture);
         free_h262_filter_context(&fcontext);
@@ -387,7 +388,7 @@ static int filter_h262(ES_p        es,
     if (max > 0 && count >= max)
     {
       if (!quiet)
-        printf("Ending after %d frames\n",count);
+        fprint_msg("Ending after %d frames\n",count);
       free_h262_picture(&this_picture);
       break;
     }
@@ -398,19 +399,19 @@ static int filter_h262(ES_p        es,
 
   if (!quiet)
   {
-    printf("\n");
-    printf("Summary\n");
-    printf("=======\n");
-    printf("                   Found       Kept            Written\n");
-    printf("Frames      %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
-           pictures_seen,pictures_kept,
-           100*(((double)pictures_kept)/pictures_seen),
-           pictures_written,
-           100*(((double)pictures_written)/pictures_seen));
+    print_msg("\n");
+    print_msg("Summary\n");
+    print_msg("=======\n");
+    print_msg("                   Found       Kept            Written\n");
+    fprint_msg("Frames      %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
+               pictures_seen,pictures_kept,
+               100*(((double)pictures_kept)/pictures_seen),
+               pictures_written,
+               100*(((double)pictures_written)/pictures_seen));
     if (frequency != 0)
-      printf("Target (frames)     .  %10d (%4.1f%%) at requested"
-             " frequency %d\n",pictures_seen/frequency,
-             100.0/frequency,frequency);
+      fprint_msg("Target (frames)     .  %10d (%4.1f%%) at requested"
+                 " frequency %d\n",pictures_seen/frequency,
+                 100.0/frequency,frequency);
   }
   return 0;
 }
@@ -433,7 +434,7 @@ static int copy_nal_units(ES_p                es,
   err = build_nal_unit_context(es,&context);
   if (err)
   {
-    fprintf(stderr,"### Unable to build NAL unit context to read ES\n");
+    print_err("### Unable to build NAL unit context to read ES\n");
     return 1;
   }
   
@@ -449,12 +450,12 @@ static int copy_nal_units(ES_p                es,
       break;
     else if (err == 2)
     {
-      fprintf(stderr,"!!! Ignoring broken NAL unit\n");
+      print_err("!!! Ignoring broken NAL unit\n");
       continue;
     }
     else if (err)
     {
-      fprintf(stderr,"### Error getting next NAL unit\n");
+      print_err("### Error getting next NAL unit\n");
       free_nal_unit_context(&context);
       return err;
     }
@@ -466,7 +467,7 @@ static int copy_nal_units(ES_p                es,
     if (err)
     {
       free_nal_unit(&nal);
-      fprintf(stderr,"### Error copying NAL units\n");
+      print_err("### Error copying NAL units\n");
       free_nal_unit_context(&context);
       return err;
     }
@@ -474,8 +475,8 @@ static int copy_nal_units(ES_p                es,
     free_nal_unit(&nal);
   }
   if (!quiet)
-    printf("Processed %d NAL unit%s\n",
-           context->count,(context->count==1?"":"s"));
+    fprint_msg("Processed %d NAL unit%s\n",
+               context->count,(context->count==1?"":"s"));
   free_nal_unit_context(&context);
   return 0;
 }
@@ -508,13 +509,13 @@ static int strip_access_units(ES_p                   es,
   err = build_access_unit_context(es,&acontext);
   if (err)
   {
-    fprintf(stderr,"### Unable to build access unit context\n");
+    print_err("### Unable to build access unit context\n");
     return 1;
   }
   err = build_h264_filter_context_strip(&fcontext,acontext,keep_all_ref);
   if (err)
   {
-    fprintf(stderr,"### Unable to build filter context\n");
+    print_err("### Unable to build filter context\n");
     free_access_unit_context(&acontext);
     return 1;
   }
@@ -530,7 +531,7 @@ static int strip_access_units(ES_p                   es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next stripped picture\n");
+      print_err("### Error getting next stripped picture\n");
       free_h264_filter_context(&fcontext);
       free_access_unit_context(&acontext);
       return 1;
@@ -547,7 +548,7 @@ static int strip_access_units(ES_p                   es,
                                     output.es_output);
     if (err)
     {
-      fprintf(stderr,"### Error writing picture\n");
+      print_err("### Error writing picture\n");
       free_h264_filter_context(&fcontext);
       free_access_unit_context(&acontext);
       return 1;
@@ -557,7 +558,7 @@ static int strip_access_units(ES_p                   es,
     if (max > 0 && count >= max)
     {
       if (!quiet)
-        printf("Ending after %d frames\n",count);
+        fprint_msg("Ending after %d frames\n",count);
       break;
     }
   }
@@ -567,14 +568,14 @@ static int strip_access_units(ES_p                   es,
   
   if (!quiet)
   {
-    printf("\n");
-    printf("Summary\n");
-    printf("=======\n");
-    printf("                  Found    Written\n");
-    printf("Access units %10d %10d (%4.1f%%)\n",
-           access_units_seen,
-           access_units_kept,
-           100*(((double)access_units_kept)/access_units_seen));
+    print_msg("\n");
+    print_msg("Summary\n");
+    print_msg("=======\n");
+    print_msg("                  Found    Written\n");
+    fprint_msg("Access units %10d %10d (%4.1f%%)\n",
+               access_units_seen,
+               access_units_kept,
+               100*(((double)access_units_kept)/access_units_seen));
   }
   return 0;
 }
@@ -608,13 +609,13 @@ static int filter_access_units(ES_p               es,
   err = build_access_unit_context(es,&acontext);
   if (err)
   {
-    fprintf(stderr,"### Unable to build access unit context\n");
+    print_err("### Unable to build access unit context\n");
     return 1;
   }
   err = build_h264_filter_context(&fcontext,acontext,frequency);
   if (err)
   {
-    fprintf(stderr,"### Unable to build filter context\n");
+    print_err("### Unable to build filter context\n");
     free_access_unit_context(&acontext);
     return 1;
   }
@@ -629,7 +630,7 @@ static int filter_access_units(ES_p               es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next filtered picture\n");
+      print_err("### Error getting next filtered picture\n");
       free_access_unit(&last_access_unit);
       free_h264_filter_context(&fcontext);
       free_access_unit_context(&acontext);
@@ -659,7 +660,7 @@ static int filter_access_units(ES_p               es,
                                       output.es_output);
       if (err)
       {
-        fprintf(stderr,"### Error writing picture\n");
+        print_err("### Error writing picture\n");
         free_access_unit(&this_access_unit);
         free_access_unit(&last_access_unit);
         free_h264_filter_context(&fcontext);
@@ -675,7 +676,7 @@ static int filter_access_units(ES_p               es,
     if (max > 0 && count >= max)
     {
       if (!quiet)
-        printf("Ending after %d frames\n",count);
+        fprint_msg("Ending after %d frames\n",count);
       free_access_unit(&this_access_unit);
       break;
     }
@@ -686,20 +687,20 @@ static int filter_access_units(ES_p               es,
 
   if (!quiet)
   {
-    printf("\n");
-    printf("Summary\n");
-    printf("=======\n");
-    printf("            Found       Kept            Written\n");
-    printf("Frames %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
-           access_units_seen,
-           access_units_kept,
-           100*(((double)access_units_kept)/access_units_seen),
-           access_units_written,
-           100*(((double)access_units_written)/access_units_seen));
+    print_msg("\n");
+    print_msg("Summary\n");
+    print_msg("=======\n");
+    print_msg("            Found       Kept            Written\n");
+    fprint_msg("Frames %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
+               access_units_seen,
+               access_units_kept,
+               100*(((double)access_units_kept)/access_units_seen),
+               access_units_written,
+               100*(((double)access_units_written)/access_units_seen));
     if (frequency != 0)
-      printf("Target (frames) . %10d (%4.1f%%) at requested"
-             " frequency %d\n",access_units_seen/frequency,
-             100.0/frequency,frequency);
+      fprint_msg("Target (frames) . %10d (%4.1f%%) at requested"
+                 " frequency %d\n",access_units_seen/frequency,
+                 100.0/frequency,frequency);
   }
   return 0;
 }
@@ -728,9 +729,9 @@ static int do_action(ACTION   action,
   if (as_TS)
   {
     if (!quiet)
-      printf("Using transport stream id 1, PMT PID %#x, program 1 ="
-             " PID %#x, stream type %#x\n",DEFAULT_PMT_PID,DEFAULT_VIDEO_PID,
-             stream_type);
+      fprint_msg("Using transport stream id 1, PMT PID %#x, program 1 ="
+                 " PID %#x, stream type %#x\n",DEFAULT_PMT_PID,DEFAULT_VIDEO_PID,
+                 stream_type);
     err = write_TS_program_data(output.ts_output,1,1,
                                 DEFAULT_PMT_PID,DEFAULT_VIDEO_PID,stream_type);
     if (err) return 1;
@@ -760,7 +761,7 @@ static int do_action(ACTION   action,
     break;
     
   default:
-    fprintf(stderr,"### Unexpected action %d\n",action);
+    fprint_err("### Unexpected action %d\n",action);
     err = 1;
     break;
   }
@@ -769,12 +770,12 @@ static int do_action(ACTION   action,
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: esfilter [actions/switches] [<infile>] [<outfile>]\n"
     "\n"
     );
   REPORT_VERSION("esfilter");
-  printf(
+  print_msg(
     "\n"
     "  Output a filtered or truncated version of an elementary stream.\n"
     "  The input is either H.264 (MPEG-4/AVC) or H.262 (MPEG-2).\n"
@@ -962,8 +963,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### esfilter: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### esfilter: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -971,7 +972,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name && had_output_name)
       {
-        fprintf(stderr,"### esfilter: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### esfilter: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else if (had_input_name)
@@ -990,18 +991,18 @@ int main(int argc, char **argv)
   
   if (!had_input_name)
   {
-    fprintf(stderr,"### esfilter: No input file specified\n");
+    print_err("### esfilter: No input file specified\n");
     return 1;
   }
   if (!had_output_name)
   {
-    fprintf(stderr,"### esfilter: No output file specified\n");
+    print_err("### esfilter: No output file specified\n");
     return 1;
   }
   if (action == ACTION_UNDEFINED)
   {
-    fprintf(stderr,"### esfilter: No action specified (-copy, -strip,"
-            " -filter)\n");
+    print_err("### esfilter: No action specified (-copy, -strip,"
+              " -filter)\n");
     return 1;
   }
 
@@ -1016,7 +1017,7 @@ int main(int argc, char **argv)
                          force_stream_type,want_data,&is_data,&es);
   if (err)
   {
-    fprintf(stderr,"### esfilter: Error opening input file\n");
+    print_err("### esfilter: Error opening input file\n");
     return 1;
   }
 
@@ -1032,7 +1033,7 @@ int main(int argc, char **argv)
     stream_type = AVC_VIDEO_STREAM_TYPE;
   else
   {
-    fprintf(stderr,"### esfilter: Unexpected type of video data\n");
+    print_err("### esfilter: Unexpected type of video data\n");
     return 1;
   }
 
@@ -1046,7 +1047,7 @@ int main(int argc, char **argv)
       err = tswrite_open(TS_W_FILE,output_name,NULL,0,quiet,&(output.ts_output));
     if (err)
     {
-      fprintf(stderr,"### esfilter: Unable to open %s\n",output_name);
+      fprint_err("### esfilter: Unable to open %s\n",output_name);
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
@@ -1056,47 +1057,47 @@ int main(int argc, char **argv)
     output.es_output = fopen(output_name,"wb");
     if (output.es_output == NULL)
     {
-      fprintf(stderr,"### esfilter: Unable to open output file %s: %s\n",
-              output_name,strerror(errno));
+      fprint_err("### esfilter: Unable to open output file %s: %s\n",
+                 output_name,strerror(errno));
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
     if (!quiet)
-      printf("Writing to   %s\n",output_name);
+      fprint_msg("Writing to   %s\n",output_name);
   }
 
   if (!quiet)
   {
     if (as_TS)
-      printf("Writing as Transport Stream\n");
+      print_msg("Writing as Transport Stream\n");
     if (action == ACTION_FILTER)
-      printf("Filtering freqency %d\n",frequency);
+      fprint_msg("Filtering freqency %d\n",frequency);
     if (action == ACTION_STRIP)
     {
       if (want_data == VIDEO_H262)
       {
         if (keep_all_ref)
-          printf("Just keeping I and P pictures\n");
+          print_msg("Just keeping I and P pictures\n");
         else
-          printf("Just keep I pictures\n");
+          print_msg("Just keep I pictures\n");
       }
       else
       {
         if (keep_all_ref)
-          printf("Just keeping reference pictures\n");
+          print_msg("Just keeping reference pictures\n");
         else
-          printf("Just keep IDR and I pictures\n");
+          print_msg("Just keep IDR and I pictures\n");
       }
     }
     if (max)
-      printf("Stopping as soon after %d NAL units as possible\n",max);
+      fprint_msg("Stopping as soon after %d NAL units as possible\n",max);
   }
 
   err = do_action(action,es,output,max,frequency,want_data==VIDEO_H262,
                   as_TS,keep_all_ref,stream_type,verbose,quiet);
   if (err)
   {
-    fprintf(stderr,"### esfilter: Error doing '%s'\n",action_switch);
+    fprint_err("### esfilter: Error doing '%s'\n",action_switch);
     (void) close_input_as_ES(input_name,&es);
     if (as_TS)
       (void) tswrite_close(output.ts_output,TRUE);
@@ -1104,9 +1105,8 @@ int main(int argc, char **argv)
     {
       err = fclose(output.es_output);
       if (err)
-        fprintf(stderr,
-                "### esfilter: (Error closing output file %s: %s)\n",
-                output_name,strerror(errno));
+        fprint_err("### esfilter: (Error closing output file %s: %s)\n",
+                   output_name,strerror(errno));
     }
     return 1;
   }
@@ -1117,7 +1117,7 @@ int main(int argc, char **argv)
     err = tswrite_close(output.ts_output,quiet);
     if (err)
     {
-      fprintf(stderr,"### esfilter: Error closing output file %s",output_name);
+      fprint_err("### esfilter: Error closing output file %s",output_name);
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
@@ -1128,8 +1128,8 @@ int main(int argc, char **argv)
     err = fclose(output.es_output);
     if (err)
     {
-      fprintf(stderr,"### esfilter: Error closing output file %s: %s\n",
-              output_name,strerror(errno));
+      fprint_err("### esfilter: Error closing output file %s: %s\n",
+                 output_name,strerror(errno));
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
@@ -1138,7 +1138,7 @@ int main(int argc, char **argv)
   err = close_input_as_ES(input_name,&es);
   if (err)
   {
-    fprintf(stderr,"### esfilter: Error closing input file\n");
+    print_err("### esfilter: Error closing input file\n");
     return 1;
   }
   return 0;

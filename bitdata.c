@@ -36,6 +36,7 @@
 
 #include "compat.h"
 #include "bitdata_fns.h"
+#include "printing_fns.h"
 
 static int MASK[] =  { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
 
@@ -54,7 +55,7 @@ extern int build_bitdata(bitdata_p  *bitdata,
   bitdata_p  new = malloc(SIZEOF_BITDATA);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate bitdata datastructure\n");
+    print_err("### Unable to allocate bitdata datastructure\n");
     return 1;
   }
 
@@ -102,7 +103,7 @@ static inline int next_bit(bitdata_p  bitdata)
     bitdata->cur_byte += 1;
     if (bitdata->cur_byte > (bitdata->data_len - 1))
     {
-      fprintf(stderr,"### No more bits to read from input stream\n");
+      print_err("### No more bits to read from input stream\n");
       return -1;
     }
   }
@@ -215,9 +216,8 @@ extern int read_exp_golomb(bitdata_p   bitdata,
   int err = read_bits(bitdata,leading_zero_bits,&next);
   if (err)
   {
-    fprintf(stderr,
-            "### Unable to read ExpGolomb value - not enough bits (%d)\n",
-            leading_zero_bits);
+    fprint_err("### Unable to read ExpGolomb value - not enough bits (%d)\n",
+               leading_zero_bits);
     return err;
   }
   *result = (int) (pow(2,leading_zero_bits) - 1 + next);
@@ -238,7 +238,7 @@ extern int read_signed_exp_golomb(bitdata_p   bitdata,
   int err = read_exp_golomb(bitdata,&val);
   if (err)
   {
-    fprintf(stderr,"### Unable to read signed ExpGolomb value\n");
+    print_err("### Unable to read signed ExpGolomb value\n");
     return err;
   }
   *result = (int) (pow(-1,(val+1)) * ceil(val / 2.0));
