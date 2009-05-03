@@ -3056,7 +3056,7 @@ extern void report_PES_data_array2(int         stream_type,
   printf("    Start code:        %02x %02x %02x\n",
          payload[0],payload[1],payload[2]);
   printf("    Stream ID:         %02x   (%d) ",stream_id,stream_id);
-  print_h262_start_code_str(stdout,stream_id);
+  print_h262_start_code_str(stream_id);
   printf("\n");
   printf("    PES packet length: %04x (%d)\n",
          PES_packet_length,PES_packet_length);

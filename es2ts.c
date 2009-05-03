@@ -105,7 +105,7 @@ static int transfer_data(ES_p        es,
     count++;
 
     if (verbose)
-      report_ES_unit(stderr,unit);
+      report_ES_unit(FALSE,unit);
     
     err = write_ES_unit_as_TS(output,unit,video_pid);
     if (err)

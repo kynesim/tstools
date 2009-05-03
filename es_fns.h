@@ -176,9 +176,9 @@ extern int build_ES_unit_from_data(ES_unit_p  *unit,
 extern void free_ES_unit(ES_unit_p  *unit);
 
 /*
- * Print out some information this ES unit, on the given stream
+ * Print out some information this ES unit, on normal or error output
  */
-extern void report_ES_unit(FILE      *stream,
+extern void report_ES_unit(int        is_msg,
                            ES_unit_p  unit);
 
 /*

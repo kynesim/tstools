@@ -32,7 +32,7 @@
 #include "h262_defns.h"
 
 /*
- * Print out information derived from the start code, to the given stream.
+ * Print out information derived from the start code
  *
  * Note that if a "SYSTEM START" code is reported, then the data is
  * likely to be PES or Transport Stream data, not Elementary Stream.
@@ -44,8 +44,7 @@
  * that some of the apparent start code prefixes are actually false
  * detections.
  */
-extern void print_h262_start_code_str(FILE  *stream,
-                                      byte   start_code);
+extern void print_h262_start_code_str(byte   start_code);
 /*
  * Build a new MPEG2 item datastructure.
  *

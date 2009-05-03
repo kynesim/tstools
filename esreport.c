@@ -247,7 +247,7 @@ static void report_ES_units(ES_p    es,
     count++;
 
     if (!quiet)
-      report_ES_unit(stdout,&unit);
+      report_ES_unit(TRUE,&unit);
 
     if (verbose)
       print_data(TRUE,"        Data",

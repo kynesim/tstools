@@ -82,8 +82,7 @@ extern int open_elementary_stream(char  *filename,
   err = build_elementary_stream_file(input,es);
   if (err)
   {
-    fprintf(stderr,"### Error building elementary stream for file %s\n",
-            filename);
+    fprint_err("### Error building elementary stream for file %s\n", filename);
     return 1;
   }
   return 0;
@@ -111,8 +110,8 @@ static int setup_readahead(ES_p  es)
   {
     if (es->read_ahead_len < 3)
     {
-      fprintf(stderr,"### File only contains %d byte%s\n",
-              es->read_ahead_len,(es->read_ahead_len==1?"":"s"));
+      fprint_err("### File only contains %d byte%s\n",
+                 es->read_ahead_len,(es->read_ahead_len==1?"":"s"));
       return 1;
     }
   }
@@ -120,15 +119,15 @@ static int setup_readahead(ES_p  es)
   {
     if (es->reader->packet->es_data_len < 3)
     {
-      fprintf(stderr,"### File PES packet only contains %d byte%s\n",
-              es->reader->packet->es_data_len,
-              (es->reader->packet->es_data_len==1?"":"s"));
+      fprint_err("### File PES packet only contains %d byte%s\n",
+                 es->reader->packet->es_data_len,
+                 (es->reader->packet->es_data_len==1?"":"s"));
       return 1;
     }
   }
 
   if (DEBUG)
-    printf("File starts %02x %02x %02x\n",es->data[0],es->data[1],es->data[2]);
+    fprint_msg("File starts %02x %02x %02x\n",es->data[0],es->data[1],es->data[2]);
 
   // Despite (maybe) reporting the above, we haven't actually read anything
   // yet
@@ -156,7 +155,7 @@ extern int build_elementary_stream_file(int    input,
   ES_p new = malloc(SIZEOF_ES);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate elementary stream datastructure\n");
+    print_err("### Unable to allocate elementary stream datastructure\n");
     return 1;
   }
 
@@ -189,7 +188,7 @@ extern int build_elementary_stream_PES(PES_reader_p  reader,
   ES_p new = malloc(SIZEOF_ES);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate elementary stream datastructure\n");
+    print_err("### Unable to allocate elementary stream datastructure\n");
     return 1;
   }
 
@@ -282,7 +281,7 @@ extern int setup_ES_unit(ES_unit_p  unit)
   unit->data = malloc(ES_UNIT_DATA_START_SIZE);
   if (unit->data == NULL)
   {
-    fprintf(stderr,"### Unable to allocate ES unit data buffer\n");
+    print_err("### Unable to allocate ES unit data buffer\n");
     return 1;
   }
   unit->data_len = 0;
@@ -321,7 +320,7 @@ extern int build_ES_unit(ES_unit_p  *unit)
   ES_unit_p  new = malloc(SIZEOF_ES_UNIT);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate ES unit datastructure\n");
+    print_err("### Unable to allocate ES unit datastructure\n");
     return 1;
   }
   err = setup_ES_unit(new);
@@ -349,13 +348,13 @@ extern int build_ES_unit_from_data(ES_unit_p  *unit,
   ES_unit_p  new = malloc(SIZEOF_ES_UNIT);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate ES unit datastructure\n");
+    print_err("### Unable to allocate ES unit datastructure\n");
     return 1;
   }
   new->data = malloc(data_len);
   if (new->data == NULL)
   {
-    fprintf(stderr,"### Unable to allocate ES unit data buffer\n");
+    print_err("### Unable to allocate ES unit data buffer\n");
     return 1;
   }
   (void) memcpy(new->data, data, data_len);
@@ -386,16 +385,17 @@ extern void free_ES_unit(ES_unit_p  *unit)
 }
 
 /*
- * Print out some information this ES unit, on the given stream
+ * Print out some information this ES unit, on normal or error output
  */
-extern void report_ES_unit(FILE      *stream,
+extern void report_ES_unit(int        is_msg,
                            ES_unit_p  unit)
 {
   byte s = unit->start_code;
-  fprintf(stream,OFFSET_T_FORMAT_08 "/%4d: ES unit (%02x '%d%d%d%d %d%d%d%d')",
-          unit->start_posn.infile,unit->start_posn.inpacket,s,
-          (s&0x80)>>7,(s&0x40)>>6,(s&0x20)>>5,(s&0x10)>>4,
-          (s&0x08)>>3,(s&0x04)>>2,(s&0x02)>>1,(s&0x01));
+  fprint_msg_or_err(is_msg,
+                    OFFSET_T_FORMAT_08 "/%4d: ES unit (%02x '%d%d%d%d %d%d%d%d')",
+                    unit->start_posn.infile,unit->start_posn.inpacket,s,
+                    (s&0x80)>>7,(s&0x40)>>6,(s&0x20)>>5,(s&0x10)>>4,
+                    (s&0x08)>>3,(s&0x04)>>2,(s&0x02)>>1,(s&0x01));
 
   // Show the data bytes - but we don't need to show the first 4,
   // since we know they're 00 00 01 <start-code>
@@ -404,13 +404,13 @@ extern void report_ES_unit(FILE      *stream,
     int ii;
     int data_len = unit->data_len - 4;
     int show_len = (data_len>10?10:data_len);
-    fprintf(stream," %6d:",data_len);
+    fprint_msg_or_err(is_msg," %6d:",data_len);
     for (ii = 0; ii < show_len; ii++)
-      fprintf(stream," %02x",unit->data[4+ii]);
+      fprint_msg_or_err(is_msg," %02x",unit->data[4+ii]);
     if (show_len < data_len)
-      fprintf(stream,"...");
+      fprint_msg_or_err(is_msg,"...");
   }
-  fprintf(stream,"\n");
+  fprint_msg_or_err(is_msg,"\n");
 }
 
 // ------------------------------------------------------------
@@ -477,7 +477,7 @@ static inline int get_more_data(ES_p  es)
       return EOF;
     else if (len == -1)
     {
-      fprintf(stderr,"### Error reading next bytes: %s\n",strerror(errno));
+      fprint_err("### Error reading next bytes: %s\n",strerror(errno));
       return 1;
     }
     es->read_ahead_posn += es->read_ahead_len;  // length of the *last* buffer
@@ -627,7 +627,7 @@ static int find_ES_unit_end(ES_p       es,
         unit->data = realloc(unit->data,newsize);
         if (unit->data == NULL)
         {
-          fprintf(stderr,"### Unable to extend ES unit data array\n");
+          print_err("### Unable to extend ES unit data array\n");
           return 1;
         }
         unit->data_size = newsize;
@@ -754,9 +754,9 @@ extern int write_ES_unit(FILE      *output,
   size_t written = fwrite(unit->data,1,unit->data_len,output);
   if (written != unit->data_len)
   {
-    fprintf(stderr,"### Error writing out ES unit data: %s\n"
-            "    Wrote %ld bytes instead of %d\n",
-            strerror(errno),(long int)written,unit->data_len);
+    fprint_err("### Error writing out ES unit data: %s\n"
+               "    Wrote %ld bytes instead of %d\n",
+               strerror(errno),(long int)written,unit->data_len);
     return 1;
   }
   else
@@ -782,8 +782,8 @@ static int seek_in_PES(ES_p       es,
 
   if (es->reader == NULL)
   {
-    fprintf(stderr,"### Attempt to seek in PES for an ES reader that"
-            " is not attached to a PES reader\n");
+    print_err("### Attempt to seek in PES for an ES reader that"
+              " is not attached to a PES reader\n");
     return 1;
   }
 
@@ -795,25 +795,25 @@ static int seek_in_PES(ES_p       es,
   err = set_PES_reader_position(es->reader,where.infile);
   if (err)
   {
-    fprintf(stderr,"### Error seeking for PES packet at " OFFSET_T_FORMAT
-            "\n",where.infile);
+    fprint_err("### Error seeking for PES packet at " OFFSET_T_FORMAT
+               "\n",where.infile);
     return 1;
   }
   // Read the PES packet containing ES (ignoring packets we don't care about)
   err = get_next_pes_packet(es);
   if (err)
   {
-    fprintf(stderr,"### Error reading PES packet at " OFFSET_T_FORMAT "/%d\n",
-            where.infile,where.inpacket);
+    fprint_err("### Error reading PES packet at " OFFSET_T_FORMAT "/%d\n",
+               where.infile,where.inpacket);
     return 1;
   }
 
   // Now sort out the byte offset
   if (where.inpacket > es->reader->packet->es_data_len)
   {
-    fprintf(stderr,"### Error seeking PES packet at " OFFSET_T_FORMAT "/%d: "
-            " packet ES data is only %d bytes long\n",where.infile,
-            where.inpacket,es->reader->packet->es_data_len);
+    fprint_err("### Error seeking PES packet at " OFFSET_T_FORMAT "/%d: "
+               " packet ES data is only %d bytes long\n",where.infile,
+               where.inpacket,es->reader->packet->es_data_len);
     return 1;
   }
   es->posn_of_next_byte = where;
@@ -878,9 +878,8 @@ extern int seek_ES(ES_p       es,
     err = seek_in_PES(es,where);
     if (err)
     {
-      fprintf(stderr,
-              "### Error seeking within ES over PES (offset " OFFSET_T_FORMAT
-              "/%d)\n",where.infile,where.inpacket);
+      fprint_err("### Error seeking within ES over PES (offset " OFFSET_T_FORMAT
+                 "/%d)\n",where.infile,where.inpacket);
       return 1;
     }
   }
@@ -977,7 +976,7 @@ extern int read_ES_data(ES_p       es,
     *data = realloc(*data,num_bytes);
     if (*data == NULL)
     {
-      fprintf(stderr,"### Unable to reallocate data space\n");
+      print_err("### Unable to reallocate data space\n");
       return 1;
     }
     if (data_len != NULL)
@@ -992,7 +991,7 @@ extern int read_ES_data(ES_p       es,
     {
       if (err == EOF)
       {
-        fprintf(stderr,"### Error (EOF) reading %d bytes\n",num_bytes);
+        fprint_err("### Error (EOF) reading %d bytes\n",num_bytes);
         return 1;
       }
       else
@@ -1005,7 +1004,7 @@ extern int read_ES_data(ES_p       es,
     err = read_bytes_from_PES(es,*data,num_bytes);
     if (err)
     {
-      fprintf(stderr,"### Error reading %d bytes from PES\n",num_bytes);
+      fprint_err("### Error reading %d bytes from PES\n",num_bytes);
       return 1;
     }
   }
@@ -1044,8 +1043,8 @@ extern int get_end_of_underlying_PES_packet(ES_p        es,
 
   if (es->reading_ES)
   {
-    fprintf(stderr,"### Cannot retrieve end of PES packet - the ES data"
-            " is direct ES, not ES read from PES\n");
+    fprint_err("### Cannot retrieve end of PES packet - the ES data"
+               " is direct ES, not ES read from PES\n");
     return 1;
   }
   if (es->reader->packet == NULL)
@@ -1092,7 +1091,7 @@ extern int get_end_of_underlying_PES_packet(ES_p        es,
   *data = malloc(*data_len);
   if (*data == NULL)
   {
-    fprintf(stderr,"### Cannot allocate space for rest of PES packet\n");
+    print_err("### Cannot allocate space for rest of PES packet\n");
     return 1;
   }
   (*data)[0] = es->prev2_byte; // Hmm - should be 0x00
@@ -1118,7 +1117,7 @@ extern int build_ES_unit_list(ES_unit_list_p  *list)
   ES_unit_list_p  new = malloc(SIZEOF_ES_UNIT_LIST);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate ES unit list datastructure\n");
+    print_err("### Unable to allocate ES unit list datastructure\n");
     return 1;
   }
   
@@ -1128,8 +1127,7 @@ extern int build_ES_unit_list(ES_unit_list_p  *list)
   if (new->array == NULL)
   {
     free(new);
-    fprintf(stderr,
-            "### Unable to allocate array in ES unit list datastructure\n");
+    print_err("### Unable to allocate array in ES unit list datastructure\n");
     return 1;
   }
   *list = new;
@@ -1154,7 +1152,7 @@ extern int append_to_ES_unit_list(ES_unit_list_p  list,
     list->array = realloc(list->array,newsize*SIZEOF_ES_UNIT);
     if (list->array == NULL)
     {
-      fprintf(stderr,"### Unable to extend ES unit list array\n");
+      print_err("### Unable to extend ES unit list array\n");
       return 1;
     }
     list->size = newsize;
@@ -1166,7 +1164,7 @@ extern int append_to_ES_unit_list(ES_unit_list_p  list,
   ptr->data = malloc(unit->data_len);
   if (ptr->data == NULL)
   {
-    fprintf(stderr,"### Unable to copy ES unit data array\n");
+    print_err("### Unable to copy ES unit data array\n");
     return 1;
   }
   memcpy(ptr->data,unit->data,unit->data_len);
@@ -1247,7 +1245,7 @@ extern void report_ES_unit_list(char              *name,
     for (ii=0; ii<list->length; ii++)
     {
       print_msg("    ");
-      report_ES_unit(stdout,&(list->array[ii]));
+      report_ES_unit(TRUE,&(list->array[ii]));
     }
   }
 }
@@ -1269,8 +1267,7 @@ extern int get_ES_unit_list_bounds(ES_unit_list_p   list,
   int ii;
   if (list->array == NULL || list->length == 0)
   {
-    fprintf(stderr,
-            "### Cannot determine bounds of an ES unit list with no content\n");
+    print_err("### Cannot determine bounds of an ES unit list with no content\n");
     return 1;
   }
 
@@ -1362,7 +1359,7 @@ static int try_to_guess_video_type(ES_unit_p   unit,
   byte nal_unit_type = 0;
 
   if (show_reasoning)
-    printf("Looking at ES unit with start code %02X\n",unit->start_code);
+    fprint_msg("Looking at ES unit with start code %02X\n",unit->start_code);
 
   // The following are *not allowed*
   //
@@ -1372,19 +1369,17 @@ static int try_to_guess_video_type(ES_unit_p   unit,
   
   if (unit->start_code == 0xBA)   // PS pack header
   {
-    fprintf(stderr,
-            "### ES unit start code is 0xBA, which looks like a PS pack"
-            " header\n    i.e., data may be PS\n");
+    print_err("### ES unit start code is 0xBA, which looks like a PS pack"
+              " header\n    i.e., data may be PS\n");
     return 1;
   }
 
   if (unit->start_code >= 0xB9)   // system start code - probably PES
   {
-    fprintf(stderr,
-            "### ES unit start code %02X is more than 0xB9, which is probably"
-            " a PES system start code\n    i.e., data may be PES, "
-            "and is thus probably PS or TS\n",
-      unit->start_code);
+    fprint_err("### ES unit start code %02X is more than 0xB9, which is probably"
+               " a PES system start code\n    i.e., data may be PES, "
+               "and is thus probably PS or TS\n",
+               unit->start_code);
     return 1;
   }
 
@@ -1392,7 +1387,7 @@ static int try_to_guess_video_type(ES_unit_p   unit,
   {
     if (*maybe_h264)
     {
-      if (show_reasoning) printf("  %02X has top bit set, so not H.264,\n",unit->start_code);
+      if (show_reasoning) fprint_msg("  %02X has top bit set, so not H.264,\n",unit->start_code);
       *maybe_h264 = FALSE;
     }
 
@@ -1402,43 +1397,43 @@ static int try_to_guess_video_type(ES_unit_p   unit,
     {
       *maybe_h262 = FALSE;
       if (show_reasoning)
-        printf("  Start code %02X is reserved in H.262, so not H.262\n",
-               unit->start_code);
+        fprint_msg("  Start code %02X is reserved in H.262, so not H.262\n",
+                   unit->start_code);
     }
     else if (unit->start_code == 0xB4 ||
              unit->start_code == 0xB8)
     {
       *maybe_avs = FALSE;
       if (show_reasoning)
-        printf("  Start code %02X is reserved in AVS, so not AVS\n",
-               unit->start_code);
+        fprint_msg("  Start code %02X is reserved in AVS, so not AVS\n",
+                   unit->start_code);
     }
   }
   else if (*maybe_h264)
   {
     if (show_reasoning)
-      printf("  Top bit not set, so might be H.264\n");
+      print_msg("  Top bit not set, so might be H.264\n");
 
     // If we don't have that top bit set, then we need to work a bit harder
     nal_ref_idc = (unit->start_code & 0x60) >> 5;
     nal_unit_type = (unit->start_code & 0x1F);  
 
     if (show_reasoning)
-      printf("  Interpreting it as nal_ref_idc %d, nal_unit_type %d\n",
-             nal_ref_idc,nal_unit_type);
+      fprint_msg("  Interpreting it as nal_ref_idc %d, nal_unit_type %d\n",
+                 nal_ref_idc,nal_unit_type);
 
     if (nal_unit_type > 12 && nal_unit_type < 24)
     {
       if (show_reasoning)
-        printf("  H.264 reserves nal_unit_type %02X,"
-               " so not H.264\n",nal_unit_type);
+        fprint_msg("  H.264 reserves nal_unit_type %02X,"
+                   " so not H.264\n",nal_unit_type);
       *maybe_h264 = FALSE;
     }
     else if (nal_unit_type > 23)
     {
       if (show_reasoning)
-        printf("  H.264 does not specify nal_unit_type %02X,"
-               " so not H.264\n",nal_unit_type);
+        fprint_msg("  H.264 does not specify nal_unit_type %02X,"
+                   " so not H.264\n",nal_unit_type);
       *maybe_h264 = FALSE;
     }
     else if (nal_ref_idc == 0)
@@ -1448,8 +1443,8 @@ static int try_to_guess_video_type(ES_unit_p   unit,
           nal_unit_type == 8)   // picture parameter set
       {
         if (show_reasoning)
-          printf("  H.264 does not allow nal_ref_idc 0 and nal_unit_type %d,"
-                 " so not H.264\n",nal_unit_type);
+          fprint_msg("  H.264 does not allow nal_ref_idc 0 and nal_unit_type %d,"
+                     " so not H.264\n",nal_unit_type);
         *maybe_h264 = FALSE;
       }
     }
@@ -1463,8 +1458,8 @@ static int try_to_guess_video_type(ES_unit_p   unit,
           nal_unit_type == 12)   // fille
       {
         if (show_reasoning)
-          printf("  H.264 insists nal_ref_idc shall be 0 for nal_unit_type %d,"
-                 " so not H.264\n",nal_unit_type);
+          fprint_msg("  H.264 insists nal_ref_idc shall be 0 for nal_unit_type %d,"
+                     " so not H.264\n",nal_unit_type);
         *maybe_h264 = FALSE;
       }
     }
@@ -1507,8 +1502,8 @@ extern int decide_ES_video_type(ES_p  es,
   err = setup_ES_unit(&unit);
   if (err)
   {
-    fprintf(stderr,"### Error trying to setup ES unit before"
-            " working out video type\n");
+    print_err("### Error trying to setup ES unit before"
+              " working out video type\n");
     return 1;
   }
 
@@ -1523,30 +1518,29 @@ extern int decide_ES_video_type(ES_p  es,
   // *very* sure it is not H.262 or AVS. And if the only other choice is H.264,
   // then...
   if (show_reasoning)
-    printf("Looking through first 500 ES units to try to decide video type\n");
+    print_msg("Looking through first 500 ES units to try to decide video type\n");
   for (ii=0; ii<500; ii++)
   {
     if (print_dots)
     {
-      printf(".");
+      print_msg(".");
       fflush(stdout);
     }
     else if (show_reasoning)
-      printf("%d: ",ii+1);
+      fprint_msg("%d: ",ii+1);
 
     err = find_next_ES_unit(es,&unit);
     if (err == EOF)
     {
-      if (print_dots) printf("\n");
-      if (show_reasoning) printf("End of file, trying to read ES unit %d\n",ii+2);
+      if (print_dots) print_msg("\n");
+      if (show_reasoning) fprint_msg("End of file, trying to read ES unit %d\n",ii+2);
       break;
     }
     else if (err)
     {
-      if (print_dots) printf("\n");
-      fprintf(stderr,
-              "### Error trying to find 'unit' %d in ES whilst"
-              " working out video type\n",ii+2);
+      if (print_dots) print_msg("\n");
+      fprint_err("### Error trying to find 'unit' %d in ES whilst"
+                 " working out video type\n",ii+2);
       clear_ES_unit(&unit);
       return 1;
     }
@@ -1554,40 +1548,39 @@ extern int decide_ES_video_type(ES_p  es,
                                   &maybe_h264,&maybe_h262,&maybe_avs);
     if (err)
     {
-      if (print_dots) printf("\n");
-      fprintf(stderr,
-              "### Whilst trying to work out video_type\n");
+      if (print_dots) print_msg("\n");
+      print_err("### Whilst trying to work out video_type\n");
       clear_ES_unit(&unit);
       return 1;
     }
 
     if (maybe_h264 && !maybe_h262 && !maybe_avs)
     {
-      if (show_reasoning) printf("  Which leaves only H.264\n");
+      if (show_reasoning) print_msg("  Which leaves only H.264\n");
       *video_type = VIDEO_H264;
       decided = TRUE;
     }
     else if (!maybe_h264 && maybe_h262 && !maybe_avs)
     {
-      if (show_reasoning) printf("  Which leaves only H.262\n");
+      if (show_reasoning) print_msg("  Which leaves only H.262\n");
       *video_type = VIDEO_H262;
       decided = TRUE;
     }
     else if (!maybe_h264 && !maybe_h262 && maybe_avs)
     {
-      if (show_reasoning) printf("  Which leaves only AVS\n");
+      if (show_reasoning) print_msg("  Which leaves only AVS\n");
       *video_type = VIDEO_AVS;
       decided = TRUE;
     }
     else
     {
       if (show_reasoning)
-        printf("  It is not possible to decide from that start code\n");
+        print_msg("  It is not possible to decide from that start code\n");
     }
     if (decided)
       break;
   }
-  if (print_dots) printf("\n");
+  if (print_dots) print_msg("\n");
   clear_ES_unit(&unit);
   return 0;
 }
@@ -1623,31 +1616,30 @@ extern int decide_ES_file_video_type(int   input,
   start_posn = tell_file(input);
   if (start_posn == -1)
   {
-    fprintf(stderr,"### Error remembering start position in file before"
-            " working out video type\n");
+    print_err("### Error remembering start position in file before"
+              " working out video type\n");
     return 1;
   }
 
   err = seek_file(input,0);
   if (err)
   {
-    fprintf(stderr,"### Error rewinding file before"
-            " working out video type\n");
+    print_err("### Error rewinding file before working out video type\n");
     return 1;
   }
 
   err = build_elementary_stream_file(input,&es);
   if (err)
   {
-    fprintf(stderr,"### Error starting elementary stream before"
-            " working out video type\n");
+    print_err("### Error starting elementary stream before"
+              " working out video type\n");
     return 1;
   }
 
   err = decide_ES_video_type(es,print_dots,show_reasoning,video_type);
   if (err)
   {
-    fprintf(stderr,"### Error deciding video type of file\n");
+    print_err("### Error deciding video type of file\n");
     free_elementary_stream(&es);
     return 1;
   }
@@ -1657,8 +1649,8 @@ extern int decide_ES_file_video_type(int   input,
   err = seek_file(input,start_posn);
   if (err)
   {
-    fprintf(stderr,"### Error returning to start position in file after"
-            " working out video type\n");
+    print_err("### Error returning to start position in file after"
+              " working out video type\n");
     return 1;
   }
   return 0;
