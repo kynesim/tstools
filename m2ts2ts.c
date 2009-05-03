@@ -42,6 +42,7 @@
 #include "compat.h"
 #include "ts_defns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 #define M2TS_PACKET_SIZE (4 + TS_PACKET_SIZE)
@@ -111,10 +112,10 @@ static int extract_packets(int input, FILE * output,
     {
       packet_buffer = malloc(sizeof(struct _m2ts_packet_buffer));
       /***DEBUG***/
-      printf("Allocated buffer @ 0x%08x\n", (unsigned int)packet_buffer);
+      fprint_msg("Allocated buffer @ 0x%08x\n", (unsigned int)packet_buffer);
       if (packet_buffer == NULL)
       {
-	fprintf(stderr, "### m2ts2ts: out of memory allocating M2TS packet buffer\n");
+	print_err( "### m2ts2ts: out of memory allocating M2TS packet buffer\n");
 	while (reorder_buffer_head != NULL)
 	{
 	  packet_buffer = reorder_buffer_head->next;
@@ -131,7 +132,7 @@ static int extract_packets(int input, FILE * output,
     {
       // End of file, no more to do, thank you and goodnight
       if (!quiet)
-	printf("m2ts2ts: Reached end of file\n");
+	print_msg("m2ts2ts: Reached end of file\n");
       break;
     }
     else if (err)
@@ -149,21 +150,21 @@ static int extract_packets(int input, FILE * output,
     }
     parse_m2ts_packet(packet_buffer);
     if (verbose)
-      printf("Read timestamp 0x%08x\n", packet_buffer->timestamp);
+      fprint_msg("Read timestamp 0x%08x\n", packet_buffer->timestamp);
 
     // Insert the packet in the reorder buffer, in time order
     // It's most likely that we'll get an up to date packet,
     // so start at the tail and work to the front
     p = reorder_buffer_tail;
     if (p != NULL)
-      printf("tail timestamp = 0x%08x @ 0x%08x\n",
-	     p->timestamp, (unsigned int)p);
+      fprint_msg("tail timestamp = 0x%08x @ 0x%08x\n",
+                 p->timestamp, (unsigned int)p);
     while (p != NULL && p->timestamp > packet_buffer->timestamp)
     {
       p = p->prev;
       if (p != NULL)
-	printf("p timestamp = 0x%08x @ 0x%08x\n",
-	       p->timestamp, (unsigned int)p);
+	fprint_msg("p timestamp = 0x%08x @ 0x%08x\n",
+                   p->timestamp, (unsigned int)p);
     }
 
     if (p == NULL)
@@ -199,23 +200,23 @@ static int extract_packets(int input, FILE * output,
       else
       {
 	if (verbose)
-	  printf("Reordered packet timestamp=0x%08x\n",
-		 packet_buffer->timestamp);
+	  fprint_msg("Reordered packet timestamp=0x%08x\n",
+                     packet_buffer->timestamp);
 	packet_buffer->next->prev = packet_buffer;
       }
     }
-    printf("### packet at 0x%08x, prev=0x%08x, next=0x%08x\n",
-	   (unsigned int)packet_buffer,
-	   (unsigned int)(packet_buffer->prev),
-	   (unsigned int)(packet_buffer->next));
+    fprint_msg("### packet at 0x%08x, prev=0x%08x, next=0x%08x\n",
+               (unsigned int)packet_buffer,
+               (unsigned int)(packet_buffer->prev),
+               (unsigned int)(packet_buffer->next));
     reorder_buffer_entries++;
 
     if (reorder_buffer_entries > (int)reorder_buffer_size)
     {
       // Write out the head of the reorder buffer
-      printf("### queue head @ 0x%08x, next=0x%08x\n",
-	     (unsigned int)reorder_buffer_head,
-	     (unsigned int)(reorder_buffer_head->next));
+      fprint_msg("### queue head @ 0x%08x, next=0x%08x\n",
+                 (unsigned int)reorder_buffer_head,
+                 (unsigned int)(reorder_buffer_head->next));
       packet_buffer = reorder_buffer_head;
       reorder_buffer_head = reorder_buffer_head->next;
       reorder_buffer_head->prev = NULL;
@@ -224,8 +225,8 @@ static int extract_packets(int input, FILE * output,
       if (written != 1)
       {
 	// Major output catastrophe!
-	fprintf(stderr, "### m2ts2ts: Error writing TS packet: %s\n",
-		strerror(errno));
+	fprint_err( "### m2ts2ts: Error writing TS packet: %s\n",
+                    strerror(errno));
 	free(packet_buffer);
 	while (reorder_buffer_head != NULL)
 	{
@@ -239,7 +240,7 @@ static int extract_packets(int input, FILE * output,
 
       reorder_buffer_entries--;
       if (verbose)
-	printf("Written timestamp 0x%08x\n", packet_buffer->timestamp);
+	fprint_msg("Written timestamp 0x%08x\n", packet_buffer->timestamp);
       packet_buffer_in_hand = packet_buffer;
     }
   }
@@ -255,8 +256,8 @@ static int extract_packets(int input, FILE * output,
     if (written != 1)
     {
       // So close...
-      fprintf(stderr, "### m2ts2ts: Error writing final TS packets: %s\n",
-	      strerror(errno));
+      fprint_err( "### m2ts2ts: Error writing final TS packets: %s\n",
+                  strerror(errno));
       while (reorder_buffer_head != NULL)
       {
 	packet_buffer = reorder_buffer_head->next;
@@ -275,10 +276,10 @@ static int extract_packets(int input, FILE * output,
 
 static void print_usage(void)
 {
-  printf("Usage: m2ts2es [switches] [<infile>] [<outfile>]\n"
+  print_msg("Usage: m2ts2es [switches] [<infile>] [<outfile>]\n"
 	 "\n");
   REPORT_VERSION("m2ts2ts");
-  printf("\n"
+  print_msg("\n"
 	 "Files:\n"
 	 "  <infile>  is a BDAV MPEG-2 Transport Stream file (M2TS)\n"
 	 "            (but see -stdin)\n"
@@ -360,8 +361,8 @@ int main(int argc, char *argv[])
       }
       else
       {
-	fprintf(stderr, "### m2ts2ts: "
-		"Unrecognised command line switch '%s'\n", argv[ii]);
+	fprint_err( "### m2ts2ts: "
+                    "Unrecognised command line switch '%s'\n", argv[ii]);
 	return 1;
       }
     }
@@ -369,7 +370,7 @@ int main(int argc, char *argv[])
     {
       if (had_input_name && had_output_name)
       {
-	fprintf(stderr, "### m2ts2ts: Unexpected '%s'\n", argv[ii]);
+	fprint_err( "### m2ts2ts: Unexpected '%s'\n", argv[ii]);
 	return 1;
       }
       else if (had_input_name) // and not had_output_name, inc "-stdout"
@@ -388,13 +389,13 @@ int main(int argc, char *argv[])
 
   if (!had_input_name)
   {
-    fprintf(stderr, "### m2ts2ts: No input file specified\n");
+    print_err( "### m2ts2ts: No input file specified\n");
     return 1;
   }
 
   if (!had_output_name)
   {
-    fprintf(stderr, "### m2ts2ts: No output file specified\n");
+    print_err( "### m2ts2ts: No output file specified\n");
     return 1;
   }
 
@@ -414,13 +415,13 @@ int main(int argc, char *argv[])
     input = open_binary_file(input_name, FALSE);
     if (input == -1)
     {
-      fprintf(stderr, "### m2ts2ts: Unable to open input file %s\n",
-	      input_name);
+      fprint_err( "### m2ts2ts: Unable to open input file %s\n",
+                  input_name);
       return 1;
     }
   }
   if (!quiet)
-    printf("Reading from %s\n", (use_stdin ? "<stdin>" : input_name));
+    fprint_msg("Reading from %s\n", (use_stdin ? "<stdin>" : input_name));
 
   if (use_stdout)
   {
@@ -433,19 +434,19 @@ int main(int argc, char *argv[])
     {
       if (!use_stdin)
 	(void) close_file(input);
-      fprintf(stderr, "### m2ts2ts: Unable to open output file %s: %s\n",
-	      output_name, strerror(errno));
+      fprint_err( "### m2ts2ts: Unable to open output file %s: %s\n",
+                  output_name, strerror(errno));
       return 1;
     }
   }
   if (!quiet)
-    printf("Writing to   %s\n", (use_stdout ? "<stdout>" : output_name));
+    fprint_msg("Writing to   %s\n", (use_stdout ? "<stdout>" : output_name));
 
 
   err = extract_packets(input, output, reorder_buff_size, verbose, quiet);
   if (err)
   {
-    fprintf(stderr, "### m2ts2ts: Error extracting data\n");
+    print_err( "### m2ts2ts: Error extracting data\n");
     if (!use_stdin)  (void) close_file(input);
     if (!use_stdout) (void) fclose(output);
     return 1;
@@ -458,8 +459,8 @@ int main(int argc, char *argv[])
     err = fclose(output);
     if (err)
     {
-      fprintf(stderr, "### m2ts2ts: Error closing output file %s: %s\n",
-	      output_name, strerror(errno));
+      fprint_err( "### m2ts2ts: Error closing output file %s: %s\n",
+                  output_name, strerror(errno));
       (void) close_file(input);
       return 1;
     }
@@ -469,8 +470,8 @@ int main(int argc, char *argv[])
   {
     err = close_file(input);
     if (err)
-      fprintf(stderr, "### m2ts2ts: Error closing input file %s\n",
-	      input_name);
+      fprint_err( "### m2ts2ts: Error closing input file %s\n",
+                  input_name);
   }
   return 0;
 }

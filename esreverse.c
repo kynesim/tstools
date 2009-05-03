@@ -52,6 +52,7 @@
 #include "pes_fns.h"
 #include "reverse_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 #define DEBUG 0
@@ -110,7 +111,7 @@ static int reverse_h262(ES_p    es,
   }
 
   if (!quiet)
-    printf("\nScanning forwards\n");
+    print_msg("\nScanning forwards\n");
   
   add_h262_reverse_context(hcontext,reverse_data);
   err = collect_reverse_h262(hcontext,max,verbose,quiet);
@@ -118,8 +119,8 @@ static int reverse_h262(ES_p    es,
   {
     if (reverse_data->length > 0)
     {
-      fprintf(stderr,"!!! Collected %d pictures and sequence headers,"
-              " continuing to reverse\n",reverse_data->length);
+      fprint_err("!!! Collected %d pictures and sequence headers,"
+                 " continuing to reverse\n",reverse_data->length);
     }
     else
     {
@@ -135,17 +136,17 @@ static int reverse_h262(ES_p    es,
     int ii;
     for (ii=0; ii<reverse_data->length; ii++)
       if (reverse_data->seq_offset[ii])
-        printf("%3d: %4d at " OFFSET_T_FORMAT "/%d for %d\n",
-               ii,reverse_data->index[ii],
-               reverse_data->start_file[ii],
-               reverse_data->start_pkt[ii],
-               reverse_data->data_len[ii]);
+        fprint_msg("%3d: %4d at " OFFSET_T_FORMAT "/%d for %d\n",
+                   ii,reverse_data->index[ii],
+                   reverse_data->start_file[ii],
+                   reverse_data->start_pkt[ii],
+                   reverse_data->data_len[ii]);
     else
-      printf("%3d: seqh at " OFFSET_T_FORMAT "/%d for %d\n",
-               ii,
-               reverse_data->start_file[ii],
-               reverse_data->start_pkt[ii],
-               reverse_data->data_len[ii]);
+      fprint_msg("%3d: seqh at " OFFSET_T_FORMAT "/%d for %d\n",
+                 ii,
+                 reverse_data->start_file[ii],
+                 reverse_data->start_pkt[ii],
+                 reverse_data->data_len[ii]);
   }
   if (!es->reading_ES)
     write_program_data(es->reader,output.ts_output);
@@ -160,7 +161,7 @@ static int reverse_h262(ES_p    es,
   }
 
   if (!quiet)
-    printf("\nOutputting in reverse order\n");
+    print_msg("\nOutputting in reverse order\n");
 
   if (as_TS)
     err = output_in_reverse_as_TS(es,output.ts_output,frequency,verbose,quiet,
@@ -172,19 +173,19 @@ static int reverse_h262(ES_p    es,
   if (!err && !quiet)
   {
     uint32_t final_index = reverse_data->index[reverse_data->first_written];
-    printf("\n");
-    printf("Summary\n");
-    printf("=======\n");
-    printf("              Considered       Used            Written\n");
-    printf("Pictures      %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
-           final_index,reverse_data->pictures_kept,
-           100*(((double)reverse_data->pictures_kept)/final_index),
-           reverse_data->pictures_written,
-           100*(((double)reverse_data->pictures_written)/final_index));
+    print_msg("\n");
+    print_msg("Summary\n");
+    print_msg("=======\n");
+    print_msg("              Considered       Used            Written\n");
+    fprint_msg("Pictures      %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
+               final_index,reverse_data->pictures_kept,
+               100*(((double)reverse_data->pictures_kept)/final_index),
+               reverse_data->pictures_written,
+               100*(((double)reverse_data->pictures_written)/final_index));
     if (frequency != 0)
-      printf("Target (pictures)      . %10d (%4.1f%%) at requested"
-             " frequency %d\n",final_index/frequency,100.0/frequency,
-             frequency);
+      fprint_msg("Target (pictures)      . %10d (%4.1f%%) at requested"
+                 " frequency %d\n",final_index/frequency,100.0/frequency,
+                 frequency);
   }
   
   free_reverse_data(&reverse_data);
@@ -215,15 +216,15 @@ static int output_parameter_sets(WRITER                 output,
     uint32_t   length = seq_param_dict->data_lens[ii];
     byte      *data = NULL;
     if (!quiet)
-      printf("Writing out sequence parameter set %d\n",
-             seq_param_dict->ids[ii]);
+      fprint_msg("Writing out sequence parameter set %d\n",
+                 seq_param_dict->ids[ii]);
 
     err = read_ES_data(nac->es,posn,length,NULL,&data);
     if (err)
     {
-      fprintf(stderr,"### Error reading (sequence parameter set %d) data"
-              " from " OFFSET_T_FORMAT "/%d for %d\n",
-              seq_param_dict->ids[ii],posn.infile,posn.inpacket,length);
+      fprint_err("### Error reading (sequence parameter set %d) data"
+                 " from " OFFSET_T_FORMAT "/%d for %d\n",
+                 seq_param_dict->ids[ii],posn.infile,posn.inpacket,length);
       return 1;
     }
     err = write_packet_data(output,as_TS,data,length,DEFAULT_VIDEO_PID,
@@ -231,8 +232,8 @@ static int output_parameter_sets(WRITER                 output,
     free(data);
     if (err)
     {
-      fprintf(stderr,"### Error writing out (sequence parameter set %d)"
-              "data\n",seq_param_dict->ids[ii]);
+      fprint_err("### Error writing out (sequence parameter set %d)"
+                 "data\n",seq_param_dict->ids[ii]);
       return 1;
     }
   }
@@ -243,15 +244,15 @@ static int output_parameter_sets(WRITER                 output,
     uint32_t   length = pic_param_dict->data_lens[ii];
     byte      *data = NULL;
     if (!quiet)
-      printf("Writing out picture parameter set %d\n",
-             pic_param_dict->ids[ii]);
+      fprint_msg("Writing out picture parameter set %d\n",
+                 pic_param_dict->ids[ii]);
 
     err = read_ES_data(nac->es,posn,length,NULL,&data);
     if (err)
     {
-      fprintf(stderr,"### Error reading (picture parameter set %d) data"
-              " from " OFFSET_T_FORMAT "/%d for %d\n",
-              pic_param_dict->ids[ii],posn.infile,posn.inpacket,length);
+      fprint_err("### Error reading (picture parameter set %d) data"
+                 " from " OFFSET_T_FORMAT "/%d for %d\n",
+                 pic_param_dict->ids[ii],posn.infile,posn.inpacket,length);
       return 1;
     }
     err = write_packet_data(output,as_TS,data,length,DEFAULT_VIDEO_PID,
@@ -259,8 +260,8 @@ static int output_parameter_sets(WRITER                 output,
     free(data);
     if (err)
     {
-      fprintf(stderr,"### Error writing out (picture parameter set %d)"
-              "data\n",pic_param_dict->ids[ii]);
+      fprint_err("### Error writing out (picture parameter set %d)"
+                 "data\n",pic_param_dict->ids[ii]);
       return 1;
     }
   }
@@ -295,7 +296,7 @@ static int reverse_access_units(ES_p   es,
   }
 
   if (!quiet)
-    printf("\nScanning forwards\n");
+    print_msg("\nScanning forwards\n");
 
   add_access_unit_reverse_context(acontext,reverse_data);
   err = collect_reverse_access_units(acontext,max,verbose,quiet);
@@ -303,8 +304,8 @@ static int reverse_access_units(ES_p   es,
   {
     if (reverse_data->length > 0)
     {
-      fprintf(stderr,"!!! Collected %d access units,"
-              " continuing to reverse\n",reverse_data->length);
+      fprint_err("!!! Collected %d access units,"
+                 " continuing to reverse\n",reverse_data->length);
     }
     else
     {
@@ -319,11 +320,11 @@ static int reverse_access_units(ES_p   es,
   {
     int ii;
     for (ii=0; ii<reverse_data->length; ii++)
-      printf("%3d: %4d at " OFFSET_T_FORMAT "/%d for %d\n",
-             ii,reverse_data->index[ii],
-             reverse_data->start_file[ii],
-             reverse_data->start_pkt[ii],
-             reverse_data->data_len[ii]);
+      fprint_msg("%3d: %4d at " OFFSET_T_FORMAT "/%d for %d\n",
+                 ii,reverse_data->index[ii],
+                 reverse_data->start_file[ii],
+                 reverse_data->start_pkt[ii],
+                 reverse_data->data_len[ii]);
   }
   //if (!es->reading_ES)
   //  write_program_data(es->reader,output.ts_output);
@@ -340,7 +341,7 @@ static int reverse_access_units(ES_p   es,
   // Before outputting any reverse data, it's a good idea to write out the
   // picture parameter set(s) and sequence parameter set(s)
   if (!quiet)
-    printf("\nPreparing to output reverse data\n");
+    print_msg("\nPreparing to output reverse data\n");
   err = output_parameter_sets(output,acontext,as_TS,quiet);
   if (err)
   {
@@ -350,7 +351,7 @@ static int reverse_access_units(ES_p   es,
   }
 
   if (!quiet)
-    printf("\nOutputting in reverse order\n");
+    print_msg("\nOutputting in reverse order\n");
 
   if (as_TS)
     err = output_in_reverse_as_TS(es,output.ts_output,frequency,verbose,quiet,
@@ -361,19 +362,19 @@ static int reverse_access_units(ES_p   es,
   if (!err && !quiet)
   {
     uint32_t final_index = reverse_data->index[reverse_data->first_written];
-    printf("\n");
-    printf("Summary\n");
-    printf("=======\n");
-    printf("              Considered       Used            Written\n");
-    printf("Access units  %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
-           final_index,reverse_data->pictures_kept,
-           100*(((double)reverse_data->pictures_kept)/final_index),
-           reverse_data->pictures_written,
-           100*(((double)reverse_data->pictures_written)/final_index));
+    print_msg("\n");
+    print_msg("Summary\n");
+    print_msg("=======\n");
+    print_msg("              Considered       Used            Written\n");
+    fprint_msg("Access units  %10d %10d (%4.1f%%) %10d (%4.1f%%)\n",
+               final_index,reverse_data->pictures_kept,
+               100*(((double)reverse_data->pictures_kept)/final_index),
+               reverse_data->pictures_written,
+               100*(((double)reverse_data->pictures_written)/final_index));
     if (frequency != 0)
-      printf("Target (access units)  . %10d (%4.1f%%) at requested"
-             " frequency %d\n",final_index/frequency,100.0/frequency,
-             frequency);
+      fprint_msg("Target (access units)  . %10d (%4.1f%%) at requested"
+                 " frequency %d\n",final_index/frequency,100.0/frequency,
+                 frequency);
   }
   free_reverse_data(&reverse_data);
   free_access_unit_context(&acontext);
@@ -382,12 +383,12 @@ static int reverse_access_units(ES_p   es,
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: esreverse [switches] [<infile>] [<outfile>]\n"
     "\n"
     );
   REPORT_VERSION("esreverse");
-  printf(
+  print_msg(
     "\n"
     "  Output a reversed stream derived from the input H.264 (MPEG-4/AVC)\n"
     "  or H.262 (MPEG-2) elementary stream.\n"
@@ -545,8 +546,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### esreverse: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### esreverse: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -554,7 +555,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name && had_output_name)
       {
-        fprintf(stderr,"### esreverse: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### esreverse: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else if (had_input_name)
@@ -573,12 +574,12 @@ int main(int argc, char **argv)
   
   if (!had_input_name)
   {
-    fprintf(stderr,"### esreverse: No input file specified\n");
+    print_err("### esreverse: No input file specified\n");
     return 1;
   }
   if (!had_output_name)
   {
-    fprintf(stderr,"### esreverse: No output file specified\n");
+    print_err("### esreverse: No output file specified\n");
     return 1;
   }
 
@@ -593,7 +594,7 @@ int main(int argc, char **argv)
                          force_stream_type,want_data,&is_data,&es);
   if (err)
   {
-    fprintf(stderr,"### esreverse: Error opening input file\n");
+    print_err("### esreverse: Error opening input file\n");
     return 1;
   }
 
@@ -603,7 +604,7 @@ int main(int argc, char **argv)
     stream_type = AVC_VIDEO_STREAM_TYPE;
   else
   {
-    fprintf(stderr,"### esreverse: Unexpected type of video data\n");
+    print_err("### esreverse: Unexpected type of video data\n");
     return 1;
   }
   
@@ -617,7 +618,7 @@ int main(int argc, char **argv)
       err = tswrite_open(TS_W_FILE,output_name,NULL,0,quiet,&(output.ts_output));
     if (err)
     {
-      fprintf(stderr,"### esreverse: Unable to open %s\n",output_name);
+      fprint_err("### esreverse: Unable to open %s\n",output_name);
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
@@ -627,23 +628,23 @@ int main(int argc, char **argv)
     output.es_output = fopen(output_name,"wb");
     if (output.es_output == NULL)
     {
-      fprintf(stderr,"### esreverse: Unable to open output file %s: %s\n",
-              output_name,strerror(errno));
+      fprint_err("### esreverse: Unable to open output file %s: %s\n",
+                 output_name,strerror(errno));
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
     if (!quiet)
-      printf("Writing to   %s\n",output_name);
+      fprint_msg("Writing to   %s\n",output_name);
   }
 
   if (!quiet)
   {
     if (as_TS)
-      printf("Writing as Transport Stream\n");
-    printf("Filtering freqency %d\n",frequency);
+      print_msg("Writing as Transport Stream\n");
+    fprint_msg("Filtering freqency %d\n",frequency);
     if (max)
-      printf("Stopping as soon after %d %s as possible\n",max,
-             (is_data == VIDEO_H262?"MPEG2 items":"NAL units"));
+      fprint_msg("Stopping as soon after %d %s as possible\n",max,
+                 (is_data == VIDEO_H262?"MPEG2 items":"NAL units"));
   }
 
   if (use_pes)
@@ -668,8 +669,8 @@ int main(int argc, char **argv)
     if (use_pes)
     {
       if (!quiet)
-        printf("Using transport stream id 1, PMT PID %#x, program 1 ="
-               " PID %#x\n",DEFAULT_PMT_PID,DEFAULT_VIDEO_PID);
+        fprint_msg("Using transport stream id 1, PMT PID %#x, program 1 ="
+                   " PID %#x\n",DEFAULT_PMT_PID,DEFAULT_VIDEO_PID);
       set_PES_reader_program_data(es->reader,1,DEFAULT_PMT_PID,
                                   DEFAULT_VIDEO_PID,
                                   DEFAULT_AUDIO_PID,  // not actually used
@@ -681,15 +682,15 @@ int main(int argc, char **argv)
     else
     {
       if (!quiet)
-        printf("Using transport stream id 1, PMT PID %#x, program 1 ="
-               " PID %#x, stream type %#x\n",DEFAULT_PMT_PID,DEFAULT_VIDEO_PID,
-               stream_type);
+        fprint_msg("Using transport stream id 1, PMT PID %#x, program 1 ="
+                   " PID %#x, stream type %#x\n",DEFAULT_PMT_PID,DEFAULT_VIDEO_PID,
+                   stream_type);
       err = write_TS_program_data(output.ts_output,
                                   1,1,DEFAULT_PMT_PID,DEFAULT_VIDEO_PID,
                                   stream_type);
       if (err)
       {
-        fprintf(stderr,"### esreverse: Error writing out TS program data\n");
+        print_err("### esreverse: Error writing out TS program data\n");
         (void) close_input_as_ES(input_name,&es);
         if (as_TS)
           (void) tswrite_close(output.ts_output,TRUE);
@@ -697,9 +698,8 @@ int main(int argc, char **argv)
         {
           err = fclose(output.es_output);
           if (err)
-            fprintf(stderr,
-                    "### esreverse: (Error closing output file %s: %s)\n",
-                    output_name,strerror(errno));
+            fprint_err("### esreverse: (Error closing output file %s: %s)\n",
+                       output_name,strerror(errno));
         }
         return 1;
       }
@@ -713,7 +713,7 @@ int main(int argc, char **argv)
 
   if (err)
   {
-    fprintf(stderr,"### esreverse: Error reversing input\n");
+    print_err("### esreverse: Error reversing input\n");
     (void) close_input_as_ES(input_name,&es);
     if (as_TS)
       (void) tswrite_close(output.ts_output,TRUE);
@@ -721,8 +721,8 @@ int main(int argc, char **argv)
     {
       err = fclose(output.es_output);
       if (err)
-        fprintf(stderr,"### esreverse: (Error closing output file %s: %s)\n",
-                output_name,strerror(errno));
+        fprint_err("### esreverse: (Error closing output file %s: %s)\n",
+                   output_name,strerror(errno));
     }
     return 1;
   }
@@ -733,8 +733,8 @@ int main(int argc, char **argv)
     err = tswrite_close(output.ts_output,quiet);
     if (err)
     {
-      fprintf(stderr,"### esreverse: Error closing output file %s",
-              output_name);
+      fprint_err("### esreverse: Error closing output file %s",
+                 output_name);
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
@@ -745,8 +745,8 @@ int main(int argc, char **argv)
     err = fclose(output.es_output);
     if (err)
     {
-      fprintf(stderr,"### esreverse: Error closing output file %s: %s\n",
-              output_name,strerror(errno));
+      fprint_err("### esreverse: Error closing output file %s: %s\n",
+                 output_name,strerror(errno));
       (void) close_input_as_ES(input_name,&es);
       return 1;
     }
@@ -755,7 +755,7 @@ int main(int argc, char **argv)
   err = close_input_as_ES(input_name,&es);
   if (err)
   {
-    fprintf(stderr,"### esreverse: Error closing input file\n");
+    print_err("### esreverse: Error closing input file\n");
     return 1;
   }
   return 0;

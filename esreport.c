@@ -47,6 +47,7 @@
 #include "h262_fns.h"
 #include "avs_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 #define FRAMES_PER_SECOND  25
@@ -96,8 +97,7 @@ static void report_avs_frames(ES_p    es,
   err = build_avs_context(es,&avs);
   if (err)
   {
-    fprintf(stderr,
-            "### Error trying to build AVS reader from ES reader\n");
+    print_err("### Error trying to build AVS reader from ES reader\n");
     return;
   }
 
@@ -110,7 +110,7 @@ static void report_avs_frames(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next AVS frame\n");
+      print_err("### Error getting next AVS frame\n");
       break;
     }
     count++;
@@ -166,51 +166,51 @@ static void report_avs_frames(ES_p    es,
   }
   free_avs_context(&avs);
 
-  printf("Found %d AVS 'frame'%s:\n"
-         "   %5d frame%s (%d I, %d P, %d B)\n"
-         "   %5d sequence header%s\n"
-         "   %5d sequence end%s\n",
-         count,(count==1?"":"s"),
-         num_frames,(num_frames==1?"":"s"),
-         num_x_frames[AVS_I_PICTURE_CODING],
-         num_x_frames[AVS_P_PICTURE_CODING],
-         num_x_frames[AVS_B_PICTURE_CODING],
-         num_sequence_headers,(num_sequence_headers==1?"":"s"),
-         num_sequence_ends,(num_sequence_ends==1?"":"s"));
+  fprint_msg("Found %d AVS 'frame'%s:\n"
+             "   %5d frame%s (%d I, %d P, %d B)\n"
+             "   %5d sequence header%s\n"
+             "   %5d sequence end%s\n",
+             count,(count==1?"":"s"),
+             num_frames,(num_frames==1?"":"s"),
+             num_x_frames[AVS_I_PICTURE_CODING],
+             num_x_frames[AVS_P_PICTURE_CODING],
+             num_x_frames[AVS_B_PICTURE_CODING],
+             num_sequence_headers,(num_sequence_headers==1?"":"s"),
+             num_sequence_ends,(num_sequence_ends==1?"":"s"));
   
   {
     double total_seconds = num_frames / (double)FRAMES_PER_SECOND;
     int    minutes = (int)(total_seconds / 60);
     double seconds = total_seconds - 60*minutes;
-    printf("At 25 frames/second, that is %dm %.1fs (%.2fs)\n",minutes,seconds,
-           total_seconds);
+    fprint_msg("At 25 frames/second, that is %dm %.1fs (%.2fs)\n",minutes,seconds,
+               total_seconds);
   }
 
   if (count_sizes)
   {
     int ii;
     if (num_frames > 0)
-      printf("Frame sizes ranged from %5u to %7u bytes, mean %9.2f\n",
-             min_frame_size,max_frame_size,
-             sum_frame_size/(double)num_frames);
+      fprint_msg("Frame sizes ranged from %5u to %7u bytes, mean %9.2f\n",
+                 min_frame_size,max_frame_size,
+                 sum_frame_size/(double)num_frames);
     for (ii = 0; ii < 3; ii++)
     {
       if (num_x_frames[ii] > 0)
-        printf("          %s frames from %5u to %7u bytes, mean %9.2f\n",
-               (ii==0?"I":
-                ii==1?"P":
-                ii==2?"B":"?"),
-               min_x_frame_size[ii],max_x_frame_size[ii],
-               sum_x_frame_size[ii]/(double)num_x_frames[ii]);
+        fprint_msg("          %s frames from %5u to %7u bytes, mean %9.2f\n",
+                   (ii==0?"I":
+                    ii==1?"P":
+                    ii==2?"B":"?"),
+                   min_x_frame_size[ii],max_x_frame_size[ii],
+                   sum_x_frame_size[ii]/(double)num_x_frames[ii]);
     }
     if (num_sequence_headers > 0)
     {
       if (min_seq_hdr_size == max_seq_hdr_size)
-        printf("Sequence headers were all %u bytes\n",min_seq_hdr_size);
+        fprint_msg("Sequence headers were all %u bytes\n",min_seq_hdr_size);
       else
-        printf("Sequence headers    from %5u to %7u bytes, mean %9.2f\n",
-               min_seq_hdr_size,max_seq_hdr_size,
-               sum_seq_hdr_size/(double)num_sequence_headers);
+        fprint_msg("Sequence headers    from %5u to %7u bytes, mean %9.2f\n",
+                   min_seq_hdr_size,max_seq_hdr_size,
+                   sum_seq_hdr_size/(double)num_sequence_headers);
     }
   }
 }
@@ -241,7 +241,7 @@ static void report_ES_units(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error finding next ES unit\n");
+      print_err("### Error finding next ES unit\n");
       break;
     }
     count++;
@@ -257,7 +257,7 @@ static void report_ES_units(ES_p    es,
       break;
   }
   clear_ES_unit(&unit);
-  printf("Found %d ES unit%s\n",count,(count==1?"":"s"));
+  fprint_msg("Found %d ES unit%s\n",count,(count==1?"":"s"));
 }
 
 /*
@@ -283,8 +283,7 @@ static void find_h262_fields(ES_p    es,
   err = build_h262_context(es,&h262);
   if (err)
   {
-    fprintf(stderr,
-            "### Error trying to build H.262 reader from ES reader\n");
+    print_err("### Error trying to build H.262 reader from ES reader\n");
     return;
   }
 
@@ -297,7 +296,7 @@ static void find_h262_fields(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next H.262 picture\n");
+      print_err("### Error getting next H.262 picture\n");
       break;
     }
     count++;
@@ -324,16 +323,16 @@ static void find_h262_fields(ES_p    es,
   }
   free_h262_context(&h262);
 
-  printf("Found %d MPEG-2 'picture'%s:\n"
-         "   %5d field%s\n"
-         "   %5d frame%s\n"
-         "   %5d sequence header%s\n"
-         "   %5d sequence end%s\n",
-         count,(count==1?"":"s"),
-         num_fields,(num_fields==1?"":"s"),
-         num_frames,(num_frames==1?"":"s"),
-         num_sequence_headers,(num_sequence_headers==1?"":"s"),
-         num_sequence_ends,(num_sequence_ends==1?"":"s"));
+  fprint_msg("Found %d MPEG-2 'picture'%s:\n"
+             "   %5d field%s\n"
+             "   %5d frame%s\n"
+             "   %5d sequence header%s\n"
+             "   %5d sequence end%s\n",
+             count,(count==1?"":"s"),
+             num_fields,(num_fields==1?"":"s"),
+             num_frames,(num_frames==1?"":"s"),
+             num_sequence_headers,(num_sequence_headers==1?"":"s"),
+             num_sequence_ends,(num_sequence_ends==1?"":"s"));
 }
 
 /*
@@ -380,8 +379,7 @@ static void report_h262_frames(ES_p    es,
   err = build_h262_context(es,&h262);
   if (err)
   {
-    fprintf(stderr,
-            "### Error trying to build H.262 reader from ES reader\n");
+    print_err("### Error trying to build H.262 reader from ES reader\n");
     return;
   }
 
@@ -394,7 +392,7 @@ static void report_h262_frames(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next H.262 picture\n");
+      print_err("### Error getting next H.262 picture\n");
       break;
     }
     count++;
@@ -450,50 +448,50 @@ static void report_h262_frames(ES_p    es,
   }
   free_h262_context(&h262);
 
-  printf("Found %d MPEG-2 'picture'%s:\n"
-         "   %5d frame%s (%d I, %d P, %d B, %d D)\n"
-         "   %5d sequence header%s\n"
-         "   %5d sequence end%s\n",
-         count,(count==1?"":"s"),
-         num_frames,(num_frames==1?"":"s"),
-         num_x_frames[0],
-         num_x_frames[1],
-         num_x_frames[2],
-         num_x_frames[3],
-         num_sequence_headers,(num_sequence_headers==1?"":"s"),
-         num_sequence_ends,(num_sequence_ends==1?"":"s"));
-  
+  fprint_msg("Found %d MPEG-2 'picture'%s:\n"
+             "   %5d frame%s (%d I, %d P, %d B, %d D)\n"
+             "   %5d sequence header%s\n"
+             "   %5d sequence end%s\n",
+             count,(count==1?"":"s"),
+             num_frames,(num_frames==1?"":"s"),
+             num_x_frames[0],
+             num_x_frames[1],
+             num_x_frames[2],
+             num_x_frames[3],
+             num_sequence_headers,(num_sequence_headers==1?"":"s"),
+             num_sequence_ends,(num_sequence_ends==1?"":"s"));
+
   {
     double total_seconds = num_frames / (double)FRAMES_PER_SECOND;
     int    minutes = (int)(total_seconds / 60);
     double seconds = total_seconds - 60*minutes;
-    printf("At 25 frames/second, that is %dm %.1fs (%.2fs)\n",minutes,seconds,
-           total_seconds);
+    fprint_msg("At 25 frames/second, that is %dm %.1fs (%.2fs)\n",minutes,seconds,
+               total_seconds);
   }
 
   if (count_sizes)
   {
     int ii;
     if (num_frames > 0)
-      printf("Frame sizes ranged from %5u to %7u bytes, mean %9.2f\n",
-             min_frame_size,max_frame_size,
-             sum_frame_size/(double)num_frames);
+      fprint_msg("Frame sizes ranged from %5u to %7u bytes, mean %9.2f\n",
+                 min_frame_size,max_frame_size,
+                 sum_frame_size/(double)num_frames);
     for (ii = 0; ii < 4; ii++)
     {
       if (num_x_frames[ii] > 0)
-        printf("          %s frames from %5u to %7u bytes, mean %9.2f\n",
-               H262_PICTURE_CODING_STR(ii),
-               min_x_frame_size[ii],max_x_frame_size[ii],
-               sum_x_frame_size[ii]/(double)num_x_frames[ii]);
+        fprint_msg("          %s frames from %5u to %7u bytes, mean %9.2f\n",
+                   H262_PICTURE_CODING_STR(ii),
+                   min_x_frame_size[ii],max_x_frame_size[ii],
+                   sum_x_frame_size[ii]/(double)num_x_frames[ii]);
     }
     if (num_sequence_headers > 0)
     {
       if (min_seq_hdr_size == max_seq_hdr_size)
-        printf("Sequence headers were all %u bytes\n",min_seq_hdr_size);
+        fprint_msg("Sequence headers were all %u bytes\n",min_seq_hdr_size);
       else
-        printf("Sequence headers    from %5u to %7u bytes, mean %9.2f\n",
-               min_seq_hdr_size,max_seq_hdr_size,
-               sum_seq_hdr_size/(double)num_sequence_headers);
+        fprint_msg("Sequence headers    from %5u to %7u bytes, mean %9.2f\n",
+                   min_seq_hdr_size,max_seq_hdr_size,
+                   sum_seq_hdr_size/(double)num_sequence_headers);
     }
   }
 }
@@ -520,8 +518,7 @@ static void report_h262_afds(ES_p    es,
   err = build_h262_context(es,&h262);
   if (err)
   {
-    fprintf(stderr,
-            "### Error trying to build H.262 reader from ES reader\n");
+    print_err("### Error trying to build H.262 reader from ES reader\n");
     return;
   }
 
@@ -534,7 +531,7 @@ static void report_h262_afds(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next H.262 picture\n");
+      print_err("### Error getting next H.262 picture\n");
       break;
     }
 
@@ -542,8 +539,8 @@ static void report_h262_afds(ES_p    es,
     {
       // NB: the time at which the frame *starts*
       if (frames % report_every == 0)
-        printf("%d minute%s\n",frames/FRAMES_PER_MINUTE,
-               (frames/FRAMES_PER_MINUTE==1?"":"s"));
+        fprint_msg("%d minute%s\n",frames/FRAMES_PER_MINUTE,
+                   (frames/FRAMES_PER_MINUTE==1?"":"s"));
       frames ++;
     }
     
@@ -552,8 +549,8 @@ static void report_h262_afds(ES_p    es,
       double total_seconds = frames / (double)FRAMES_PER_SECOND;
       int    minutes = (int)(total_seconds / 60);
       double seconds = total_seconds - 60*minutes;
-      printf("%dm %4.1fs (frame %d @ %.2fs): ",minutes,seconds,
-             frames,total_seconds);
+      fprint_msg("%dm %4.1fs (frame %d @ %.2fs): ",minutes,seconds,
+                 frames,total_seconds);
       report_h262_picture(picture,FALSE);
       afd = picture->afd;
     }
@@ -569,8 +566,8 @@ static void report_h262_afds(ES_p    es,
     double total_seconds = frames / (double)FRAMES_PER_SECOND;
     int    minutes = (int)(total_seconds / 60);
     double seconds = total_seconds - 60*minutes;
-    printf("Found %d MPEG-2 frame%s",frames,(frames==1?"":"s"));
-    printf(" which is %dm %.1fs (%.2fs)\n",minutes,seconds,total_seconds);
+    fprint_msg("Found %d MPEG-2 frame%s",frames,(frames==1?"":"s"));
+    fprint_msg(" which is %dm %.1fs (%.2fs)\n",minutes,seconds,total_seconds);
   }
 }
 
@@ -598,7 +595,7 @@ static void report_h262_items(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error finding next H.262 item\n");
+      print_err("### Error finding next H.262 item\n");
       break;
     }
     count++;
@@ -614,7 +611,7 @@ static void report_h262_items(ES_p    es,
     if (max > 0 && count >= max)
       break;
   }
-  printf("Found %d MPEG-2 item%s\n",count,(count==1?"":"s"));
+  fprint_msg("Found %d MPEG-2 item%s\n",count,(count==1?"":"s"));
 }
 
 /*
@@ -636,7 +633,7 @@ static void report_by_nal_unit(ES_p   es,
   err = build_nal_unit_context(es,&context);
   if (err)
   {
-    fprintf(stderr,"### Unable to build NAL unit context to read ES\n");
+    print_err("### Unable to build NAL unit context to read ES\n");
     return;
   }
 
@@ -649,15 +646,15 @@ static void report_by_nal_unit(ES_p   es,
 
     if (max > 0 && context->count >= max)
     {
-      printf("\nStopping because %d NAL units have been read\n",
-             context->count);
+      fprint_msg("\nStopping because %d NAL units have been read\n",
+                 context->count);
       break;
     }
 
     err = find_next_NAL_unit(context,!quiet,&nal);
     if (err == 2)
     {
-      printf("... ignoring broken NAL unit\n");
+      print_msg("... ignoring broken NAL unit\n");
       continue;
     }
     else if (err)
@@ -678,33 +675,33 @@ static void report_by_nal_unit(ES_p   es,
     free_nal_unit(&nal);    
   }
   if (err == EOF && !quiet)
-    printf("EOF\n");
+    print_msg("EOF\n");
   if (err == 0 || err == EOF)
   {
     int ii;
-    printf("Found %d NAL unit%s\n",context->count,(context->count==1?"":"s"));
-    printf("nal_ref_idc:\n");
+    fprint_msg("Found %d NAL unit%s\n",context->count,(context->count==1?"":"s"));
+    print_msg("nal_ref_idc:\n");
     for (ii=0; ii<4; ii++)
       if (ref_idcs[ii] > 0)
-        printf("  %8d of %2d%s\n",ref_idcs[ii],ii,ii?"":" (non-reference)");
+        fprint_msg("  %8d of %2d%s\n",ref_idcs[ii],ii,ii?"":" (non-reference)");
 
-    printf("nal_unit_type:\n");
+    print_msg("nal_unit_type:\n");
     for (ii=0; ii<13; ii++)
       if (unit_types[ii] > 0)
-        printf("  %8d of type %2d (%s)\n",unit_types[ii],ii,NAL_UNIT_TYPE_STR(ii));
+        fprint_msg("  %8d of type %2d (%s)\n",unit_types[ii],ii,NAL_UNIT_TYPE_STR(ii));
     if (unit_types[13] > 0)
-      printf("  %8d of type 13..23 (Reserved)\n",unit_types[13]);
+      fprint_msg("  %8d of type 13..23 (Reserved)\n",unit_types[13]);
     if (unit_types[14] > 0)
-      printf("  %8d of typ 24..31 (Unspecified)\n",unit_types[14]);
+      fprint_msg("  %8d of typ 24..31 (Unspecified)\n",unit_types[14]);
 
-    printf("slice_type:\n");
+    print_msg("slice_type:\n");
     for (ii=0; ii<10; ii++)
       if (slice_types[ii] > 0)
-        printf("  %8d of type %2d (%s)\n",slice_types[ii],ii,
+        fprint_msg("  %8d of type %2d (%s)\n",slice_types[ii],ii,
                NAL_SLICE_TYPE_STR(ii));
   }
   else
-    fprintf(stderr,"### Abandoning reporting due to error\n");
+    print_err("### Abandoning reporting due to error\n");
   free_nal_unit_context(&context);
 }
 
@@ -744,7 +741,7 @@ static void find_h264_fields(ES_p    es,
       break;
     else if (err)
     {
-      fprintf(stderr,"### Error getting next access unit\n");
+      print_err("### Error getting next access unit\n");
       break;
     }
     count++;
@@ -765,12 +762,12 @@ static void find_h264_fields(ES_p    es,
     if (max > 0 && count >= max)
       break;
   }
-  printf("Found %d MPEG-4 picture%s, %d field%s, %d frame%s\n",
-         count,(count==1?"":"s"),
-         num_fields,(num_fields==1?"":"s"),
-         num_frames,(num_frames==1?"":"s"));
+  fprint_msg("Found %d MPEG-4 picture%s, %d field%s, %d frame%s\n",
+             count,(count==1?"":"s"),
+             num_fields,(num_fields==1?"":"s"),
+             num_frames,(num_frames==1?"":"s"));
 
-  printf("Fields with PTS associated: %u\n",num_with_PTS);
+  fprint_msg("Fields with PTS associated: %u\n",num_with_PTS);
   free_access_unit_context(&context);
 }
 
@@ -888,93 +885,93 @@ static void report_h264_frames(ES_p  es,
     // Did the logical stream end after the last access unit?
     if (context->end_of_stream)
     {
-      if (!quiet) printf("Found End-of-stream NAL unit\n");
+      if (!quiet) print_msg("Found End-of-stream NAL unit\n");
       break;
     }
 
     if (max > 0 && access_unit_count >= max)
     {
-      printf("\nStopping because (at least) %d frames have been read\n",
-             access_unit_count);
+      fprint_msg("\nStopping because (at least) %d frames have been read\n",
+                 access_unit_count);
       break;
     }
   }
 
-  printf("Found %d frame%s (%d NAL unit%s)\n",
-         access_unit_count,(access_unit_count==1?"":"s"),
-         context->nac->count,(context->nac->count==1?"":"s"));
+  fprint_msg("Found %d frame%s (%d NAL unit%s)\n",
+             access_unit_count,(access_unit_count==1?"":"s"),
+             context->nac->count,(context->nac->count==1?"":"s"));
 
   if (count_types)
   {
     if (slice_categories[I_NON_REF] > 0)
     {
-      printf("Non-reference frames:\n");
+      print_msg("Non-reference frames:\n");
       if (slice_types[I_NON_REF][I_SLICE_I] != 0)
-        printf("   I frames    %7d\n",slice_types[I_NON_REF][I_SLICE_I]);
+        fprint_msg("   I frames    %7d\n",slice_types[I_NON_REF][I_SLICE_I]);
       if (slice_types[I_NON_REF][I_SLICE_P] != 0)
-        printf("   P frames    %7d\n",slice_types[I_NON_REF][I_SLICE_P]);
+        fprint_msg("   P frames    %7d\n",slice_types[I_NON_REF][I_SLICE_P]);
       if (slice_types[I_NON_REF][I_SLICE_B] != 0)
-        printf("   B frames    %7d\n",slice_types[I_NON_REF][I_SLICE_B]);
+        fprint_msg("   B frames    %7d\n",slice_types[I_NON_REF][I_SLICE_B]);
       if (slice_types[I_NON_REF][I_SLICE_MIX] != 0)
-        printf("   Mixed/other %7d\n",slice_types[I_NON_REF][I_SLICE_MIX]);
+        fprint_msg("   Mixed/other %7d\n",slice_types[I_NON_REF][I_SLICE_MIX]);
     }
 
     if (slice_categories[I_REF_IDR] > 0)
     {
-      printf("IDR frames\n");
+      print_msg("IDR frames\n");
       if (slice_types[I_REF_IDR][I_SLICE_I] != 0)
-        printf("   I frames    %7d\n",slice_types[I_REF_IDR][I_SLICE_I]);
+        fprint_msg("   I frames    %7d\n",slice_types[I_REF_IDR][I_SLICE_I]);
       if (slice_types[I_REF_IDR][I_SLICE_P] != 0)
-        printf("   P frames    %7d\n",slice_types[I_REF_IDR][I_SLICE_P]);
+        fprint_msg("   P frames    %7d\n",slice_types[I_REF_IDR][I_SLICE_P]);
       if (slice_types[I_REF_IDR][I_SLICE_B] != 0)
-        printf("   B frames    %7d\n",slice_types[I_REF_IDR][I_SLICE_B]);
+        fprint_msg("   B frames    %7d\n",slice_types[I_REF_IDR][I_SLICE_B]);
       if (slice_types[I_REF_IDR][I_SLICE_MIX] != 0)
-        printf("   Mixed/other %7d\n",slice_types[I_REF_IDR][I_SLICE_MIX]);
+        fprint_msg("   Mixed/other %7d\n",slice_types[I_REF_IDR][I_SLICE_MIX]);
     }
 
     if (slice_categories[I_REF_NON_IDR] > 0)
     {
-      printf("Non-IDR reference frames:\n");
+      print_msg("Non-IDR reference frames:\n");
       if (slice_types[I_REF_NON_IDR][I_SLICE_I] != 0)
-        printf("   I frames    %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_I]);
+        fprint_msg("   I frames    %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_I]);
       if (slice_types[I_REF_NON_IDR][I_SLICE_P] != 0)
-        printf("   P frames    %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_P]);
+        fprint_msg("   P frames    %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_P]);
       if (slice_types[I_REF_NON_IDR][I_SLICE_B] != 0)
-        printf("   B frames    %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_B]);
+        fprint_msg("   B frames    %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_B]);
       if (slice_types[I_REF_NON_IDR][I_SLICE_MIX] != 0)
-        printf("   Mixed/other %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_MIX]);
+        fprint_msg("   Mixed/other %7d\n",slice_types[I_REF_NON_IDR][I_SLICE_MIX]);
     }
 
     if (slice_categories[I_OTHER] > 0)
-      printf("Other frame types: %d\n",slice_categories[I_OTHER]);
+      fprint_msg("Other frame types: %d\n",slice_categories[I_OTHER]);
   }
   
   {
     double total_seconds = access_unit_count / (double)FRAMES_PER_SECOND;
     int    minutes = (int)(total_seconds / 60);
     double seconds = total_seconds - 60*minutes;
-    printf("At 25 frames/second, that is %dm %.1fs (%.2fs)\n",minutes,seconds,
-           total_seconds);
+    fprint_msg("At 25 frames/second, that is %dm %.1fs (%.2fs)\n",minutes,seconds,
+               total_seconds);
   }
 
   if (count_sizes && access_unit_count > 0)
-    printf("Frame sizes ranged from %u to %u bytes, mean %.2f\n",
-           min_frame_size,max_frame_size,
-           sum_frame_size/(double)access_unit_count);
+    fprint_msg("Frame sizes ranged from %u to %u bytes, mean %.2f\n",
+               min_frame_size,max_frame_size,
+               sum_frame_size/(double)access_unit_count);
 
-  printf("Frames with PTS associated: %u\n",num_with_PTS);
+  fprint_msg("Frames with PTS associated: %u\n",num_with_PTS);
 
   free_access_unit_context(&context);
 }
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: esreport [switches] [<infile>]\n"
     "\n"
     );
   REPORT_VERSION("esreport");
-  printf(
+  print_msg(
     "\n"
     "  Report on the content of an elementary stream containing H.264\n"
     "  (MPEG-4/AVC), H.262 (MPEG-2) or AVS video data.\n"
@@ -1148,8 +1145,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### esreport: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### esreport: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -1157,7 +1154,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name)
       {
-        fprintf(stderr,"### esreport: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### esreport: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else
@@ -1171,7 +1168,7 @@ int main(int argc, char **argv)
   
   if (!had_input_name)
   {
-    fprintf(stderr,"### esreport: No input file specified\n");
+    print_err("### esreport: No input file specified\n");
     return 1;
   }
 
@@ -1179,7 +1176,7 @@ int main(int argc, char **argv)
                          force_stream_type,want_data,&is_data,&es);
   if (err)
   {
-    fprintf(stderr,"### esreport: Error opening input file\n");
+    print_err("### esreport: Error opening input file\n");
     return 1;
   }
 
@@ -1224,14 +1221,14 @@ int main(int argc, char **argv)
   }
   else
   {
-    fprintf(stderr,"### esreport: Unexpected type of video data\n");
+    print_err("### esreport: Unexpected type of video data\n");
     return 1;
   }
 
   err = close_input_as_ES(input_name,&es);
   if (err)
   {
-    fprintf(stderr,"### esreport: Error closing input file\n");
+    print_err("### esreport: Error closing input file\n");
     return 1;
   }
   return 0;

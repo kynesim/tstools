@@ -39,6 +39,7 @@
 #include "ts_fns.h"
 #include "tswrite_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 // Default audio rates, in Hertz
@@ -75,10 +76,10 @@ static int check(uint64_t value)
   if (err) return 1;
 
   if (value == result)
-    printf("Value " LLU_FORMAT " OK\n",value);
+    fprint_msg("Value " LLU_FORMAT " OK\n",value);
   else
   {
-    printf("Input " LLU_FORMAT ", output " LLU_FORMAT "\n",value,result);
+    fprint_msg("Input " LLU_FORMAT ", output " LLU_FORMAT "\n",value,result);
     return 1;
   }
 
@@ -160,8 +161,8 @@ static int merge_with_avs(avs_context_p  video_context,
   int got_audio = TRUE;
 
   if (verbose)
-    printf("Video PTS increment %u\n"
-           "Audio PTS increment %u\n",video_pts_increment,audio_pts_increment);
+    fprint_msg("Video PTS increment %u\n"
+               "Audio PTS increment %u\n",video_pts_increment,audio_pts_increment);
 
   // Start off our output with some null packets - this is in case the
   // reader needs some time to work out its byte alignment before it starts
@@ -203,7 +204,7 @@ static int merge_with_avs(avs_context_p  video_context,
                                2,prog_pids,prog_type);
   if (err)
   {
-    fprintf(stderr,"### Error writing out TS program data\n");
+    print_err("### Error writing out TS program data\n");
     return 1;
   }
 
@@ -219,7 +220,7 @@ static int merge_with_avs(avs_context_p  video_context,
       if (err == EOF)
       {
         if (verbose)
-          printf("EOF: no more video data\n");
+          print_msg("EOF: no more video data\n");
         got_video = FALSE;
       }
       else if (err)
@@ -236,7 +237,7 @@ static int merge_with_avs(avs_context_p  video_context,
         if (err)
         {
           free_avs_frame(&avs_frame);
-          fprintf(stderr,"### Error writing AVS frame (sequence header/end)\n");
+          print_err("### Error writing AVS frame (sequence header/end)\n");
           return 1;
         }
         continue;               // look for a "proper" frame
@@ -249,16 +250,16 @@ static int merge_with_avs(avs_context_p  video_context,
       video_pts += video_pts_increment;
       video_frame_count ++;
       if (verbose)
-        printf("\n%s video frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
-               (is_avs_I_frame(avs_frame)?"**":"++"),
-               video_frame_count,video_time,video_pts);
+        fprint_msg("\n%s video frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
+                   (is_avs_I_frame(avs_frame)?"**":"++"),
+                   video_frame_count,video_time,video_pts);
 
       if (pat_pmt_freq && !(video_frame_count % pat_pmt_freq))
         {
           if (verbose)
             {
-              printf("\nwriting PAT and PMT (frame = %d, freq = %d).. ", 
-                     video_frame_count, pat_pmt_freq);
+              fprint_msg("\nwriting PAT and PMT (frame = %d, freq = %d).. ", 
+                         video_frame_count, pat_pmt_freq);
             }
 
           err = write_TS_program_data2(output, 
@@ -293,7 +294,7 @@ static int merge_with_avs(avs_context_p  video_context,
       if (err)
       {
         free_avs_frame(&avs_frame);
-        fprintf(stderr,"### Error writing AVS frame\n");
+        print_err("### Error writing AVS frame\n");
         return 1;
       }
       free_avs_frame(&avs_frame);
@@ -309,7 +310,7 @@ static int merge_with_avs(avs_context_p  video_context,
       if (err == EOF)
       {
         if (verbose)
-          printf("EOF: no more audio data\n");
+          print_msg("EOF: no more audio data\n");
         got_audio = FALSE;
         break;
       }
@@ -321,8 +322,8 @@ static int merge_with_avs(avs_context_p  video_context,
       audio_pts += audio_pts_increment;
       audio_frame_count ++;
       if (verbose)
-        printf("** audio frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
-               audio_frame_count,audio_time,audio_pts);
+        fprint_msg("** audio frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
+                   audio_frame_count,audio_time,audio_pts);
 
       err = write_ES_as_TS_PES_packet_with_pts_dts(output,aframe->data,
                                                    aframe->data_len,
@@ -333,7 +334,7 @@ static int merge_with_avs(avs_context_p  video_context,
       if (err)
       {
         free_audio_frame(&aframe);
-        fprintf(stderr,"### Error writing audio frame\n");
+        print_err("### Error writing audio frame\n");
         return 1;
       }
       free_audio_frame(&aframe);
@@ -345,12 +346,12 @@ static int merge_with_avs(avs_context_p  video_context,
     uint32_t video_elapsed = (uint32_t)((double)(100*video_frame_count)/video_frame_rate);
     uint32_t audio_elapsed = 100*audio_frame_count*
       audio_samples_per_frame/audio_sample_rate;
-    printf("Read %d video frame%s, %.2fs elapsed (%dm %.2fs)\n",
-           video_frame_count,(video_frame_count==1?"":"s"),
-           video_elapsed/100.0,video_elapsed/6000,(video_elapsed%6000)/100.0);
-    printf("Read %d audio frame%s, %.2fs elapsed (%dm %.2fs)\n",
-           audio_frame_count,(audio_frame_count==1?"":"s"),
-           audio_elapsed/100.0,audio_elapsed/6000,(audio_elapsed%6000)/100.0);
+    fprint_msg("Read %d video frame%s, %.2fs elapsed (%dm %.2fs)\n",
+               video_frame_count,(video_frame_count==1?"":"s"),
+               video_elapsed/100.0,video_elapsed/6000,(video_elapsed%6000)/100.0);
+    fprint_msg("Read %d audio frame%s, %.2fs elapsed (%dm %.2fs)\n",
+               audio_frame_count,(audio_frame_count==1?"":"s"),
+               audio_elapsed/100.0,audio_elapsed/6000,(audio_elapsed%6000)/100.0);
   }
 
   return 0;
@@ -396,8 +397,8 @@ static int merge_with_h264(access_unit_context_p  video_context,
   int got_audio = TRUE;
 
   if (verbose)
-    printf("Video PTS increment %u\n"
-           "Audio PTS increment %u\n",video_pts_increment,audio_pts_increment);
+    fprint_msg("Video PTS increment %u\n"
+               "Audio PTS increment %u\n",video_pts_increment,audio_pts_increment);
 
   // Start off our output with some null packets - this is in case the
   // reader needs some time to work out its byte alignment before it starts
@@ -439,7 +440,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
                                2,prog_pids,prog_type);
   if (err)
   {
-    fprintf(stderr,"### Error writing out TS program data\n");
+    print_err("### Error writing out TS program data\n");
     return 1;
   }
 
@@ -455,7 +456,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
       if (err == EOF)
       {
         if (verbose)
-          printf("EOF: no more video data\n");
+          print_msg("EOF: no more video data\n");
         got_video = FALSE;
       }
       else if (err)
@@ -468,16 +469,16 @@ static int merge_with_h264(access_unit_context_p  video_context,
       video_pts += video_pts_increment;
       video_frame_count ++;
       if (verbose)
-        printf("\n%s video frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
-               (is_I_or_IDR_frame(access_unit)?"**":"++"),
-               video_frame_count,video_time,video_pts);
+        fprint_msg("\n%s video frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
+                   (is_I_or_IDR_frame(access_unit)?"**":"++"),
+                   video_frame_count,video_time,video_pts);
 
       if (pat_pmt_freq && !(video_frame_count % pat_pmt_freq))
         {
           if (verbose)
             {
-              printf("\nwriting PAT and PMT (frame = %d, freq = %d).. ", 
-                     video_frame_count, pat_pmt_freq);
+              fprint_msg("\nwriting PAT and PMT (frame = %d, freq = %d).. ", 
+                         video_frame_count, pat_pmt_freq);
             }
           err = write_TS_program_data2(output, 
                                        1, // tsid
@@ -509,7 +510,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
       if (err)
       {
         free_access_unit(&access_unit);
-        fprintf(stderr,"### Error writing access unit (frame)\n");
+        print_err("### Error writing access unit (frame)\n");
         return 1;
       }
       free_access_unit(&access_unit);
@@ -518,7 +519,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
       if (video_context->end_of_stream)
       {
         if (verbose)
-          printf("Found End-of-stream NAL unit\n");
+          print_msg("Found End-of-stream NAL unit\n");
         got_video = FALSE;
       }
     }
@@ -533,7 +534,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
       if (err == EOF)
       {
         if (verbose)
-          printf("EOF: no more audio data\n");
+          print_msg("EOF: no more audio data\n");
         got_audio = FALSE;
         break;
       }
@@ -545,8 +546,8 @@ static int merge_with_h264(access_unit_context_p  video_context,
       audio_pts += audio_pts_increment;
       audio_frame_count ++;
       if (verbose)
-        printf("** audio frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
-               audio_frame_count,audio_time,audio_pts);
+        fprint_msg("** audio frame %5d (@ %.2fs, " LLU_FORMAT ")\n",
+                   audio_frame_count,audio_time,audio_pts);
 
       err = write_ES_as_TS_PES_packet_with_pts_dts(output,aframe->data,
                                                    aframe->data_len,
@@ -557,7 +558,7 @@ static int merge_with_h264(access_unit_context_p  video_context,
       if (err)
       {
         free_audio_frame(&aframe);
-        fprintf(stderr,"### Error writing audio frame\n");
+        print_err("### Error writing audio frame\n");
         return 1;
       }
       free_audio_frame(&aframe);
@@ -569,12 +570,12 @@ static int merge_with_h264(access_unit_context_p  video_context,
     uint32_t video_elapsed = 100*video_frame_count/video_frame_rate;
     uint32_t audio_elapsed = 100*audio_frame_count*
       audio_samples_per_frame/audio_sample_rate;
-    printf("Read %d video frame%s, %.2fs elapsed (%dm %.2fs)\n",
-           video_frame_count,(video_frame_count==1?"":"s"),
-           video_elapsed/100.0,video_elapsed/6000,(video_elapsed%6000)/100.0);
-    printf("Read %d audio frame%s, %.2fs elapsed (%dm %.2fs)\n",
-           audio_frame_count,(audio_frame_count==1?"":"s"),
-           audio_elapsed/100.0,audio_elapsed/6000,(audio_elapsed%6000)/100.0);
+    fprint_msg("Read %d video frame%s, %.2fs elapsed (%dm %.2fs)\n",
+               video_frame_count,(video_frame_count==1?"":"s"),
+               video_elapsed/100.0,video_elapsed/6000,(video_elapsed%6000)/100.0);
+    fprint_msg("Read %d audio frame%s, %.2fs elapsed (%dm %.2fs)\n",
+               audio_frame_count,(audio_frame_count==1?"":"s"),
+               audio_elapsed/100.0,audio_elapsed/6000,(audio_elapsed%6000)/100.0);
   }
 
   return 0;
@@ -583,13 +584,13 @@ static int merge_with_h264(access_unit_context_p  video_context,
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage:\n"
     "    esmerge <video-file> <audio-file> <output-file>\n"
     "\n"
     );
   REPORT_VERSION("esmerge");
-  printf(
+  print_msg(
     "\n"
     "  Merge the contents of two Elementary Stream (ES) files, one containing\n"
     "  video data, and the other audio, to produce an output file containing\n"
@@ -750,8 +751,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### esmerge: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### esmerge: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -774,7 +775,7 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### esmerge: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### esmerge: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -783,25 +784,25 @@ int main(int argc, char **argv)
 
   if (!had_video_name)
   {
-    fprintf(stderr,"### esmerge: No video input file specified\n");
+    print_err("### esmerge: No video input file specified\n");
     return 1;
   }
   if (!had_audio_name)
   {
-    fprintf(stderr,"### esmerge: No audio input file specified\n");
+    print_err("### esmerge: No audio input file specified\n");
     return 1;
   }
   if (!had_output_name)
   {
-    fprintf(stderr,"### esmerge: No output file specified\n");
+    print_err("### esmerge: No output file specified\n");
     return 1;
   }
 
   err = open_elementary_stream(video_name,&video_es);
   if (err)
   {
-    fprintf(stderr,"### esmerge: "
-            "Problem starting to read video as ES - abandoning reading\n");
+    print_err("### esmerge: "
+              "Problem starting to read video as ES - abandoning reading\n");
     return 1;
   }
 
@@ -810,8 +811,8 @@ int main(int argc, char **argv)
     err = build_access_unit_context(video_es,&h264_video_context);
     if (err)
     {
-      fprintf(stderr,"### esmerge: "
-              "Problem starting to read video as H.264 - abandoning reading\n");
+      print_err("### esmerge: "
+                "Problem starting to read video as H.264 - abandoning reading\n");
       close_elementary_stream(&video_es);
       return 1;
     }
@@ -821,23 +822,23 @@ int main(int argc, char **argv)
     err = build_avs_context(video_es,&avs_video_context);
     if (err)
     {
-      fprintf(stderr,"### esmerge: "
-              "Problem starting to read video as H.264 - abandoning reading\n");
+      print_err("### esmerge: "
+                "Problem starting to read video as H.264 - abandoning reading\n");
       close_elementary_stream(&video_es);
       return 1;
     }
   }
   else
   {
-    fprintf(stderr,"### esmerge: Unknown video type\n");
+    print_err("### esmerge: Unknown video type\n");
     return 1;
   }
 
   audio_file = open_binary_file(audio_name,FALSE);
   if (audio_file == -1)
   {
-    fprintf(stderr,"### esmerge: "
-            "Problem opening audio file - abandoning reading\n");
+    print_err("### esmerge: "
+              "Problem opening audio file - abandoning reading\n");
     close_elementary_stream(&video_es);
     free_access_unit_context(&h264_video_context);
     free_avs_context(&avs_video_context);
@@ -847,9 +848,9 @@ int main(int argc, char **argv)
   err = tswrite_open(TS_W_FILE,output_name,NULL,0,quiet,&output);
   if (err)
   {
-    fprintf(stderr,"### esmerge: "
-            "Problem opening output file %s - abandoning reading\n",
-            output_name);
+    fprint_err("### esmerge: "
+               "Problem opening output file %s - abandoning reading\n",
+               output_name);
     close_elementary_stream(&video_es);
     close_file(audio_file);
     free_access_unit_context(&h264_video_context);
@@ -875,13 +876,13 @@ int main(int argc, char **argv)
 
   if (!quiet)
   {
-    printf("Reading video from %s\n",video_name);
-    printf("Reading audio from %s (as %s)\n",audio_name,AUDIO_STR(audio_type));
-    printf("Writing output to  %s\n",output_name);
-    printf("Audio sample rate: %dHz (%.2fKHz)\n",audio_sample_rate,
-           audio_sample_rate/1000.0);
-    printf("Audio samples per frame: %d\n",audio_samples_per_frame);
-    printf("Video frame rate: %dHz\n",video_frame_rate);
+    fprint_msg("Reading video from %s\n",video_name);
+    fprint_msg("Reading audio from %s (as %s)\n",audio_name,AUDIO_STR(audio_type));
+    fprint_msg("Writing output to  %s\n",output_name);
+    fprint_msg("Audio sample rate: %dHz (%.2fKHz)\n",audio_sample_rate,
+               audio_sample_rate/1000.0);
+    fprint_msg("Audio samples per frame: %d\n",audio_samples_per_frame);
+    fprint_msg("Video frame rate: %dHz\n",video_frame_rate);
   }
 
 
@@ -901,12 +902,12 @@ int main(int argc, char **argv)
                          quiet,verbose,debugging);
   else
   {
-    fprintf(stderr,"### esmerge: Unknown video type\n");
+    print_err("### esmerge: Unknown video type\n");
     return 1;
   }
   if (err)
   {
-    fprintf(stderr,"### esmerge: Error merging video and audio streams\n");
+    print_err("### esmerge: Error merging video and audio streams\n");
     close_elementary_stream(&video_es);
     close_file(audio_file);
     free_access_unit_context(&h264_video_context);
@@ -922,7 +923,7 @@ int main(int argc, char **argv)
   err = tswrite_close(output,quiet);
   if (err)
   {
-    fprintf(stderr,"### esmerge: Error closing output %s\n",output_name);
+    fprint_err("### esmerge: Error closing output %s\n",output_name);
     return 1;
   }
   return 0;

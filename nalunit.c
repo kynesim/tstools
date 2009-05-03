@@ -44,6 +44,7 @@
 #include "bitdata_fns.h"
 #include "nalunit_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 
 #define DEBUG 0
 
@@ -74,7 +75,7 @@ extern int build_nal_unit_context(ES_p                es,
   nal_unit_context_p  new = malloc(SIZEOF_NAL_UNIT_CONTEXT);
   if (new == NULL)
   {
-    fprint_err("### Unable to allocate NAL unit context datastructure\n");
+    print_err("### Unable to allocate NAL unit context datastructure\n");
     return 1;
   }
   new->es = es;
@@ -150,14 +151,14 @@ extern int build_nal_unit(nal_unit_p  *nal)
   nal_unit_p  new = malloc(SIZEOF_NAL_UNIT);
   if (new == NULL)
   {
-    fprint_err("### Unable to allocate NAL unit datastructure\n");
+    print_err("### Unable to allocate NAL unit datastructure\n");
     return 1;
   }
 
   err = setup_ES_unit(&(new->unit));
   if (err)
   {
-    fprint_err("### Unable to allocate NAL unit data buffer\n");
+    print_err("### Unable to allocate NAL unit data buffer\n");
     free(new);
     return 1;
   }
@@ -248,7 +249,7 @@ static int remove_emulation_prevention(byte   data[],
   tgt = malloc(data_len);
   if (tgt == NULL)
   {
-    fprint_err("### Cannot malloc RBSP target array\n");
+    print_err("### Cannot malloc RBSP target array\n");
     return 1;
   }
   
@@ -291,7 +292,7 @@ static inline int prepare_rbsp(nal_unit_p  nal)
                                       &(nal->rbsp),&(nal->rbsp_len));
     if (err)
     {
-      fprint_err("### Error removing emulation prevention bytes\n");
+      print_err("### Error removing emulation prevention bytes\n");
       return 1;
     }
   }
@@ -299,7 +300,7 @@ static inline int prepare_rbsp(nal_unit_p  nal)
   err = build_bitdata(&bd,nal->rbsp,nal->rbsp_len);
   if (err)
   {
-    fprint_err("### Unable to build bitdata datastructure for NAL RBSP\n");
+    print_err("### Unable to build bitdata datastructure for NAL RBSP\n");
     return 1;
   }
   nal->bit_data = bd;
@@ -347,16 +348,16 @@ static int read_slice_data(nal_unit_p   nal,
 
   if (show_nal_details)
   {
-    printf("@@ NAL " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
-           "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
-           nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
-           nal->data_len,
-           nal->nal_ref_idc,nal->nal_unit_type,
-           NAL_UNIT_TYPE_STR(nal->nal_unit_type));
-    printf("   first_mb_in_slice %u, slice_type %u (%s),"
-           " pic_parameter_set_id %d\n",data->first_mb_in_slice,
-           data->slice_type,NAL_SLICE_TYPE_STR(data->slice_type),
-           data->pic_parameter_set_id);
+    fprint_msg("@@ NAL " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
+               "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
+               nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
+               nal->data_len,
+               nal->nal_ref_idc,nal->nal_unit_type,
+               NAL_UNIT_TYPE_STR(nal->nal_unit_type));
+    fprint_msg("   first_mb_in_slice %u, slice_type %u (%s),"
+               " pic_parameter_set_id %d\n",data->first_mb_in_slice,
+               data->slice_type,NAL_SLICE_TYPE_STR(data->slice_type),
+               data->pic_parameter_set_id);
   }
   
   // If we don't have sequence/parameter sets, then we can't go any
@@ -381,15 +382,15 @@ static int read_slice_data(nal_unit_p   nal,
   data->seq_param_set_pic_order_cnt_type = seq_param_data->pic_order_cnt_type;
 
   if (show_nal_details)
-    printf("   seq_param_set->pic_order_cnt_type %u\n",
-           data->seq_param_set_pic_order_cnt_type);
+    fprint_msg("   seq_param_set->pic_order_cnt_type %u\n",
+               data->seq_param_set_pic_order_cnt_type);
   
   err = read_bits(bd,seq_param_data->log2_max_frame_num,&data->frame_num);
   CHECK("frame_num");
 
   if (show_nal_details)
-    printf("   frame_num %u (%d bits)\n",data->frame_num,
-           seq_param_data->log2_max_frame_num);
+    fprint_msg("   frame_num %u (%d bits)\n",data->frame_num,
+               seq_param_data->log2_max_frame_num);
 
   data->field_pic_flag = 0;     // value if not present - i.e., a frame
   data->bottom_field_flag = 0;
@@ -399,14 +400,14 @@ static int read_slice_data(nal_unit_p   nal,
     err = read_bit(bd,&data->field_pic_flag);
     CHECK("field_pic_flag");
     if (show_nal_details)
-      printf("   field_pic_flag %d\n",data->field_pic_flag);
+      fprint_msg("   field_pic_flag %d\n",data->field_pic_flag);
     if (data->field_pic_flag)
     {
       data->bottom_field_flag_present = TRUE;
       err = read_bit(bd,&data->bottom_field_flag);
       CHECK("bottom_field_flag");
       if (show_nal_details)
-        printf("   bottom_field_flag %d\n",data->bottom_field_flag);
+        fprint_msg("   bottom_field_flag %d\n",data->bottom_field_flag);
     }
   }
   
@@ -415,7 +416,7 @@ static int read_slice_data(nal_unit_p   nal,
     err = read_exp_golomb(bd,&data->idr_pic_id);
     CHECK("idr_pic_id");
     if (show_nal_details)
-      printf("   idr_pic_id %u\n",data->idr_pic_id);
+      fprint_msg("   idr_pic_id %u\n",data->idr_pic_id);
   }
 
   data->delta_pic_order_cnt_bottom = 0;  // value if not present
@@ -432,11 +433,11 @@ static int read_slice_data(nal_unit_p   nal,
       CHECK("delta_pic_order_cnt_bottom");
     }
     if (show_nal_details)
-      printf("   pic_order_cnt_lsb %u (%d bits)\n"
-             "   delta_pic_order_cnt_bottom %d\n",
-             data->pic_order_cnt_lsb,
-             seq_param_data->log2_max_pic_order_cnt_lsb,
-             data->delta_pic_order_cnt_bottom);
+      fprint_msg("   pic_order_cnt_lsb %u (%d bits)\n"
+                 "   delta_pic_order_cnt_bottom %d\n",
+                 data->pic_order_cnt_lsb,
+                 seq_param_data->log2_max_pic_order_cnt_lsb,
+                 data->delta_pic_order_cnt_bottom);
   }
   else if (seq_param_data->pic_order_cnt_type == 1 &&
            !seq_param_data->delta_pic_order_always_zero_flag)
@@ -444,14 +445,14 @@ static int read_slice_data(nal_unit_p   nal,
     err = read_signed_exp_golomb(bd,&data->delta_pic_order_cnt[0]);
     CHECK("delta_pic_order_cnt[0]");
     if (show_nal_details)
-      printf("   delta_pic_order_cnt[0] %d\n",data->delta_pic_order_cnt[0]);
+      fprint_msg("   delta_pic_order_cnt[0] %d\n",data->delta_pic_order_cnt[0]);
 
     if (pic_param_data->pic_order_present_flag && !data->field_pic_flag)
     {
       err = read_signed_exp_golomb(bd,&data->delta_pic_order_cnt[1]);
       CHECK("delta_pic_order_cnt[1]");
       if (show_nal_details)
-        printf("   delta_pic_order_cnt[1] %d\n",data->delta_pic_order_cnt[1]);
+        fprint_msg("   delta_pic_order_cnt[1] %d\n",data->delta_pic_order_cnt[1]);
     }
   }
 
@@ -467,7 +468,7 @@ static int read_slice_data(nal_unit_p   nal,
     err = read_exp_golomb(bd,&data->redundant_pic_cnt);
     CHECK("redundant_pic_cnt");
     if (show_nal_details)
-      printf("   redundant_pic_cnt %u\n",data->redundant_pic_cnt);
+      fprint_msg("   redundant_pic_cnt %u\n",data->redundant_pic_cnt);
   }
 
   nal->decoded = TRUE;
@@ -502,11 +503,11 @@ static int read_pic_param_set_data(nal_unit_p   nal,
   byte     constrained_intra_pred_flag;
 
 #undef CHECK
-#define CHECK(name)                                                     \
-  if (err)                                                              \
-  {                                                                     \
-    fprint_err("### Error reading %s field from picture parameter set\n", \
-            (name));                                                    \
+#define CHECK(name)                                                      \
+  if (err)                                                               \
+  {                                                                      \
+    fprint_err("### Error reading %s field from picture parameter set\n",\
+               (name));                                                  \
   }
 
   // We need to know the id of this picture parameter set, and also
@@ -526,17 +527,17 @@ static int read_pic_param_set_data(nal_unit_p   nal,
 
   if (show_nal_details)
   {
-    printf("@@ PPS " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
-           "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
-           nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
-           nal->data_len,
-           nal->nal_ref_idc,nal->nal_unit_type,
-           NAL_UNIT_TYPE_STR(nal->nal_unit_type));
-    printf("   pic_parameter_set_id %d, seq_parameter_set_id %d\n",
-           data->pic_parameter_set_id,data->seq_parameter_set_id);
-    printf("   entropy_coding_mode_flag %d\n",
-           data->entropy_coding_mode_flag);
-    printf("   pic_order_present_flag %d\n",data->pic_order_present_flag);
+    fprint_msg("@@ PPS " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
+               "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
+               nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
+               nal->data_len,
+               nal->nal_ref_idc,nal->nal_unit_type,
+               NAL_UNIT_TYPE_STR(nal->nal_unit_type));
+    fprint_msg("   pic_parameter_set_id %d, seq_parameter_set_id %d\n",
+               data->pic_parameter_set_id,data->seq_parameter_set_id);
+    fprint_msg("   entropy_coding_mode_flag %d\n",
+               data->entropy_coding_mode_flag);
+    fprint_msg("   pic_order_present_flag %d\n",data->pic_order_present_flag);
   }
 
   // After this, we don't (at the moment) really need any of the rest.
@@ -549,14 +550,14 @@ static int read_pic_param_set_data(nal_unit_p   nal,
   data->num_slice_groups ++;
 
   if (show_nal_details)
-    printf("   num_slice_groups %u\n",data->num_slice_groups);
+    fprint_msg("   num_slice_groups %u\n",data->num_slice_groups);
 
   if (data->num_slice_groups > 1)
   {
     err = read_exp_golomb(bd,&data->slice_group_map_type);
     CHECK("slice_group_map_type");
     if (show_nal_details)
-      printf("   slice_group_map_type %u\n",data->slice_group_map_type);
+      fprint_msg("   slice_group_map_type %u\n",data->slice_group_map_type);
     if (data->slice_group_map_type == 0)
     {
       // NB: 0..num_slice_groups-1, not 0..num_slice_groups-1 - 1
@@ -601,7 +602,7 @@ static int read_pic_param_set_data(nal_unit_p   nal,
       pic_size_in_map_units ++;
       CHECK("pic_size_in_map_units");
       if (show_nal_details)
-        printf("   pic_size_in_map_units %u\n",pic_size_in_map_units);
+        fprint_msg("   pic_size_in_map_units %u\n",pic_size_in_map_units);
       size = (int) ceil(log2(data->num_slice_groups));
       // Again, notice the range
       for (ii=0; ii < pic_size_in_map_units; ii++)
@@ -616,51 +617,51 @@ static int read_pic_param_set_data(nal_unit_p   nal,
   CHECK("num_ref_idx_10_active");
   num_ref_idx_10_active ++;
   if (show_nal_details)
-    printf("   num_ref_idx_10_active %u\n",num_ref_idx_10_active);
+    fprint_msg("   num_ref_idx_10_active %u\n",num_ref_idx_10_active);
   err = read_exp_golomb(bd,&num_ref_idx_11_active); // minus 1
   CHECK("num_ref_idx_11_active");
   num_ref_idx_11_active ++;
   if (show_nal_details)
-    printf("   num_ref_idx_11_active %u\n",num_ref_idx_11_active);
+    fprint_msg("   num_ref_idx_11_active %u\n",num_ref_idx_11_active);
   err = read_bit(bd,&weighted_pred_flag);
   CHECK("weighted_pred_flag");
   if (show_nal_details)
-    printf("   weighted_pred_flag %d\n",weighted_pred_flag);
+    fprint_msg("   weighted_pred_flag %d\n",weighted_pred_flag);
   err = read_bits(bd,2,&weighted_bipred_idc);
   CHECK("weighted_bipred_idc");
   if (show_nal_details)
-    printf("   weighted_bipred_idc %u\n",weighted_bipred_idc);
+    fprint_msg("   weighted_bipred_idc %u\n",weighted_bipred_idc);
   err = read_signed_exp_golomb(bd,&pic_init_qp); // minus 26
   CHECK("pic_init_qp");
   pic_init_qp += 26;
   if (show_nal_details)
-    printf("   pic_init_qp %d\n",pic_init_qp);
+    fprint_msg("   pic_init_qp %d\n",pic_init_qp);
   err = read_signed_exp_golomb(bd,&pic_init_qs); // minus 26
   CHECK("pic_init_qs");
   pic_init_qs += 26;
   if (show_nal_details)
-    printf("   pic_init_qs %d\n",pic_init_qs);
+    fprint_msg("   pic_init_qs %d\n",pic_init_qs);
   err = read_signed_exp_golomb(bd,&chroma_qp_index_offset);
   CHECK("chroma_qp_index_offset");
   if (show_nal_details)
-    printf("   chroma_qp_index_offset %d\n",chroma_qp_index_offset);
+    fprint_msg("   chroma_qp_index_offset %d\n",chroma_qp_index_offset);
   err = read_bit(bd,&deblocking_filter_control_present_flag);
   CHECK("deblocking_filter_control_present_flag");
   if (show_nal_details)
-    printf("   deblocking_filter_control_present_flag %d\n",
-           deblocking_filter_control_present_flag);
+    fprint_msg("   deblocking_filter_control_present_flag %d\n",
+               deblocking_filter_control_present_flag);
   err = read_bit(bd,&constrained_intra_pred_flag);
   CHECK("constrained_intra_pred_flag");
   if (show_nal_details)
-    printf("   constrained_intra_pred_flag %d\n",constrained_intra_pred_flag);
+    fprint_msg("   constrained_intra_pred_flag %d\n",constrained_intra_pred_flag);
   // We (sort of) care about redundant_pic_cnt_present_flag
   // in that we need to know it if we are going to read the later bits
   // of a slice header
   err = read_bit(bd,&data->redundant_pic_cnt_present_flag);
   CHECK("redundant_pic_cnt_present_flag");
   if (show_nal_details)
-    printf("   redundant_pic_cnt_present_flag %d\n",
-           data->redundant_pic_cnt_present_flag);
+    fprint_msg("   redundant_pic_cnt_present_flag %d\n",
+               data->redundant_pic_cnt_present_flag);
 
   nal->decoded = TRUE;
   return 0;
@@ -690,11 +691,11 @@ static int read_seq_param_set_data(nal_unit_p   nal,
   uint32_t pic_height_in_map_units;
 
 #undef CHECK
-#define CHECK(name)                                                     \
-  if (err)                                                              \
-  {                                                                     \
+#define CHECK(name)                                                       \
+  if (err)                                                                \
+  {                                                                       \
     fprint_err("### Error reading %s field from sequence parameter set\n",\
-            (name));                                                    \
+               (name));                                                   \
   }
 
   err = read_bits_into_byte(bd,8,&data->profile_idc);
@@ -711,9 +712,9 @@ static int read_seq_param_set_data(nal_unit_p   nal,
   if (reserved_zero_5bits != 0)
   {
     fprint_err("### reserved_zero_5bits not zero (%d) in sequence"
-            " parameter set NAL unit at " OFFSET_T_FORMAT "/%d\n",
-            reserved_zero_5bits,
-            nal->unit.start_posn.infile,nal->unit.start_posn.inpacket);
+               " parameter set NAL unit at " OFFSET_T_FORMAT "/%d\n",
+               reserved_zero_5bits,
+               nal->unit.start_posn.infile,nal->unit.start_posn.inpacket);
     print_data(FALSE,"   Data",nal->bit_data->data,nal->bit_data->data_len,
                20);
     // Should we carry on or give up? On the whole, if this is broken
@@ -726,18 +727,18 @@ static int read_seq_param_set_data(nal_unit_p   nal,
 
   if (show_nal_details)
   {
-    printf("@@ SPS " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
-           "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
-           nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
-           nal->data_len,
-           nal->nal_ref_idc,nal->nal_unit_type,
-           NAL_UNIT_TYPE_STR(nal->nal_unit_type));
-    printf("   profile_idc %u, constraint set flags: %d %d %d\n",
-           data->profile_idc,
-           data->constraint_set0_flag,
-           data->constraint_set1_flag,
-           data->constraint_set2_flag);
-    printf("   level_idc %u\n",data->level_idc);
+    fprint_msg("@@ SPS " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
+               "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
+               nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
+               nal->data_len,
+               nal->nal_ref_idc,nal->nal_unit_type,
+               NAL_UNIT_TYPE_STR(nal->nal_unit_type));
+    fprint_msg("   profile_idc %u, constraint set flags: %d %d %d\n",
+               data->profile_idc,
+               data->constraint_set0_flag,
+               data->constraint_set1_flag,
+               data->constraint_set2_flag);
+    fprint_msg("   level_idc %u\n",data->level_idc);
   }
 
   err = read_exp_golomb(bd,&temp);
@@ -753,9 +754,9 @@ static int read_seq_param_set_data(nal_unit_p   nal,
 
   if (show_nal_details)
   {
-    printf("   seq_parameter_set_id %u\n",data->seq_parameter_set_id);
-    printf("   log2_max_frame_num %u\n",data->log2_max_frame_num);
-    printf("   pic_order_cnt_type %u\n",data->pic_order_cnt_type);
+    fprint_msg("   seq_parameter_set_id %u\n",data->seq_parameter_set_id);
+    fprint_msg("   log2_max_frame_num %u\n",data->log2_max_frame_num);
+    fprint_msg("   pic_order_cnt_type %u\n",data->pic_order_cnt_type);
   }
   
   if (data->pic_order_cnt_type == 0)
@@ -764,8 +765,8 @@ static int read_seq_param_set_data(nal_unit_p   nal,
     CHECK("log2_max_pic_order_cnt_lsb");
     data->log2_max_pic_order_cnt_lsb += 4;
     if (show_nal_details)
-      printf("   log2_max_pic_order_cnt_lsb %u\n",
-             data->log2_max_pic_order_cnt_lsb);
+      fprint_msg("   log2_max_pic_order_cnt_lsb %u\n",
+                 data->log2_max_pic_order_cnt_lsb);
   }
   else if (data->pic_order_cnt_type == 1)
   {
@@ -777,8 +778,8 @@ static int read_seq_param_set_data(nal_unit_p   nal,
     err = read_bit(bd,&data->delta_pic_order_always_zero_flag);
     CHECK("delta_pic_order_always_zero_flag");
     if (show_nal_details)
-      printf("   delta_pic_order_always_zero_flag %d\n",
-             data->delta_pic_order_always_zero_flag);
+      fprint_msg("   delta_pic_order_always_zero_flag %d\n",
+                 data->delta_pic_order_always_zero_flag);
     err = read_signed_exp_golomb(bd,&offset_for_non_ref_pic);
     CHECK("offset_for_non_ref_pic");
     err = read_signed_exp_golomb(bd,&offset_for_top_to_bottom_field);
@@ -797,28 +798,28 @@ static int read_seq_param_set_data(nal_unit_p   nal,
   err = read_exp_golomb(bd,&num_ref_frames);
   CHECK("num_ref_frames");
   if (show_nal_details)
-    printf("   num_ref_frames %u\n",num_ref_frames);
+    fprint_msg("   num_ref_frames %u\n",num_ref_frames);
   err = read_bit(bd,&gaps_in_frame_num_value_allowed_flag);
   CHECK("gaps_in_frame_num_value_allowed_flag");
   if (show_nal_details)
   if (show_nal_details)
-    printf("   gaps_in_frame_num_value_allowed_flag %d\n",
-           gaps_in_frame_num_value_allowed_flag);
+    fprint_msg("   gaps_in_frame_num_value_allowed_flag %d\n",
+               gaps_in_frame_num_value_allowed_flag);
   err = read_exp_golomb(bd,&pic_width_in_mbs); // minus 1
   CHECK("pic_width_in_mbs");
   pic_width_in_mbs ++;
   if (show_nal_details)
-    printf("   pic_width_in_mbs %u\n",pic_width_in_mbs);
+    fprint_msg("   pic_width_in_mbs %u\n",pic_width_in_mbs);
   err = read_exp_golomb(bd,&pic_height_in_map_units); // minus 1
   CHECK("pic_height_in_map_units");
   pic_height_in_map_units ++;
   if (show_nal_details)
-    printf("   pic_height_in_map_units %u\n",pic_height_in_map_units);
+    fprint_msg("   pic_height_in_map_units %u\n",pic_height_in_map_units);
   // We care about frame_mbs_only_flag
   err = read_bit(bd,&data->frame_mbs_only_flag);
   CHECK("frame_mbs_only_flag");
   if (show_nal_details)
-    printf("   frame_mbs_only_flag %d\n",data->frame_mbs_only_flag);
+    fprint_msg("   frame_mbs_only_flag %d\n",data->frame_mbs_only_flag);
 
   nal->decoded = TRUE;
   return 0;
@@ -839,11 +840,11 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
   uint32_t   temp;
 
 #undef CHECK
-#define CHECK(name)                                         \
-  if (err)                                                  \
-  {                                                         \
+#define CHECK(name)                                     \
+  if (err)                                              \
+  {                                                     \
     fprint_err("### Error reading %s field from SEI\n", \
-            (name));                                        \
+               (name));                                 \
   }
 
   err = read_exp_golomb(bd,&temp);
@@ -861,9 +862,9 @@ static int read_SEI_recovery_point(nal_unit_p   nal,
 
   if (show_nal_details)
   {
-    printf("@@ Recovery Point SEI\n");
-    printf("   recovery_frame_cnt %d\n   exact_match_flag %d\n", data->recovery_frame_cnt, data->exact_match_flag);
-    printf("   broken_link_flag %d\n   changing_slice_group_idc %d", data->broken_link_flag, data->changing_slice_group_idc);
+    print_msg("@@ Recovery Point SEI\n");
+    fprint_msg("   recovery_frame_cnt %d\n   exact_match_flag %d\n", data->recovery_frame_cnt, data->exact_match_flag);
+    fprint_msg("   broken_link_flag %d\n   changing_slice_group_idc %d", data->broken_link_flag, data->changing_slice_group_idc);
   }
 
   return 0;
@@ -888,11 +889,11 @@ static int read_SEI(nal_unit_p   nal,
   uint32_t temp = 0;
 
 #undef CHECK
-#define CHECK(name)                                         \
-  if (err)                                                  \
-  {                                                         \
+#define CHECK(name)                                     \
+  if (err)                                              \
+  {                                                     \
     fprint_err("### Error reading %s field from SEI\n", \
-            (name));                                        \
+               (name));                                 \
   }
 
   // read payloadtype (see H.264:7.3.2.3.1)
@@ -969,22 +970,22 @@ static int read_rbsp_data(nal_unit_p   nal,
   else if (nal->nal_unit_type == 6)                       // SEI 
     err = read_SEI(nal,show_nal_details);
   else if (show_nal_details)
-    printf("@@ nal " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
-           "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
-           nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
-           nal->data_len,
-           nal->nal_ref_idc,nal->nal_unit_type,
-           NAL_UNIT_TYPE_STR(nal->nal_unit_type));
+    fprint_msg("@@ nal " OFFSET_T_FORMAT_08 "/%04d: size %d\n"
+               "   nal_ref_idc %x nal_unit_type %02x (%s)\n",
+               nal->unit.start_posn.infile,nal->unit.start_posn.inpacket,
+               nal->data_len,
+               nal->nal_ref_idc,nal->nal_unit_type,
+               NAL_UNIT_TYPE_STR(nal->nal_unit_type));
 
   if (err)
   {
     fprint_err("### Error reading RBSP data for %s NAL (ref idc %x,"
-            " unit type %x) at " OFFSET_T_FORMAT_08 "/%04d\n",
-            NAL_UNIT_TYPE_STR(nal->nal_unit_type),
-            nal->nal_ref_idc,
-            nal->nal_unit_type,
-            nal->unit.start_posn.infile,
-            nal->unit.start_posn.inpacket);
+               " unit type %x) at " OFFSET_T_FORMAT_08 "/%04d\n",
+               NAL_UNIT_TYPE_STR(nal->nal_unit_type),
+               nal->nal_ref_idc,
+               nal->nal_unit_type,
+               nal->unit.start_posn.infile,
+               nal->unit.start_posn.inpacket);
   }
 
   // At this point, we've finished with the actual RBSP data
@@ -1103,8 +1104,8 @@ extern int nal_is_first_VCL_NAL(nal_unit_p   nal,
 
   if (!nal->decoded)
   {
-    fprint_err("### Cannot decide if NAL unit is first VCL NAL\n"
-            "    its RBSP data has not been interpreted\n");
+    print_err("### Cannot decide if NAL unit is first VCL NAL\n"
+              "    its RBSP data has not been interpreted\n");
     return FALSE;
   }
   
@@ -1263,13 +1264,13 @@ static void check_profile(nal_unit_p  nal,
 
   if (nal == NULL)
   {
-    fprint_err("### Attempt to check profile on a NULL NAL unit\n");
+    print_err("### Attempt to check profile on a NULL NAL unit\n");
     return;
   }
   else if (nal->nal_unit_type != 7)
   {
-    fprint_err("### Attempt to check profile on a NAL unit that is not a "
-            "sequence parameter set\n");
+    print_err("### Attempt to check profile on a NAL unit that is not a "
+              "sequence parameter set\n");
     report_nal(FALSE,nal);
     return;
   }
@@ -1281,8 +1282,8 @@ static void check_profile(nal_unit_p  nal,
     int err = read_rbsp_data(nal,NULL,NULL,show_nal_details);
     if (err)
     {
-      fprint_err("### Error trying to decode RBSP for first sequence"
-              " parameter set\n");
+      print_err("### Error trying to decode RBSP for first sequence"
+                " parameter set\n");
       return;
     }
   }
@@ -1298,23 +1299,23 @@ static void check_profile(nal_unit_p  nal,
   {
     int sum = data.constraint_set0_flag + data.constraint_set1_flag +
       data.constraint_set2_flag;
-    fprint_err("\n");
+    print_err("\n");
     fprint_err("Warning: This bitstream declares itself as %s profile (%d)",
-            name,data.profile_idc);
+               name,data.profile_idc);
     if (sum == 0)
-      fprint_err(".\n");
+      print_err(".\n");
     else
     {
-      fprint_err(",\n");
-      fprint_err("         and as obeying the constraints of the");
-      if (data.constraint_set0_flag) fprint_err(" baseline");
-      if (data.constraint_set1_flag) fprint_err(" main");
-      if (data.constraint_set2_flag) fprint_err(" extended");
+      print_err(",\n");
+      print_err("         and as obeying the constraints of the");
+      if (data.constraint_set0_flag) print_err(" baseline");
+      if (data.constraint_set1_flag) print_err(" main");
+      if (data.constraint_set2_flag) print_err(" extended");
       fprint_err(" profile%s.\n",(sum==1?"":"s"));
     }
     fprint_err("         This software does not support %s profile,\n",
-            name);
-    fprint_err("         and may give incorrect results or fail.\n\n");
+               name);
+    print_err("         and may give incorrect results or fail.\n\n");
     return;
   }
 }
@@ -1351,13 +1352,13 @@ extern int setup_NAL_data(int         verbose,
   if (forbidden_zero_bit)
   {
     fprint_err("### NAL forbidden_zero_bit is non-zero, at "
-            OFFSET_T_FORMAT "/%d\n",
-            nal->unit.start_posn.infile,nal->unit.start_posn.inpacket);
+               OFFSET_T_FORMAT "/%d\n",
+               nal->unit.start_posn.infile,nal->unit.start_posn.inpacket);
     fprint_err("    First byte of NAL unit is %02x",nal->data[0]);
     if (nal->data[0] == 0xB3)
-      fprint_err(", which is H.262 sequence header start code\n"
-              "    Data may be MPEG-1 or MPEG-2");
-    fprint_err("\n");
+      print_err(", which is H.262 sequence header start code\n"
+                "    Data may be MPEG-1 or MPEG-2");
+    print_err("\n");
     return 1;
   }
   nal->nal_ref_idc = (nal->data[0] & 0x60) >> 5;
@@ -1428,7 +1429,7 @@ extern int find_next_NAL_unit(nal_unit_context_p  context,
   (context->count) ++;
 
   if (context->show_nal_details)
-    printf("\n");
+    print_msg("\n");
 
   err = setup_NAL_data(verbose,*nal);
   if (err)
@@ -1468,7 +1469,7 @@ extern int find_next_NAL_unit(nal_unit_context_p  context,
                               (*nal)->u.pic.pic_parameter_set_id,*nal);
     if (err)
     {
-      fprint_err("### Error remembering picture parameter set ");
+      print_err("### Error remembering picture parameter set ");
       report_nal(FALSE,*nal);
       free_nal_unit(nal);
       return 1;
@@ -1480,7 +1481,7 @@ extern int find_next_NAL_unit(nal_unit_context_p  context,
                               (*nal)->u.seq.seq_parameter_set_id,*nal);
     if (err)
     {
-      fprint_err("### Error remembering sequence parameter set ");
+      print_err("### Error remembering sequence parameter set ");
       report_nal(FALSE,*nal);
       free_nal_unit(nal);
       return 1;
@@ -1504,7 +1505,7 @@ extern int write_NAL_unit_as_ES(FILE       *output,
   int err = write_ES_unit(output,&(nal->unit));
   if (err)
   {
-    fprint_err("### Error writing NAL unit as ES\n");
+    print_err("### Error writing NAL unit as ES\n");
     return err;
   }
   else
@@ -1533,7 +1534,7 @@ extern int write_NAL_unit_as_TS(TS_writer_p tswriter,
                                       video_pid,DEFAULT_VIDEO_STREAM_ID);
   if (err)
   {
-    fprint_err("### Error writing NAL unit as TS\n");
+    print_err("### Error writing NAL unit as TS\n");
     return err;
   }
   else
@@ -1554,8 +1555,7 @@ extern int build_param_dict(param_dict_p *param_dict)
   param_dict_p  new = malloc(SIZEOF_PARAM_DICT);
   if (new == NULL)
   {
-    fprint_err("### Unable to allocate parameter 'dictionary'"
-            " datastructure\n");
+    print_err("### Unable to allocate parameter 'dictionary' datastructure\n");
     return 1;
   }
 
@@ -1565,8 +1565,8 @@ extern int build_param_dict(param_dict_p *param_dict)
   new->ids = malloc(sizeof(uint32_t)*NAL_PIC_PARAM_START_SIZE);
   if (new->ids == NULL)
   {
-    fprint_err("### Unable to allocate array within 'dictionary'"
-            " datastructure\n");
+    print_err("### Unable to allocate array within 'dictionary'"
+              " datastructure\n");
     free(new);
     return 1;
   }
@@ -1574,8 +1574,8 @@ extern int build_param_dict(param_dict_p *param_dict)
   new->params = malloc(SIZEOF_NAL_INNARDS*NAL_PIC_PARAM_START_SIZE);
   if (new->params == NULL)
   {
-    fprint_err("### Unable to allocate array within 'dictionary'"
-            " datastructure\n");
+    print_err("### Unable to allocate array within 'dictionary'"
+              " datastructure\n");
     free(new->ids);
     free(new);
     return 1;
@@ -1584,8 +1584,8 @@ extern int build_param_dict(param_dict_p *param_dict)
   new->posns = malloc(SIZEOF_ES_OFFSET*NAL_PIC_PARAM_START_SIZE);
   if (new->posns == NULL)
   {
-    fprint_err("### Unable to allocate array within 'dictionary'"
-            " datastructure\n");
+    print_err("### Unable to allocate array within 'dictionary'"
+              " datastructure\n");
     free(new->params);
     free(new->ids);
     free(new);
@@ -1595,8 +1595,8 @@ extern int build_param_dict(param_dict_p *param_dict)
   new->data_lens = malloc(sizeof(uint32_t)*NAL_PIC_PARAM_START_SIZE);
   if (new->data_lens == NULL)
   {
-    fprint_err("### Unable to allocate array within 'dictionary'"
-            " datastructure\n");
+    print_err("### Unable to allocate array within 'dictionary'"
+              " datastructure\n");
     free(new->params);
     free(new->ids);
     free(new);
@@ -1680,27 +1680,27 @@ extern int remember_param_data(param_dict_p  param_dict,
     param_dict->ids = realloc(param_dict->ids,newsize*sizeof(uint32_t));
     if (param_dict->ids == NULL)
     {
-      fprint_err("### Unable to extend parameter set dictionary array\n");
+      print_err("### Unable to extend parameter set dictionary array\n");
       return 1;
     }
     param_dict->params = realloc(param_dict->params,
                                  newsize*SIZEOF_NAL_INNARDS);
     if (param_dict->params == NULL)
     {
-      fprint_err("### Unable to extend parameter set dictionary array\n");
+      print_err("### Unable to extend parameter set dictionary array\n");
       return 1;
     }
     param_dict->posns = realloc(param_dict->params,newsize*SIZEOF_ES_OFFSET);
     if (param_dict->posns == NULL)
     {
-      fprint_err("### Unable to extend parameter set dictionary array\n");
+      print_err("### Unable to extend parameter set dictionary array\n");
       return 1;
     }
     param_dict->data_lens = realloc(param_dict->params,
                                     newsize*sizeof(uint32_t));
     if (param_dict->data_lens == NULL)
     {
-      fprint_err("### Unable to extend parameter set dictionary array\n");
+      print_err("### Unable to extend parameter set dictionary array\n");
       return 1;
     }
     param_dict->size = newsize;
@@ -1772,7 +1772,7 @@ extern int get_pic_param_data(param_dict_p pic_param_dict,
   if (absent)
   {
     fprint_err("### Unable to find picture parameter set with id %u\n",
-            pic_param_id);
+               pic_param_id);
     return 1;
   }
   *pic_param_data = &(innards->pic);
@@ -1803,7 +1803,7 @@ extern int get_seq_param_data(param_dict_p seq_param_dict,
   if (absent)
   {
     fprint_err("### Unable to find sequence parameter set with id %u\n",
-            seq_param_id);
+               seq_param_id);
     return 1;
   }
   *seq_param_data = &(innards->seq);
@@ -1829,7 +1829,7 @@ extern int build_nal_unit_list(nal_unit_list_p  *list)
   nal_unit_list_p  new = malloc(SIZEOF_NAL_UNIT_LIST);
   if (new == NULL)
   {
-    fprint_err("### Unable to allocate NAL unit list datastructure\n");
+    print_err("### Unable to allocate NAL unit list datastructure\n");
     return 1;
   }
   
@@ -1839,8 +1839,7 @@ extern int build_nal_unit_list(nal_unit_list_p  *list)
   if (new->array == NULL)
   {
     free(new);
-    fprint_err(
-            "### Unable to allocate array in NAL unit list datastructure\n");
+    print_err("### Unable to allocate array in NAL unit list datastructure\n");
     return 1;
   }
 
@@ -1862,7 +1861,7 @@ extern int append_to_nal_unit_list(nal_unit_list_p  list,
     list->array = realloc(list->array,newsize*sizeof(nal_unit_p));
     if (list->array == NULL)
     {
-      fprint_err("### Unable to extend NAL unit list array\n");
+      print_err("### Unable to extend NAL unit list array\n");
       return 1;
     }
     list->size = newsize;
