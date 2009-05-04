@@ -47,6 +47,7 @@
 #include "ps_fns.h"
 #include "pes_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "tswrite_fns.h"
 #include "pidint_fns.h"
 #include "version.h"
@@ -103,14 +104,14 @@ static int read_TS_packet(TS_reader_p  tsreader,
     if (loop)
     {
       if (!quiet)
-        printf("Read %d packets, rewinding and continuing\n",max);
+        fprint_msg("Read %d packets, rewinding and continuing\n",max);
       err = seek_using_TS_reader(tsreader,start_posn);
       if (err) return 1;
       *count = start_count;
     }
     else
     {
-      if (!quiet) printf("Stopping after %d TS packets\n",max);
+      if (!quiet) fprint_msg("Stopping after %d TS packets\n",max);
       return EOF;
     }
   }
@@ -124,16 +125,16 @@ static int read_TS_packet(TS_reader_p  tsreader,
       if (!loop)
         return EOF;
       if (!quiet)
-        printf("EOF (after %d TS packets), rewinding and continuing\n",
-               *count);
+        fprint_msg("EOF (after %d TS packets), rewinding and continuing\n",
+                   *count);
     }
     else
     {
-      fprintf(stderr,"### Error reading TS packet %d\n",*count);
+      fprint_err("### Error reading TS packet %d\n",*count);
       if (!loop)
         return 1;
       if (!quiet)
-        printf("!!! Rewinding and continuing anyway\n");
+        print_msg("!!! Rewinding and continuing anyway\n");
     }
     err = seek_using_TS_reader(tsreader,start_posn);
     if (err) return 1;
@@ -144,7 +145,7 @@ static int read_TS_packet(TS_reader_p  tsreader,
                         &adapt,&adapt_len,&payload,&payload_len);
   if (err)
   {
-    fprintf(stderr,"### Error splitting TS packet %d\n",*count);
+    fprint_err("### Error splitting TS packet %d\n",*count);
     return 1;
   }
 
@@ -204,14 +205,14 @@ static int find_PCR_PID(TS_reader_p  tsreader,
     err = read_next_TS_packet(tsreader,&data);
     if (err == EOF)
     {
-      fprintf(stderr,"### EOF (after %d TS packets), before finding program"
-              " information\n",count);
+      fprint_err("### EOF (after %d TS packets), before finding program"
+                 " information\n",count);
       if (pmt_data) free(pmt_data);
       return 1;
     }
     else if (err)
     {
-      fprintf(stderr,"### Error reading TS packet %d\n",count+1);
+      fprint_err("### Error reading TS packet %d\n",count+1);
       if (pmt_data) free(pmt_data);
       return 1;
     }
@@ -221,7 +222,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
                           &adapt,&adapt_len,&payload,&payload_len);
     if (err)
     {
-      fprintf(stderr,"### Error splitting TS packet %d\n",count);
+      fprint_err("### Error splitting TS packet %d\n",count);
       if (pmt_data) free(pmt_data);
       return 1;
     }
@@ -232,20 +233,20 @@ static int find_PCR_PID(TS_reader_p  tsreader,
     err = tswrite_write(tswriter,data,pid,FALSE,0);
     if (err)
     {
-      fprintf(stderr,"### Error writing TS packet %d to circular buffer\n",
-              count);
+      fprint_err("### Error writing TS packet %d to circular buffer\n",
+                 count);
       if (pmt_data) free(pmt_data);
       return 1;
     }
 
     if (pid == 0x0000)
     {
-      if (!quiet) printf("Packet %d is PAT\n",count);
+      if (!quiet) fprint_msg("Packet %d is PAT\n",count);
       if (payload_unit_start_indicator && pat_data)
       {
         // This is the start of a new PAT packet, but we'd already
         // started one, so throw its data away
-        fprintf(stderr,"!!! Discarding previous (uncompleted) PAT data\n");
+        print_err("!!! Discarding previous (uncompleted) PAT data\n");
         free(pat_data);
         pat_data = NULL; pat_data_len = 0; pat_data_used = 0;
       }
@@ -253,7 +254,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       {
         // This is the continuation of a PAT packet, but we hadn't
         // started one yet
-        fprintf(stderr,"!!! Discarding PAT continuation, no PAT started\n");
+        print_err("!!! Discarding PAT continuation, no PAT started\n");
         continue;
       }
 
@@ -261,8 +262,8 @@ static int find_PCR_PID(TS_reader_p  tsreader,
                            &pat_data,&pat_data_len,&pat_data_used);
       if (err)
       {
-        fprintf(stderr,"### Error %s PAT\n",
-                (payload_unit_start_indicator?"starting new":"continuing"));
+        fprint_err("### Error %s PAT\n",
+                   (payload_unit_start_indicator?"starting new":"continuing"));
         if (pat_data) free(pat_data);
         return 1;
       }
@@ -281,7 +282,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
         report_pidint_list(prog_list,"Program list","Program",FALSE);
 
       if (prog_list->length > 1 && !quiet)
-        printf("Multiple programs in PAT - using the first\n\n");
+        print_msg("Multiple programs in PAT - using the first\n\n");
 
       pmt_pid = prog_list->pid[0];
       pmt_program_number = prog_list->number[0];
@@ -294,15 +295,15 @@ static int find_PCR_PID(TS_reader_p  tsreader,
     else if (got_PAT && pid == pmt_pid)
     {
       if (!quiet)
-        printf("Packet %d %s PMT with PID %04x\n",
-               count, payload_unit_start_indicator?"starts":"continues",
-               pmt_pid);
+        fprint_msg("Packet %d %s PMT with PID %04x\n",
+                   count, payload_unit_start_indicator?"starts":"continues",
+                   pmt_pid);
 
       if (payload_unit_start_indicator && pmt_data)
       {
         // This is the start of a new PMT packet, but we'd already
         // started one, so throw its data away
-        fprintf(stderr,"!!! Discarding previous (uncompleted) PMT data\n");
+        print_err("!!! Discarding previous (uncompleted) PMT data\n");
         free(pmt_data);
         pmt_data = NULL; pmt_data_len = 0; pmt_data_used = 0;
       }
@@ -310,7 +311,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       {
         // This is the continuation of a PMT packet, but we hadn't
         // started one yet
-        fprintf(stderr,"!!! Discarding PMT continuation, no PMT started\n");
+        print_err("!!! Discarding PMT continuation, no PMT started\n");
         continue;
       }
 
@@ -318,8 +319,8 @@ static int find_PCR_PID(TS_reader_p  tsreader,
                            &pmt_data,&pmt_data_len,&pmt_data_used);
       if (err)
       {
-        fprintf(stderr,"### Error %s PMT\n",
-                (payload_unit_start_indicator?"starting new":"continuing"));
+        fprint_err("### Error %s PMT\n",
+                   (payload_unit_start_indicator?"starting new":"continuing"));
         if (pmt_data) free(pmt_data);
         return 1;
       }
@@ -336,7 +337,8 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       if (pmt->program_number != pmt_program_number)
       {
         if (!quiet)
-          printf("Discarding PMT program %d - looking for %d\n", pmt->program_number, pmt_program_number);
+          fprint_msg("Discarding PMT program %d - looking for %d\n",
+                     pmt->program_number, pmt_program_number);
         free_pmt(&pmt);
         continue;
       }
@@ -346,15 +348,15 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       *pcr_pid = pmt->PCR_pid;
       free_pmt(&pmt);
       if (!quiet)
-        printf("Taking timing information from PID 0x%03x\n",*pcr_pid);
+        fprint_msg("Taking timing information from PID 0x%03x\n",*pcr_pid);
       *num_read = count;
       return 0;
     }
 
     if (max > 0 && count >= max)
     {
-      fprintf(stderr,"### Stopping after %d TS packets, before finding program"
-              " information\n",max);
+      fprint_err("### Stopping after %d TS packets, before finding program"
+                 " information\n",max);
       if (pmt_data) free(pmt_data);
       return 1;
     }
@@ -427,9 +429,8 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
     err = find_PCR_PID(tsreader,tswriter,&pcr_pid,&start_count,max,quiet);
     if (err)
     {
-      fprintf(stderr,
-              "### Unable to find PCR PID for timing information\n"
-              "    Looked in first %d TS packets\n",max);
+      fprint_err("### Unable to find PCR PID for timing information\n"
+                 "    Looked in first %d TS packets\n",max);
       return 1;
     }
   }
@@ -454,8 +455,8 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
     {
       if (tsreader->file != STDIN_FILENO)
       {
-        fprintf(stderr,"### Last TS packet read was at " LLU_FORMAT "\n",
-                (uint64_t)count * TS_PACKET_SIZE);
+        fprint_err("### Last TS packet read was at " LLU_FORMAT "\n",
+                   (uint64_t)count * TS_PACKET_SIZE);
       }
       return 1;
     }
@@ -472,17 +473,17 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
     err = tswrite_write(tswriter,data,pid,TRUE,pcr);
     if (err)
     {
-      fprintf(stderr,"### Error writing TS packet %d to circular buffer\n",
-              count);
+      fprint_err("### Error writing TS packet %d to circular buffer\n",
+                 count);
       return 1;
     }
 
     if (!quiet && verbose && total%REPORT_EVERY == 0)
-      printf("Transferred %d TS packets\n",total);
+      fprint_msg("Transferred %d TS packets\n",total);
   }
 
   if (!quiet)
-    printf("Transferred %d TS packet%s in total\n",total,(total==1?"":"s"));
+    fprint_msg("Transferred %d TS packet%s in total\n",total,(total==1?"":"s"));
   return 0;
 }
 
@@ -527,9 +528,8 @@ static int play_TS_packets(TS_reader_p  tsreader,
   err = find_PCR_PID(tsreader,tswriter,&pcr_pid,&start_count,max,quiet);
   if (err)
   {
-    fprintf(stderr,
-            "### Unable to find PCR PID for timing information\n"
-            "    Looked in first %d TS packets\n",max);
+    fprint_err("### Unable to find PCR PID for timing information\n"
+               "    Looked in first %d TS packets\n",max);
     return 1;
   }
 
@@ -556,8 +556,8 @@ static int play_TS_packets(TS_reader_p  tsreader,
     {
       if (tsreader->file != STDIN_FILENO)
       {
-        fprintf(stderr,"### Last TS packet read was at " LLU_FORMAT "\n",
-                (uint64_t)count * TS_PACKET_SIZE);
+        fprint_err("### Last TS packet read was at " LLU_FORMAT "\n",
+                   (uint64_t)count * TS_PACKET_SIZE);
       }
       return 1;
     }
@@ -596,20 +596,20 @@ static int play_TS_packets(TS_reader_p  tsreader,
     err = tswrite_write(tswriter,data,pid,got_pcr,pcr);
     if (err)
     {
-      fprintf(stderr,"### Error writing TS packet %d to circular buffer\n",
-              count);
+      fprint_err("### Error writing TS packet %d to circular buffer\n",
+                 count);
       return 1;
     }
 
     if (!quiet && verbose && total%REPORT_EVERY == 0)
-      printf("Transferred %d TS packets\n",total);
+      fprint_msg("Transferred %d TS packets\n",total);
   }
 
   if (!quiet)
   {
-    printf("Transferred %d TS packet%s in total\n",total,(total==1?"":"s"));
-    printf("Used PCRs from %d packets, ignored PCRs from %d packets\n",
-           pcrs_used,pcrs_ignored);
+    fprint_msg("Transferred %d TS packet%s in total\n",total,(total==1?"":"s"));
+    fprint_msg("Used PCRs from %d packets, ignored PCRs from %d packets\n",
+               pcrs_used,pcrs_ignored);
   }
   return 0;
 }
@@ -743,7 +743,7 @@ static int play_PS_stream(int          input,
   err = build_PS_reader(input,quiet,&ps);
   if (err)
   {
-    fprintf(stderr,"### Error building PS reader for input\n");
+    print_err("### Error building PS reader for input\n");
     return 1;
   }
 
@@ -751,8 +751,8 @@ static int play_PS_stream(int          input,
   {
     is_h264 = !want_h262;
     if (!quiet)
-      printf("Reading input as %s\n",(want_h262?"MPEG-2 (H.262)":
-                             "MPEG-4/AVC (H.264)"));
+      fprint_msg("Reading input as %s\n",(want_h262?"MPEG-2 (H.262)":
+                                          "MPEG-4/AVC (H.264)"));
   }
   else
   {
@@ -760,8 +760,8 @@ static int play_PS_stream(int          input,
     if (err) return 1;
 
     if (!quiet)
-      printf("Video appears to be %s\n",
-             (is_h264?"MPEG-4/AVC (H.264)":"MPEG-2 (H.262)"));
+      fprint_msg("Video appears to be %s\n",
+                 (is_h264?"MPEG-4/AVC (H.264)":"MPEG-2 (H.262)"));
   }
 
   err = ps_to_ts(ps,output,pad_start,program_repeat,
@@ -773,7 +773,7 @@ static int play_PS_stream(int          input,
   if (err)
   {
     if (loop)
-      fprintf(stderr,"!!! Ignoring error and looping\n");
+      print_err("!!! Ignoring error and looping\n");
     else
     {
       free_PS_reader(&ps);
@@ -785,11 +785,11 @@ static int play_PS_stream(int          input,
   {
     for (;;)
     {
-      if (!quiet) printf("Rewinding and continuing\n");
+      if (!quiet) print_msg("Rewinding and continuing\n");
       err = rewind_program_stream(ps);
       if (err)
       {
-        fprintf(stderr,"### Error rewinding\n");
+        print_err("### Error rewinding\n");
         free_PS_reader(&ps);
         return 1;
       }
@@ -801,7 +801,7 @@ static int play_PS_stream(int          input,
       if (err)
       {
         if (loop)
-          fprintf(stderr,"!!! Ignoring error and looping\n");
+          print_err("!!! Ignoring error and looping\n");
         else
         {
           free_PS_reader(&ps);
@@ -815,20 +815,20 @@ static int play_PS_stream(int          input,
 
 static void print_usage(int summary)
 {
-  printf(
+  print_msg(
     "Basic usage: tsplay  <infile>  <host>[:<port>]\n"
     "\n"
     );
   REPORT_VERSION("tsplay");
   if (summary)
-    printf(
+    print_msg(
       "\n"
       "  Play the given file (containing Transport Stream or Program Stream\n"
       "  data) 'at' the nominated host, or to an output file. The output\n"
       "  is always Transport Stream.\n"
       );
   else
-    printf(
+    print_msg(
       "\n"
       "  Reads from a file containing H.222.0 (ISO/IEC 13818-1) Transport\n"
       "  Stream or Program Stream data (converting PS to TS as it goes),\n"
@@ -847,7 +847,7 @@ static void print_usage(int summary)
       "\n"
       "  Note that most switches can be placed anywhere on the command line.\n"
       );
-  printf(
+  print_msg(
     "\n"
     "Input:\n"
     "  <infile>          Input is from the named H.222 TS file.\n"
@@ -864,15 +864,15 @@ static void print_usage(int summary)
     "  -udp              Output to the host is via UDP (the default).\n"
     );
   if (summary)
-    printf(
+    print_msg(
       "  -stdout           Output is to standard output. Forces -quiet.\n"
       );
   else
-    printf(
+    print_msg(
       "  -stdout           Output is to standard output. This does not\n"
       "                    make sense with -tcp or -udp. This forces -quiet.\n"
       );
-  printf(
+  print_msg(
     "\n"
     "  -mcastif <ipaddr>\n"
     "  -i <ipaddr>       If output is via UDP, and <host> is a multicast\n"
@@ -888,14 +888,14 @@ static void print_usage(int summary)
     "\n"
     );
   if (summary)
-    printf(
+    print_msg(
       "  -max <n>, -m <n>  Maximum number of TS/PS packets to read.\n"
       "                    See -details for more information.\n"
       "  -loop             Play the input file repeatedly. Can be combined\n"
       "                    with -max.\n"
       );
   else
-    printf(
+    fprint_msg(
       "Normal operation outputs some messages summarising the command line\n"
       "choices, information about the circular buffer filling, and\n"
       "confirmation when the program is ending.\n"
@@ -931,7 +931,7 @@ static void print_usage(int summary)
 
 static void print_help_help()
 {
-  printf(
+  print_msg(
     "With no switches, tsplay will give a brief summary of its basic usage.\n"
     "Otherwise:\n"
     "\n"
@@ -951,7 +951,7 @@ static void print_help_help()
 
 static void print_help_ts()
 {
-  printf(
+  print_msg(
     "Transport Stream Switches:\n"
     "The following switches are only applicable if the input data is TS.\n"
     "\n"
@@ -992,7 +992,7 @@ static void print_help_ts()
 
 static void print_help_ps()
 {
-  printf(
+  print_msg(
     "Program Stream Switches:\n"
     "The following switches are only applicable if the input data is PS.\n"
     "\n"
@@ -1071,7 +1071,7 @@ static void print_help_tuning()
 static void print_help_testing()
 {
   tswrite_help_testing();
-  printf(
+  print_msg(
     "\n"
     "  -drop <k> <d>     As TS packets are output, for every <k>+<d> packets,\n"
     "                    keep <k> and then drop (throw away) <d>.\n"
@@ -1175,24 +1175,24 @@ int main(int argc, char **argv)
           else if (!strcmp(argv[ii+1],"all"))
           {
             print_usage(FALSE);
-            printf("\n");
+            print_msg("\n");
             print_help_ts();
-            printf("\n");
+            print_msg("\n");
             print_help_ps();
-            printf("\n");
+            print_msg("\n");
             print_help_tuning();
-            printf("\n");
+            print_msg("\n");
             print_help_testing();
-            printf("\n");
+            print_msg("\n");
             print_help_debugging();
-            printf("\n");
+            print_msg("\n");
             print_help_help();
           }
           else
           {
-            fprintf(stderr,"### tsplay: "
-                    "Unrecognised command line switch '%s %s' -- try '-help'\n",
-                    argv[ii],argv[ii+1]);
+            fprint_err("### tsplay: "
+                       "Unrecognised command line switch '%s %s' -- try '-help'\n",
+                       argv[ii],argv[ii+1]);
             return 1;
           }
         }
@@ -1235,8 +1235,7 @@ int main(int argc, char **argv)
       {
         if (how == TS_W_STDOUT || how == TS_W_FILE)
         {
-          fprintf(stderr,
-                  "### tsplay: -tcp does not make sense with file output\n");
+          print_err("### tsplay: -tcp does not make sense with file output\n");
           return 1;
         }
         use_network = TRUE;
@@ -1246,8 +1245,7 @@ int main(int argc, char **argv)
       {
         if (how == TS_W_STDOUT || how == TS_W_FILE)
         {
-          fprintf(stderr,
-                  "### tsplay: -udp does not make sense with file output\n");
+          print_err("### tsplay: -udp does not make sense with file output\n");
           return 1;
         }
         use_network = TRUE;
@@ -1329,7 +1327,7 @@ int main(int argc, char **argv)
           want_dolby_as_dvb = FALSE;
         else
         {
-          fprintf(stderr,"### tsplay: -dolby must be followed by dvb or atsc\n");
+          print_err("### tsplay: -dolby must be followed by dvb or atsc\n");
           return 1;
         }
         ii++;
@@ -1356,7 +1354,7 @@ int main(int argc, char **argv)
         if (err) return 1;
         if (pid_to_ignore == 0)
         {
-          fprintf(stderr,"### tsplay: -ignore 0 is not allowed\n");
+          print_err("### tsplay: -ignore 0 is not allowed\n");
           return 1;
         }
         ii++;
@@ -1386,7 +1384,7 @@ int main(int argc, char **argv)
       {
         if (ii+2 >= argc)
         {
-          fprintf(stderr,"### tsplay: -drop requires two arguments\n");
+          print_err("### tsplay: -drop requires two arguments\n");
           return 1;
         }
         err = int_value("tsplay",argv[ii],argv[ii+1],TRUE,0,&drop_packets);
@@ -1397,8 +1395,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### tsplay: "
-                "Unrecognised command line switch '%s' -- try '-help'\n",argv[ii]);
+        fprint_err("### tsplay: "
+                   "Unrecognised command line switch '%s' -- try '-help'\n",argv[ii]);
         return 1;
       }
     }
@@ -1421,7 +1419,7 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### tsplay: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### tsplay: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -1430,14 +1428,14 @@ int main(int argc, char **argv)
 
   if (!had_input_name)
   {
-    fprintf(stderr,"### tsplay: No input file specified\n");
+    print_err("### tsplay: No input file specified\n");
     return 1;
   }
 
   // We *need* some output...
   if (!had_output_name)
   {
-    fprintf(stderr,"### tsplay: No output file or host specified\n");
+    print_err("### tsplay: No output file or host specified\n");
     return 1;
   }
 
@@ -1455,12 +1453,12 @@ int main(int argc, char **argv)
   // This is an important check
   if (max > 0 && how == TS_W_UDP && (max / 7) < context.circ_buf_size)
   {
-    fprintf(stderr,"### tsplay: -max %d cannot work with -buffer %d"
-            " - max must be at least %d",max,
-            context.circ_buf_size,context.circ_buf_size*7);
+    fprint_err("### tsplay: -max %d cannot work with -buffer %d"
+               " - max must be at least %d",max,
+               context.circ_buf_size,context.circ_buf_size*7);
     if (max/7 > 0)
-      fprintf(stderr,",\n            or buffer size reduced to %d",max/7);
-    fprintf(stderr,"\n");
+      fprint_err(",\n            or buffer size reduced to %d",max/7);
+    print_err("\n");
     return 1;
   }
 
@@ -1472,16 +1470,16 @@ int main(int argc, char **argv)
   input = open_binary_file(input_name,FALSE);
   if (input == -1)
   {
-    fprintf(stderr,"### tsplay: Unable to open input file %s\n",input_name);
+    fprint_err("### tsplay: Unable to open input file %s\n",input_name);
     return 1;
   }
   if (!quiet)
-    printf("Reading from  %s%s\n",input_name,(loop?" (and looping)":""));
+    fprint_msg("Reading from  %s%s\n",input_name,(loop?" (and looping)":""));
 
   err = determine_if_TS_file(input,&is_TS);
   if (err)
   {
-    fprintf(stderr,"### tsplay: Cannot play file %s\n",output_name);
+    fprint_err("### tsplay: Cannot play file %s\n",output_name);
     (void) close_file(input);
     return 1;
   }
@@ -1490,7 +1488,7 @@ int main(int argc, char **argv)
                      &tswriter);
   if (err)
   {
-    fprintf(stderr,"### tsplay: Cannot open/connect to %s\n",output_name);
+    fprint_err("### tsplay: Cannot open/connect to %s\n",output_name);
     (void) close_file(input);
     return 1;
   }
@@ -1499,24 +1497,24 @@ int main(int argc, char **argv)
   {
     if (is_TS)
     {
-      printf("Input appears to be Transport Stream\n");
+      print_msg("Input appears to be Transport Stream\n");
       if (scan_for_PCRs)
-        printf("Using 'exact' TS packet timing (by looking-ahead to the next PCR)\n");
+        print_msg("Using 'exact' TS packet timing (by looking-ahead to the next PCR)\n");
       else
-        printf("Approximating/predicting intermediate PCRs\n");
+        print_msg("Approximating/predicting intermediate PCRs\n");
       if (pid_to_ignore)
-        printf("Ignoring PID %04x (%d)\n",pid_to_ignore,pid_to_ignore);
+        fprint_msg("Ignoring PID %04x (%d)\n",pid_to_ignore,pid_to_ignore);
     }
     else
     {
-      printf("Input appears to be Program Stream\n");
+      print_msg("Input appears to be Program Stream\n");
       if (input_is_dvd)
-        printf("Treating input as from DVD\n");
+        print_msg("Treating input as from DVD\n");
       else
-        printf("Treating input as NOT from DVD\n");
+        print_msg("Treating input as NOT from DVD\n");
     }
     if (max)
-      printf("Stopping after at most %d packets\n",max);
+      fprint_msg("Stopping after at most %d packets\n",max);
 
     if (how == TS_W_UDP)
       tswrite_report_args(&context);
@@ -1524,8 +1522,9 @@ int main(int argc, char **argv)
 
   if (drop_packets)
   {
-    if (!quiet) printf("DROPPING: Keeping %d TS packet%s, then dropping (throwing away) %d\n",
-                       drop_packets,(drop_packets==1?"":"s"),drop_number);
+    if (!quiet)
+      fprint_msg("DROPPING: Keeping %d TS packet%s, then dropping (throwing away) %d\n",
+                 drop_packets,(drop_packets==1?"":"s"),drop_number);
     tswriter->drop_packets = drop_packets;
     tswriter->drop_number = drop_number;
   }
@@ -1540,7 +1539,7 @@ int main(int argc, char **argv)
     err = tswrite_start_buffering_from_context(tswriter,&context);
     if (err)
     {
-      fprintf(stderr,"### tsplay: Error setting up buffering\n");
+      print_err("### tsplay: Error setting up buffering\n");
       (void) close_file(input);
       (void) tswrite_close(tswriter,TRUE);
       return 1;
@@ -1562,7 +1561,7 @@ int main(int argc, char **argv)
                          verbose,quiet);
   if (err)
   {
-    fprintf(stderr,"### tsplay: Error playing stream\n");
+    print_err("### tsplay: Error playing stream\n");
     (void) close_file(input);
     (void) tswrite_close(tswriter,TRUE);
     return 1;
@@ -1571,22 +1570,22 @@ int main(int argc, char **argv)
   if (!quiet)
   {
     end = time(NULL);
-    printf("Started  output at %s",ctime(&start));
-    printf("Finished output at %s",ctime(&end));
-    printf("Elapsed time %.1fs\n",difftime(end,start));
+    fprint_msg("Started  output at %s",ctime(&start));
+    fprint_msg("Finished output at %s",ctime(&end));
+    fprint_msg("Elapsed time %.1fs\n",difftime(end,start));
   }
   
   err = close_file(input);
   if (err)
   {
-    fprintf(stderr,"### tsplay: Error closing input file %s\n",input_name);
+    fprint_err("### tsplay: Error closing input file %s\n",input_name);
     (void) tswrite_close(tswriter,TRUE);
     return 1;
   }
   err = tswrite_close(tswriter,quiet);
   if (err)
   {
-    fprintf(stderr,"### tsplay: Error closing output to %s\n",output_name);
+    fprint_err("### tsplay: Error closing output to %s\n",output_name);
     return 1;
   }
   return 0;

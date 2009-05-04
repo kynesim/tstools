@@ -34,6 +34,7 @@
 #include <errno.h>
 
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 #define TS_PACKET_SIZE 188
@@ -82,14 +83,14 @@ static uint8_t *create_out_packet(char *in_data, int in_len, uint16_t pid)
   {
     int i;
     ptr = out_packet;
-    printf("Packet to be written is:\n");
+    print_msg("Packet to be written is:\n");
     for (i=0;i<TS_PACKET_SIZE;i++)
     {
-      if (!(i%16)) printf("\n");
+      if (!(i%16)) print_msg("\n");
 
-      printf("%02x ",ptr[i]);
+      fprint_msg("%02x ",ptr[i]);
     }
-    printf("\n\n");
+    print_msg("\n\n");
   }
 
   return out_packet;
@@ -118,7 +119,7 @@ static int insert_packets(int      file,
 
     if (packet_numbers[packnum_i]==packets_read && packnum_i<n_pack)
     {
-      printf("Writing new packet before packet %d...\n",packets_read);
+      fprint_msg("Writing new packet before packet %d...\n",packets_read);
 
       rv = write(out_file,out_packet,TS_PACKET_SIZE);
       assert(rv == TS_PACKET_SIZE);
@@ -132,7 +133,7 @@ static int insert_packets(int      file,
     packets_read++;
   }
 
-  printf("\nRead a total of %d packets (%d bytes)\n",packets_read,bytes_read);
+  fprint_msg("\nRead a total of %d packets (%d bytes)\n",packets_read,bytes_read);
   return 0;
 }
 
@@ -160,12 +161,12 @@ static int num_char_in_string(char *string,char c)
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: ts_packet_insert [switches] <infile>\n"
     "\n"
     );
   REPORT_VERSION("ts_packet_insert");
-  printf(
+  print_msg(
     "\n"
     "  Insert TS packets into a Transport Stream at positions\n"
     "  specified by the user.\n"
@@ -259,13 +260,13 @@ int main(int argc, char **argv)
         positions = malloc(n_pos * sizeof(double));
         if (!positions)
         {
-          fprintf(stderr,"malloc failed");
+          print_err("malloc failed");
           exit(1);
         }
 
         position_string = strtok(argv[argno],":");
         pos_index=0;
-        printf("Adding new packets at:");
+        print_msg("Adding new packets at:");
         while (1)
         {
           if (!position_string)
@@ -275,16 +276,16 @@ int main(int argc, char **argv)
 
           if (endptr == position_string || positions[pos_index]>1 || positions[pos_index]<0)
           {
-            fprintf(stderr,"\nNot a valid floating point number for position (argument %d)\n",argno); 
+            fprint_err("\nNot a valid floating point number for position (argument %d)\n",argno); 
             exit(1);
           }
 
-          printf("  %d%%",(int)(positions[pos_index]*100));
+          fprint_msg("  %d%%",(int)(positions[pos_index]*100));
 
           position_string = strtok(NULL,":");
           pos_index++;
         }
-        printf("\n");
+        print_msg("\n");
         sort_positions(positions,n_pos);
         assert(pos_index == n_pos);
 
@@ -314,7 +315,7 @@ int main(int argc, char **argv)
       }
       else
       {
-        printf("\n *** Unknown option %s, ignoring.\n\n",argv[argno]);
+        fprint_msg("\n *** Unknown option %s, ignoring.\n\n",argv[argno]);
       }
     }
     else
@@ -326,7 +327,7 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr, "### ts_packet_insert: Unexpected '%s'\n", argv[argno]);
+        fprint_err( "### ts_packet_insert: Unexpected '%s'\n", argv[argno]);
         return 1;
       }
     }
@@ -335,14 +336,14 @@ int main(int argc, char **argv)
 
   if (!in_file_path)
   {
-    fprintf(stderr,"Error: No input file specified.\n");
+    print_err("Error: No input file specified.\n");
     exit(1);
   }
 
-  printf("Reading from file:   %s\n",in_file_path);
-  printf("Writing to file:     %s\n",output_file_path);
-  printf("Inserting packets with PID %#x (%u)\n",pid,pid);
-  printf("Using output string: %s\n",out_string);
+  fprint_msg("Reading from file:   %s\n",in_file_path);
+  fprint_msg("Writing to file:     %s\n",output_file_path);
+  fprint_msg("Inserting packets with PID %#x (%u)\n",pid,pid);
+  fprint_msg("Using output string: %s\n",out_string);
 
   {
     int out_file;
@@ -350,16 +351,16 @@ int main(int argc, char **argv)
 
     if (in_file<0)
     {
-      fprintf(stderr,"Error: could not open %s for reading: %s\n",
-              in_file_path,strerror(errno));
+      fprint_err("Error: could not open %s for reading: %s\n",
+                 in_file_path,strerror(errno));
       exit(1);
     }
 
     out_file = open(output_file_path,O_WRONLY | O_TRUNC | O_CREAT,0644);
     if (out_file<0)
     {
-      fprintf(stderr,"Error: could not open %s for reading: %s\n",
-              output_file_path,strerror(errno));
+      fprint_err("Error: could not open %s for reading: %s\n",
+                 output_file_path,strerror(errno));
       exit(1);
     }
 
@@ -367,15 +368,15 @@ int main(int argc, char **argv)
 
     if (in_file_size % TS_PACKET_SIZE)
     {
-      fprintf(stderr,"Error: TS file length is not a multiple of 188 bytes\n");
+      print_err("Error: TS file length is not a multiple of 188 bytes\n");
       exit(1);
     }
 
     {
       int num_pack = in_file_size / TS_PACKET_SIZE;
       int i;
-      printf("\nInput file is %ld bytes long with ",in_file_size);
-      printf("%d TS packets\n",num_pack);
+      fprint_msg("\nInput file is %ld bytes long with ",in_file_size);
+      fprint_msg("%d TS packets\n",num_pack);
 
       packet_numbers = malloc(n_pos * sizeof(int));
 

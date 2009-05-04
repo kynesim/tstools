@@ -42,6 +42,7 @@
 #include "compat.h"
 #include "ts_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "pidint_fns.h"
 #include "version.h"
 
@@ -80,7 +81,7 @@ static int report_streams(TS_reader_p tsreader,
   int num_pats = 0;
   int num_pmts = 0;
 
-  printf("Scanning %d TS packets\n",max);
+  fprint_msg("Scanning %d TS packets\n",max);
 
   for (ii=0; ii<max; ii++)
   {
@@ -94,12 +95,12 @@ static int report_streams(TS_reader_p tsreader,
                              &adapt,&adapt_len,&payload,&payload_len);
     if (err == EOF)
     {
-      printf("EOF\n");
+      print_msg("EOF\n");
       break;
     }
     else if (err)
     {
-      fprintf(stderr,"### Error reading TS packet %d\n",ii+1);
+      fprint_err("### Error reading TS packet %d\n",ii+1);
       if (pat_data) free(pat_data);
       free_pidint_list(&last_prog_list);
       free_pmt(&last_pmt);
@@ -111,10 +112,10 @@ static int report_streams(TS_reader_p tsreader,
     {
       num_pats++;
       if (verbose)
-        printf("Packet %d is PAT\n",ii+1);
+        fprint_msg("Packet %d is PAT\n",ii+1);
       if (payload_len == 0)
       {
-        printf("Packet %d is PAT, but has no payload\n",ii+1);
+        fprint_msg("Packet %d is PAT, but has no payload\n",ii+1);
         continue;
       }
 
@@ -122,7 +123,7 @@ static int report_streams(TS_reader_p tsreader,
       {
         // This is the start of a new PAT packet, but we'd already
         // started one, so throw its data away
-        fprintf(stderr,"!!! Discarding previous (uncompleted) PAT data\n");
+        print_err("!!! Discarding previous (uncompleted) PAT data\n");
         free(pat_data);
         pat_data = NULL; pat_data_len = 0; pat_data_used = 0;
       }
@@ -130,7 +131,7 @@ static int report_streams(TS_reader_p tsreader,
       {
         // This is the continuation of a PAT packet, but we hadn't
         // started one yet
-        fprintf(stderr,"!!! Discarding PAT continuation, no PAT started\n");
+        print_err("!!! Discarding PAT continuation, no PAT started\n");
         continue;
       }
 
@@ -138,8 +139,8 @@ static int report_streams(TS_reader_p tsreader,
                            &pat_data,&pat_data_len,&pat_data_used);
       if (err)
       {
-        fprintf(stderr,"### Error %s PAT\n",
-                (payload_unit_start_indicator?"starting new":"continuing"));
+        fprint_err("### Error %s PAT\n",
+                   (payload_unit_start_indicator?"starting new":"continuing"));
         if (pat_data) free(pat_data);
         free_pidint_list(&last_prog_list);
         free_pmt(&last_pmt);
@@ -177,18 +178,18 @@ static int report_streams(TS_reader_p tsreader,
       if (!same_pidint_list(this_prog_list,last_prog_list))
       {
         if (last_prog_list != NULL)
-          printf("\nPacket %d is PAT - content changed\n",ii+1);
+          fprint_msg("\nPacket %d is PAT - content changed\n",ii+1);
         else if (!verbose)
-          printf("\nPacket %d is PAT\n",ii+1);
+          fprint_msg("\nPacket %d is PAT\n",ii+1);
 
         report_pidint_list(this_prog_list,"Program list","Program",FALSE);
 
         if (this_prog_list->length == 0)
-          printf("No programs defined in PAT (packet %d)\n",ii+1);
+          fprint_msg("No programs defined in PAT (packet %d)\n",ii+1);
         else
         {
           if (this_prog_list->length > 1)
-            printf("Multiple programs in PAT - using the first\n");
+            fprint_msg("Multiple programs in PAT - using the first\n");
           pmt_pid = this_prog_list->pid[0];
         }
       }
@@ -198,11 +199,11 @@ static int report_streams(TS_reader_p tsreader,
     else if (pid == pmt_pid)
     {
       if (verbose)
-        printf("Packet %d is PMT with PID %04x (%d)%s\n",ii+1,pid,pid,
+        fprint_msg("Packet %d is PMT with PID %04x (%d)%s\n",ii+1,pid,pid,
                (payload_unit_start_indicator?"[pusi]":""));
       if (payload_len == 0)
       {
-        printf("Packet %d is PMT, but has no payload\n",ii+1);
+        fprint_msg("Packet %d is PMT, but has no payload\n",ii+1);
         continue;
       }
 
@@ -210,7 +211,7 @@ static int report_streams(TS_reader_p tsreader,
       {
         // This is the start of a new PMT packet, but we'd already
         // started one, so throw its data away
-        fprintf(stderr,"!!! Discarding previous (uncompleted) PMT data\n");
+        print_err("!!! Discarding previous (uncompleted) PMT data\n");
         free(pmt_data);
         pmt_data = NULL; pmt_data_len = 0; pmt_data_used = 0;
       }
@@ -218,7 +219,7 @@ static int report_streams(TS_reader_p tsreader,
       {
         // This is the continuation of a PMT packet, but we hadn't
         // started one yet
-        fprintf(stderr,"!!! Discarding PMT continuation, no PMT started\n");
+        print_err("!!! Discarding PMT continuation, no PMT started\n");
         continue;
       }
 
@@ -226,8 +227,8 @@ static int report_streams(TS_reader_p tsreader,
                            &pmt_data,&pmt_data_len,&pmt_data_used);
       if (err)
       {
-        fprintf(stderr,"### Error %s PMT\n",
-                (payload_unit_start_indicator?"starting new":"continuing"));
+        fprint_err("### Error %s PMT\n",
+                   (payload_unit_start_indicator?"starting new":"continuing"));
         free_pidint_list(&this_prog_list);
         free_pmt(&last_pmt);
         if (pmt_data) free(pmt_data);
@@ -258,10 +259,10 @@ static int report_streams(TS_reader_p tsreader,
       }
 
       if (last_pmt != NULL)
-        printf("\nPacket %d is PMT with PID %04x (%d)"
-               " - content changed\n",ii+1,pid,pid);
+        fprint_msg("\nPacket %d is PMT with PID %04x (%d)"
+                   " - content changed\n",ii+1,pid,pid);
       else if (!verbose)
-        printf("\nPacket %d is PMT with PID %04x (%d)\n",ii+1,pid,pid);
+        fprint_msg("\nPacket %d is PMT with PID %04x (%d)\n",ii+1,pid,pid);
 
       report_pmt(TRUE,"  ",this_pmt);
 
@@ -270,9 +271,9 @@ static int report_streams(TS_reader_p tsreader,
     }
   }
 
-  printf("\nFound %d PAT packet%s and %d PMT packet%s in %d TS packets\n",
-         num_pats,(num_pats==1?"":"s"),
-         num_pmts,(num_pmts==1?"":"s"),max);
+  fprint_msg("\nFound %d PAT packet%s and %d PMT packet%s in %d TS packets\n",
+             num_pats,(num_pats==1?"":"s"),
+             num_pmts,(num_pmts==1?"":"s"),max);
 
   free_pidint_list(&last_prog_list);
   free_pmt(&last_pmt);
@@ -282,12 +283,12 @@ static int report_streams(TS_reader_p tsreader,
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: tsinfo [switches] [<infile>]\n"
     "\n"
     );
   REPORT_VERSION("tsinfo");
-  printf(
+  print_msg(
     "\n"
     "  Report on the program streams in a Transport Stream.\n"
     "\n"
@@ -357,8 +358,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### tsinfo: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### tsinfo: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -366,7 +367,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name)
       {
-        fprintf(stderr,"### tsinfo: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### tsinfo: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else
@@ -380,23 +381,23 @@ int main(int argc, char **argv)
 
   if (!had_input_name)
   {
-    fprintf(stderr,"### tsinfo: No input file specified\n");
+    print_err("### tsinfo: No input file specified\n");
     return 1;
   }
 
   err = open_file_for_TS_read((use_stdin?NULL:input_name),&tsreader);
   if (err)
   {
-    fprintf(stderr,"### tsinfo: Unable to open input file %s for reading TS\n",
-            use_stdin?"<stdin>":input_name);
+    fprint_err("### tsinfo: Unable to open input file %s for reading TS\n",
+               use_stdin?"<stdin>":input_name);
     return 1;
   }
-  printf("Reading from %s\n",(use_stdin?"<stdin>":input_name));
+  fprint_msg("Reading from %s\n",(use_stdin?"<stdin>":input_name));
 
   err = report_streams(tsreader,max,verbose);
   if (err)
   {
-    fprintf(stderr,"### tsinfo: Error reporting on stream\n");
+    print_err("### tsinfo: Error reporting on stream\n");
     (void) close_TS_reader(&tsreader);
     return 1;
   }

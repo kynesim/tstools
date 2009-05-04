@@ -29,14 +29,16 @@
 #ifndef _version
 #define _version
 
+#include "printing_fns.h"
+
 const char software_version[] = "1.11";
 
 // The following is intended to be output as part of the main help text for
 // each program. ``program_name`` is thus the name of the program.
 #define REPORT_VERSION(program_name) \
-  printf("  TS tools version %s, %s built %s %s\n", \
-         software_version,(program_name), \
-         __DATE__,__TIME__)
+  fprint_msg("  TS tools version %s, %s built %s %s\n", \
+             software_version,(program_name), \
+             __DATE__,__TIME__)
 
 #endif // _version
 
