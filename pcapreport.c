@@ -119,7 +119,7 @@ static int digest_times_read(void *handle, byte *out_buf, size_t len)
   memmove(ctx->tmp_buf, &ctx->tmp_buf[nr_bytes], 
           new_tmp_len);
   ctx->tmp_len = new_tmp_len;
-  //   printf(">> read %d bytes from intermediate buffer. \n", nr_bytes);
+  //   fprint_msg(">> read %d bytes from intermediate buffer. \n", nr_bytes);
 
   return nr_bytes;
 }
@@ -149,7 +149,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
                                   &ctx->ts_r);
     if (rv)
     {
-      fprintf(stderr, "### pcapreport: Cannot create ts reader.\n");
+      print_err( "### pcapreport: Cannot create ts reader.\n");
       return 1;
     }
   }
@@ -187,9 +187,9 @@ static int digest_times(pcapreport_ctx_t *ctx,
                            &payload, &payload_len);
       if (rv)
       {
-        printf(">> WARNING: TS packet %d [ packet %d @ %d.%d s ] cannot be split.\n",
-               ctx->ts_counter, ctx->pkt_counter, 
-               pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
+        fprint_msg(">> WARNING: TS packet %d [ packet %d @ %d.%d s ] cannot be split.\n",
+                   ctx->ts_counter, ctx->pkt_counter, 
+                   pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
       }
       else
       {
@@ -207,8 +207,8 @@ static int digest_times(pcapreport_ctx_t *ctx,
                                         &pcr);
           if (has_pcr)
           {
-            printf(">> Found PCR %lld at %d.%d s \n", 
-                   pcr, pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
+            fprint_msg(">> Found PCR %lld at %d.%d s \n", 
+                       pcr, pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
 
             // PCR pops out in 27MHz units. Let's do all our comparisons
             // in 90kHz.
@@ -216,9 +216,8 @@ static int digest_times(pcapreport_ctx_t *ctx,
             t_pcr = (((int64_t)pcap_pkt_hdr->ts_usec*9)/100) + 
               ((int64_t)pcap_pkt_hdr->ts_sec * 90000);
 
-            // printf("pcr = %lld t_pcr = %lld diff = %lld\n", 
-            // pcr, t_pcr, 
-            // t_pcr - pcr);
+            // fprint_msg("pcr = %lld t_pcr = %lld diff = %lld\n", 
+            //            pcr, t_pcr, t_pcr - pcr);
 
             pcr_time_offset = ((int64_t)t_pcr - (int64_t)pcr);
             if (ctx->pcr_time_offset_valid)
@@ -228,12 +227,12 @@ static int digest_times(pcapreport_ctx_t *ctx,
               if (skew > ctx->skew_discontinuity_threshold || 
                   skew < -ctx->skew_discontinuity_threshold)
               {
-                printf(">> Skew discontinuity! Skew = %lld (> %lld) at"
-                       " ts = %d network = %d (PCR %lld Time %d.%d)\n", 
-                       skew, ctx->skew_discontinuity_threshold, 
-                       ctx->ts_counter, ctx->pkt_counter,
-                       pcr, pcap_pkt_hdr->ts_sec,
-                       pcap_pkt_hdr->ts_usec);
+                fprint_msg(">> Skew discontinuity! Skew = %lld (> %lld) at"
+                           " ts = %d network = %d (PCR %lld Time %d.%d)\n", 
+                           skew, ctx->skew_discontinuity_threshold, 
+                           ctx->ts_counter, ctx->pkt_counter,
+                           pcr, pcap_pkt_hdr->ts_sec,
+                           pcap_pkt_hdr->ts_usec);
 
                 ctx->pcr_time_offset = pcr_time_offset;
               }
@@ -249,14 +248,14 @@ static int digest_times(pcapreport_ctx_t *ctx,
 
                 skew_rate = (double)skew / ((double)((double)rel_tim / (60*1000000)));
 
-                printf(">> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min)\n",
-                       ctx->ts_counter, ctx->pkt_counter,
-                       pcr, 
-                       pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec,
-                       (int)(rel_tim / (int64_t)1000000), 
-                       (int)rel_tim%1000000,
-                       skew, pcr_time_offset - ctx->last_time_offset, 
-                       skew_rate);
+                fprint_msg(">> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min)\n",
+                           ctx->ts_counter, ctx->pkt_counter,
+                           pcr, 
+                           pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec,
+                           (int)(rel_tim / (int64_t)1000000), 
+                           (int)rel_tim%1000000,
+                           skew, pcr_time_offset - ctx->last_time_offset, 
+                           skew_rate);
               }
               ctx->last_time_offset = pcr_time_offset;
             }
@@ -277,7 +276,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
 #if 0
         // CC?
         cc = pkt[3]&0x0f;
-        //printf("cc = %d \n", cc);
+        //fprint_msg("cc = %d \n", cc);
         if (!ctx->have_cc)
         {
           ctx->have_cc = 1; 
@@ -286,10 +285,10 @@ static int digest_times(pcapreport_ctx_t *ctx,
         {
           if (cc != ((ctx->last_cc + 1)&0xf))
           {
-            printf(">> CC discontinuity! ts = %d network = %d expected %d got %d.\n",
-                   ctx->ts_counter, ctx->pkt_counter, 
-                   (ctx->last_cc+1)&0xf,
-                   cc);
+            fprint_msg(">> CC discontinuity! ts = %d network = %d expected %d got %d.\n",
+                       ctx->ts_counter, ctx->pkt_counter, 
+                       (ctx->last_cc+1)&0xf,
+                       cc);
           }
         }
         ctx->last_cc = cc;
@@ -315,23 +314,23 @@ static int write_out_packet(pcapreport_ctx_t *ctx,
       ctx->output_file = fopen(ctx->output_name, "wb");
       if (!ctx->output_file)
       {
-        fprintf(stderr,"### pcapreport: Cannot open %s .\n", 
-                ctx->output_name);
+        fprint_err("### pcapreport: Cannot open %s .\n", 
+                   ctx->output_name);
         return 1;
       }
     }
 
     if (ctx->verbose)
     {
-      printf("++   Dumping %d bytes to output file.\n", len);
+      fprint_msg("++   Dumping %d bytes to output file.\n", len);
     }
     rv = fwrite(data, len, 1, ctx->output_file);
     if (rv != 1)
     {
-      fprintf(stderr, "### pcapreport: Couldn't write %d bytes"
-              " to %s (error = %d).\n", 
-              len, ctx->output_name, 
-              ferror(ctx->output_file));
+      fprint_err( "### pcapreport: Couldn't write %d bytes"
+                  " to %s (error = %d).\n", 
+                  len, ctx->output_name, 
+                  ferror(ctx->output_file));
       return 1;
     }
   }
@@ -341,11 +340,12 @@ static int write_out_packet(pcapreport_ctx_t *ctx,
 
 static void print_usage()
 {
-  printf("Usage: pcapreport [switches] <infile>\n"
-         "\n"
-        );
+  print_msg(
+    "Usage: pcapreport [switches] <infile>\n"
+    "\n"
+    );
   REPORT_VERSION("pcapreport");
-  printf(
+  print_msg(
     "\n"
     " Report on a pcap capture file.\n"
     "\n"
@@ -426,8 +426,8 @@ int main(int argc, char **argv)
         ctx.output_dest_port = port;
         if (ipv4_string_to_addr(&ctx.output_dest_addr, hostname))
         {
-          fprintf(stderr, "### pcapreport: '%s' is not a host IP address (names are not allowed!)\n",
-                  hostname);
+          fprint_err( "### pcapreport: '%s' is not a host IP address (names are not allowed!)\n",
+                      hostname);
           return 1;
         }
       }
@@ -454,8 +454,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr, "### pcapreport: "
-                "Unrecognised command line switch '%s'\n", argv[ii]);
+        fprint_err( "### pcapreport: "
+                    "Unrecognised command line switch '%s'\n", argv[ii]);
         return 1;
       }
     }
@@ -463,7 +463,7 @@ int main(int argc, char **argv)
     {
       if (ctx.had_input_name)
       {
-        fprintf(stderr, "### pcapreport: Unexpected '%s'\n", argv[ii]);
+        fprint_err( "### pcapreport: Unexpected '%s'\n", argv[ii]);
         return 1;
       }
       else
@@ -477,51 +477,49 @@ int main(int argc, char **argv)
 
   if (!ctx.had_input_name)
   {
-    fprintf(stderr,"### pcapreport: No input file specified\n");
+    print_err("### pcapreport: No input file specified\n");
     return 1;
   }
 
-  printf("%s\n",ctx.input_name);
+  fprint_msg("%s\n",ctx.input_name);
 
   err = pcap_open(&ctx.pcreader, &ctx.pcap_hdr, ctx.input_name);
   if (err)
   {
-    fprintf(stderr, 
-            "### pcapreport: Unable to open input file %s for reading "
-            "PCAP (code %d)\n", 
-            ctx.had_input_name?ctx.input_name:"<stdin>", err);
+    fprint_err("### pcapreport: Unable to open input file %s for reading "
+               "PCAP (code %d)\n", 
+               ctx.had_input_name?ctx.input_name:"<stdin>", err);
     // Just an error code isn't much use - let's look at the source
     // and report something more helpful...
-    fprintf(stderr,
-            "                %s\n",
-            (err==-1?"Unable to open file":
-             err==-2?"Unable to allocate PCAP reader datastructure":
-             err==-4?"Unable to read PCAP header - is it a PCAP file?":
-             "<unrecogised error code>"));
+    fprint_err("                %s\n",
+               (err==-1?"Unable to open file":
+                err==-2?"Unable to allocate PCAP reader datastructure":
+                err==-4?"Unable to read PCAP header - is it a PCAP file?":
+                "<unrecogised error code>"));
     return 1;
   }
 
   if (ctx.output_name)
   {
-    printf("pcapreport: Dumping all packets for %s:%d to %s\n",
-           ipv4_addr_to_string(ctx.output_dest_addr),
-           ctx.output_dest_port,
-           ctx.output_name);
+    fprint_msg("pcapreport: Dumping all packets for %s:%d to %s\n",
+               ipv4_addr_to_string(ctx.output_dest_addr),
+               ctx.output_dest_port,
+               ctx.output_name);
   }
 
-  printf("Capture made by version %u.%u local_tz_correction "
-         "%d sigfigs %u snaplen %d network %u\n", 
-         ctx.pcap_hdr.version_major, ctx.pcap_hdr.version_minor,
-         ctx.pcap_hdr.thiszone,
-         ctx.pcap_hdr.sigfigs,
-         ctx.pcap_hdr.snaplen,
-         ctx.pcap_hdr.network);
+  fprint_msg("Capture made by version %u.%u local_tz_correction "
+             "%d sigfigs %u snaplen %d network %u\n", 
+             ctx.pcap_hdr.version_major, ctx.pcap_hdr.version_minor,
+             ctx.pcap_hdr.thiszone,
+             ctx.pcap_hdr.sigfigs,
+             ctx.pcap_hdr.snaplen,
+             ctx.pcap_hdr.network);
 
   if (ctx.pcap_hdr.snaplen < 65535)
   {
-    fprintf(stderr,"### pcapreport: WARNING snaplen is %d, not >= 65535 - "
-            "not all data may have been captured.\n", 
-            ctx.pcap_hdr.snaplen);
+    fprint_err("### pcapreport: WARNING snaplen is %d, not >= 65535 - "
+               "not all data may have been captured.\n", 
+               ctx.pcap_hdr.snaplen);
   }
 
 
@@ -547,9 +545,9 @@ int main(int argc, char **argv)
 
           if (ctx.verbose)
           {
-            printf("pkt: Time = %d.%d orig_len = %d \n", 
-                   rec_hdr.ts_sec, rec_hdr.ts_usec, 
-                   rec_hdr.orig_len);
+            fprint_msg("pkt: Time = %d.%d orig_len = %d \n", 
+                       rec_hdr.ts_sec, rec_hdr.ts_usec, 
+                       rec_hdr.orig_len);
           }
 
           if (!(ctx.pcap_hdr.network == PCAP_NETWORK_TYPE_ETHERNET))
@@ -578,16 +576,16 @@ int main(int argc, char **argv)
 
             if (ctx.verbose)
             {
-              printf("++ 802.11: src %02x:%02x:%02x:%02x:%02x:%02x "
-                     " dst %02x:%02x:%02x:%02x:%02x:%02x "
-                     "typeorlen 0x%04x\n",
-                     epkt.src_addr[0], epkt.src_addr[1], 
-                     epkt.src_addr[2], epkt.src_addr[3], 
-                     epkt.src_addr[4], epkt.src_addr[5],
-                     epkt.dst_addr[0], epkt.dst_addr[1], 
-                     epkt.dst_addr[2], epkt.dst_addr[3],
-                     epkt.dst_addr[4], epkt.dst_addr[5], 
-                     epkt.typeorlen);
+              fprint_msg("++ 802.11: src %02x:%02x:%02x:%02x:%02x:%02x "
+                         " dst %02x:%02x:%02x:%02x:%02x:%02x "
+                         "typeorlen 0x%04x\n",
+                         epkt.src_addr[0], epkt.src_addr[1], 
+                         epkt.src_addr[2], epkt.src_addr[3], 
+                         epkt.src_addr[4], epkt.src_addr[5],
+                         epkt.dst_addr[0], epkt.dst_addr[1], 
+                         epkt.dst_addr[2], epkt.dst_addr[3],
+                         epkt.dst_addr[4], epkt.dst_addr[5], 
+                         epkt.typeorlen);
             }
 
             data = &data[out_st];
@@ -611,27 +609,26 @@ int main(int argc, char **argv)
 
             if (ctx.verbose)
             {		    
-              printf("++ IPv4: src = %s", 
-                     ipv4_addr_to_string(ipv4_hdr.src_addr));
-              printf(" dest = %s \n", 
-                     ipv4_addr_to_string(ipv4_hdr.dest_addr));
+              fprint_msg("++ IPv4: src = %s", 
+                         ipv4_addr_to_string(ipv4_hdr.src_addr));
+              fprint_msg(" dest = %s \n", 
+                         ipv4_addr_to_string(ipv4_hdr.dest_addr));
 
-              printf(
-                "++ IPv4: version = 0x%x hdr_length = 0x%x"
-                " serv_type = 0x%08x length = 0x%04x\n"
-                "++ IPv4: ident = 0x%04x flags = 0x%02x"
-                " frag_offset = 0x%04x ttl = %d\n"
-                "++ IPv4: proto = %d csum = 0x%04x\n",
-                ipv4_hdr.version,
-                ipv4_hdr.hdr_length,
-                ipv4_hdr.serv_type,
-                ipv4_hdr.length,
-                ipv4_hdr.ident,
-                ipv4_hdr.flags,
-                ipv4_hdr.frag_offset,
-                ipv4_hdr.ttl,
-                ipv4_hdr.proto,
-                ipv4_hdr.csum);
+              fprint_msg("++ IPv4: version = 0x%x hdr_length = 0x%x"
+                         " serv_type = 0x%08x length = 0x%04x\n"
+                         "++ IPv4: ident = 0x%04x flags = 0x%02x"
+                         " frag_offset = 0x%04x ttl = %d\n"
+                         "++ IPv4: proto = %d csum = 0x%04x\n",
+                         ipv4_hdr.version,
+                         ipv4_hdr.hdr_length,
+                         ipv4_hdr.serv_type,
+                         ipv4_hdr.length,
+                         ipv4_hdr.ident,
+                         ipv4_hdr.flags,
+                         ipv4_hdr.frag_offset,
+                         ipv4_hdr.ttl,
+                         ipv4_hdr.proto,
+                         ipv4_hdr.csum);
             }
 
             data = &data[out_st];
@@ -654,11 +651,11 @@ int main(int argc, char **argv)
 
             if (ctx.verbose)
             {
-              printf("++ udp: src port = %d "
-                     "dest port = %d len = %d \n",
-                     udp_hdr.source_port,
-                     udp_hdr.dest_port,
-                     udp_hdr.length);
+              fprint_msg("++ udp: src port = %d "
+                         "dest port = %d len = %d \n",
+                         udp_hdr.source_port,
+                         udp_hdr.dest_port,
+                         udp_hdr.length);
             }
 
             data = &data[out_st];
@@ -701,8 +698,8 @@ dump_out:
         break;
       default:
         // Some other error.
-        fprintf(stderr, "### pcapreport: Can't read packet %d - code %d\n",
-                ctx.pkt_counter, err);
+        fprint_err( "### pcapreport: Can't read packet %d - code %d\n",
+                    ctx.pkt_counter, err);
         ++done;
         break;
       }
@@ -713,7 +710,7 @@ dump_out:
 
   if (ctx.output_file) 
   {
-    printf("Closing output file.\n");
+    fprint_msg("Closing output file.\n");
     fclose(ctx.output_file); 
   }
 

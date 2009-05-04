@@ -44,16 +44,17 @@
 #include "ts_fns.h"
 #include "tswrite_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: ps2ts [switches] [<infile>] [<outfile>]\n"
     "\n"
     );
   REPORT_VERSION("ps2ts");
-  printf(
+  print_msg(
     "\n"
     "  Convert an H.222 program stream to H.222 transport stream.\n"
     "\n"
@@ -241,7 +242,7 @@ int main(int argc, char **argv)
           want_dolby_as_dvb = FALSE;
         else
         {
-          fprintf(stderr,"### ps2ts: -dolby must be followed by dvb or atsc\n");
+          print_err("### ps2ts: -dolby must be followed by dvb or atsc\n");
           return 1;
         }
         ii++;
@@ -359,8 +360,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### ps2ts: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### ps2ts: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -368,7 +369,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name && had_output_name)
       {
-        fprintf(stderr,"### ps2ts: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### ps2ts: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else if (had_input_name)
@@ -387,12 +388,12 @@ int main(int argc, char **argv)
 
   if (!had_input_name)
   {
-    fprintf(stderr,"### ps2ts: No input file specified\n");
+    print_err("### ps2ts: No input file specified\n");
     return 1;
   }
   if (!had_output_name)
   {
-    fprintf(stderr,"### ps2ts: No output file specified\n");
+    print_err("### ps2ts: No output file specified\n");
     return 1;
   }
 
@@ -406,59 +407,59 @@ int main(int argc, char **argv)
   err = open_PS_file(input_name,quiet,&ps);
   if (err)
   {
-    fprintf(stderr,"### ps2ts: Unable to open input %s\n",
-            (use_stdin?"<stdin>":input_name));
+    fprint_err("### ps2ts: Unable to open input %s\n",
+               (use_stdin?"<stdin>":input_name));
     return 1;
   }
 
   if (!quiet)
-    printf("Reading from %s\n",(use_stdin?"<stdin>":input_name));
+    fprint_msg("Reading from %s\n",(use_stdin?"<stdin>":input_name));
 
   // Try to decide what sort of data stream we have
   if (force_stream_type || use_stdin)
   {
     if (!quiet)
-      printf("Reading input as %s (0x%02x)\n",
-             h222_stream_type_str(video_type),video_type);
+      fprint_msg("Reading input as %s (0x%02x)\n",
+                 h222_stream_type_str(video_type),video_type);
   }
   else
   {
     err = determine_PS_video_type(ps,&video_type);
     if (err) return 1;
     if (!quiet)
-      printf("Video appears to be %s (0x%02x)\n",
-             h222_stream_type_str(video_type),video_type);
+      fprint_msg("Video appears to be %s (0x%02x)\n",
+                 h222_stream_type_str(video_type),video_type);
   }
 
   if (!quiet)
   {
     if (input_is_dvd)
-      printf("Treating input as from DVD\n");
+      print_msg("Treating input as from DVD\n");
     else
-      printf("Treating input as NOT from DVD\n");
+      print_msg("Treating input as NOT from DVD\n");
 
-    printf("Reading video from ");
+    print_msg("Reading video from ");
     if (video_stream == -1)
-      printf("first stream found");
+      print_msg("first stream found");
     else
-      printf("stream %0#x (%d)",video_stream,video_stream);
+      fprint_msg("stream %0#x (%d)",video_stream,video_stream);
     if (keep_audio)
     {
-      printf(", audio from ");
+      print_msg(", audio from ");
       if (audio_stream == -1)
-        printf("first %s found",(want_ac3_audio?"AC3 stream":"stream"));
+        fprint_msg("first %s found",(want_ac3_audio?"AC3 stream":"stream"));
       else
-        printf("%s %0#x (%d)",(want_ac3_audio?"AC3 stream":"stream"),
+        fprint_msg("%s %0#x (%d)",(want_ac3_audio?"AC3 stream":"stream"),
                audio_stream,audio_stream);
-      printf("\n");
+      print_msg("\n");
     }
 
-    printf("Writing video with PID 0x%02x",video_pid);
+    fprint_msg("Writing video with PID 0x%02x",video_pid);
     if (keep_audio)
-      printf(", audio with PID 0x%02x,",audio_pid);
-    printf(" PMT PID 0x%02x, PCR PID 0x%02x\n",pmt_pid,pcr_pid);
+      fprint_msg(", audio with PID 0x%02x,",audio_pid);
+    fprint_msg(" PMT PID 0x%02x, PCR PID 0x%02x\n",pmt_pid,pcr_pid);
     if (max)
-      printf("Stopping after %d program stream packets\n",max);
+      fprint_msg("Stopping after %d program stream packets\n",max);
   }
 
   if (use_stdout)
@@ -469,7 +470,7 @@ int main(int argc, char **argv)
     err = tswrite_open(TS_W_FILE,output_name,NULL,0,quiet,&output);
   if (err)
   {
-    fprintf(stderr,"### ps2ts: Unable to open %s\n",output_name);
+    fprint_err("### ps2ts: Unable to open %s\n",output_name);
     (void) close_PS_file(&ps);
     return 1;
   }
@@ -481,7 +482,7 @@ int main(int argc, char **argv)
                  keep_audio,audio_pid,max,verbose,quiet);
   if (err)
   {
-    fprintf(stderr,"### ps2ts: Error transferring data\n");
+    print_err("### ps2ts: Error transferring data\n");
     (void) close_PS_file(&ps);
     (void) tswrite_close(output,TRUE);
     return 1;
@@ -490,12 +491,12 @@ int main(int argc, char **argv)
   // And tidy up when we're finished
   err = tswrite_close(output,quiet);
   if (err)
-    fprintf(stderr,"### ps2ts: Error closing output %s: %s\n",output_name,
+    fprint_err("### ps2ts: Error closing output %s: %s\n",output_name,
             strerror(errno));
   err = close_PS_file(&ps);
   if (err)
-    fprintf(stderr,"### ps2ts: Error closing input %s\n",
-            (use_stdin?"<stdin>":input_name));
+    fprint_err("### ps2ts: Error closing input %s\n",
+               (use_stdin?"<stdin>":input_name));
   return 0;
 }
 

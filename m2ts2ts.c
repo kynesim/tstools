@@ -170,9 +170,9 @@ static int extract_packets(int input, FILE * output,
     if (p == NULL)
     {
       // Insert as the head of queue
-      printf ("### Insert 0x%08x at head: 0x%08x\n",
-	      (unsigned int)packet_buffer,
-	      (unsigned int)reorder_buffer_head);
+      fprint_msg("### Insert 0x%08x at head: 0x%08x\n",
+                 (unsigned int)packet_buffer,
+                 (unsigned int)reorder_buffer_head);
       packet_buffer->next = reorder_buffer_head;
       reorder_buffer_head = packet_buffer;
       packet_buffer->prev = NULL;

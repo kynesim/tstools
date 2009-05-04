@@ -138,7 +138,7 @@ extern int rewind_program_stream(PS_reader_p  ps);
  * Print out a stream id in a manner consistent with the PS usages
  * of the stream id values.
  */
-extern void print_stream_id(FILE  *stream,
+extern void print_stream_id(int    is_msg,
                             byte   stream_id);
 /*
  * Look for the start (the first 4 bytes) of the next program stream packet.

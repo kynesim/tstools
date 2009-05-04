@@ -43,6 +43,7 @@
 #include "ps_fns.h"
 #include "pes_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "version.h"
 
 
@@ -146,23 +147,23 @@ static int report_ps(PS_reader_p  ps,
   err = read_PS_packet_start(ps,verbose,&posn,&stream_id);
   if (err == EOF)
   {
-    fprintf(stderr,"### Error reading first pack header\n");
-    fprintf(stderr,"    Unexpected end of PS at start of stream\n");
+    print_err("### Error reading first pack header\n");
+    print_err("    Unexpected end of PS at start of stream\n");
     return 1;
   }
   else if (err)
   {
-    fprintf(stderr,"### Error reading first pack header\n");
+    print_err("### Error reading first pack header\n");
     return 1;
   }
   count++;
 
   if (stream_id != 0xba)
   {
-    fprintf(stderr,"### Program stream does not start with pack header\n");
-    fprintf(stderr,"    First packet has stream id %02X (",stream_id);
-    print_stream_id(stdout,stream_id);
-    printf(")\n");
+    print_err("### Program stream does not start with pack header\n");
+    fprint_err("    First packet has stream id %02X (",stream_id);
+    print_stream_id(FALSE,stream_id);
+    print_err(")\n");
     return 1;
   }
 
@@ -174,7 +175,7 @@ static int report_ps(PS_reader_p  ps,
     if (max > 0 && num_packs >= max)
     {
       if (verbose)
-        printf("Stopping after %d packs\n",num_packs);
+        fprint_msg("Stopping after %d packs\n",num_packs);
       break;
     }
 
@@ -183,17 +184,16 @@ static int report_ps(PS_reader_p  ps,
     err = read_PS_pack_header_body(ps,&header);
     if (err)
     {
-      fprintf(stderr,
-              "### Error reading data for pack header starting at "
-              OFFSET_T_FORMAT "\n",posn);
+      fprint_err("### Error reading data for pack header starting at "
+                 OFFSET_T_FORMAT "\n",posn);
       goto give_up;
     }
 
     if (verbose)
-      printf("\n" OFFSET_T_FORMAT_08
-             ": Pack header: SCR " LLD_FORMAT " (" LLD_FORMAT
-             "/%d) mux rate %d\n",posn,header.scr,header.scr_base,
-             header.scr_extn,header.program_mux_rate);
+      fprint_msg("\n" OFFSET_T_FORMAT_08
+                 ": Pack header: SCR " LLD_FORMAT " (" LLD_FORMAT
+                 "/%d) mux rate %d\n",posn,header.scr,header.scr_base,
+                 header.scr_extn,header.program_mux_rate);
 
     // Read (and, for the moment, at least, ignore) any system headers
     for (;;)
@@ -213,16 +213,15 @@ static int report_ps(PS_reader_p  ps,
         err = read_PS_packet_body(ps,stream_id,&packet);
         if (err)
         {
-          fprintf(stderr,
-                  "### Error reading system header starting at "
-                  OFFSET_T_FORMAT "\n",posn);
+          fprint_err("### Error reading system header starting at "
+                     OFFSET_T_FORMAT "\n",posn);
           goto give_up;
         }
         // For the moment, just ignore the system header content
         num_system_headers ++;
         if (verbose)
-          printf(OFFSET_T_FORMAT_08 ": System header %d\n",
-                 posn,num_system_headers);
+          fprint_msg(OFFSET_T_FORMAT_08 ": System header %d\n",
+                     posn,num_system_headers);
       }
       else
         break;
@@ -240,17 +239,17 @@ static int report_ps(PS_reader_p  ps,
       err = read_PS_packet_body(ps,stream_id,&packet);
       if (err)
       {
-        fprintf(stderr,"### Error reading PS packet starting at "
-                OFFSET_T_FORMAT "\n",posn);
+        fprint_err("### Error reading PS packet starting at "
+                   OFFSET_T_FORMAT "\n",posn);
         goto give_up;
       }
       // For the moment, just ignore its content
       if (verbose)
       {
-        printf(OFFSET_T_FORMAT_08 ": PS Packet %2d stream %02X (",
-               posn,count,stream_id);
-        print_stream_id(stdout,stream_id);
-        printf(")\n");
+        fprint_msg(OFFSET_T_FORMAT_08 ": PS Packet %2d stream %02X (",
+                   posn,count,stream_id);
+        print_stream_id(TRUE,stream_id);
+        print_msg(")\n");
         print_data(TRUE,"          Packet",
                    packet.data,packet.data_len,20);
 #if 1 // XXX
@@ -287,9 +286,9 @@ static int report_ps(PS_reader_p  ps,
           int index;
           if (substream_index < 0 || substream_index >= cDEPTH)
           {
-            fprintf(stderr,"Internal error: got substream index %d"
-                    " (instead, counting item wrongly as index %d)\n",
-                    substream_index,cDEPTH-1);
+            fprint_err("Internal error: got substream index %d"
+                       " (instead, counting item wrongly as index %d)\n",
+                       substream_index,cDEPTH-1);
             substream_index = cDEPTH-1;
           }
           switch (what)
@@ -303,8 +302,8 @@ static int report_ps(PS_reader_p  ps,
           case SUBSTREAM_LPCM: index = cLPCM; break;
           case SUBSTREAM_SUBPICTURES: index = cSUBPICTURES; break;
           case SUBSTREAM_OTHER: index = cOTHER; break;
-          default: fprintf(stderr,"Internal error: got substream id %d"
-                           " (instead, counting item wrongly as OTHER)\n",what);
+          default: fprint_err("Internal error: got substream id %d"
+                              " (instead, counting item wrongly as OTHER)\n",what);
                    index = cOTHER;
                    break;
           }
@@ -364,107 +363,107 @@ give_up:
 
   {
     int ii;
-    printf("Packets (total):                %8d\n",count);
-    printf("Packs:                          %8d\n",num_packs);
+    fprint_msg("Packets (total):                %8d\n",count);
+    fprint_msg("Packs:                          %8d\n",num_packs);
     for (ii=0; ii<NUMBER_VIDEO_STREAMS; ii++)
       if (num_video[ii] > 0)
       {
-        printf("Video packets (stream %2d):  %8d",ii,num_video[ii]);
-        printf("  min size %5d, max size %5d, mean size %7.1f\n",
-               min_video_size[ii],max_video_size[ii],
-               sum_video_size[ii]/num_video[ii]);
+        fprint_msg("Video packets (stream %2d):  %8d",ii,num_video[ii]);
+        fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                   min_video_size[ii],max_video_size[ii],
+                   sum_video_size[ii]/num_video[ii]);
       }
     for (ii=0; ii<NUMBER_AUDIO_STREAMS; ii++)
       if (num_audio[ii] > 0)
       {
-        printf("Audio packets (stream %2d):  %8d",ii,num_audio[ii]);
-        printf("  min size %5d, max size %5d, mean size %7.1f\n",
-               min_audio_size[ii],max_audio_size[ii],
-               sum_audio_size[ii]/num_audio[ii]);
+        fprint_msg("Audio packets (stream %2d):  %8d",ii,num_audio[ii]);
+        fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                   min_audio_size[ii],max_audio_size[ii],
+                   sum_audio_size[ii]/num_audio[ii]);
       }
     if (num_private[cPRIVATE1] > 0)
     {
       int ii;
-      printf("Private1 packets:           %8d",num_private[cPRIVATE1]);
-      printf("  min size %5d, max size %5d, mean size %7.1f\n",
-             min_private_size[cPRIVATE1],max_private_size[cPRIVATE1],
-             sum_private_size[cPRIVATE1]/num_private[cPRIVATE1]);
+      fprint_msg("Private1 packets:           %8d",num_private[cPRIVATE1]);
+      fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                 min_private_size[cPRIVATE1],max_private_size[cPRIVATE1],
+                 sum_private_size[cPRIVATE1]/num_private[cPRIVATE1]);
       for (ii=0; ii<cDEPTH; ii++)
       {
         if (num_other[cAC3][ii] > 0)
         {
-          printf("     AC3, index %2d:         %8d",ii,num_other[cAC3][ii]);
-          printf("  min size %5d, max size %5d, mean size %7.1f\n",
-                 min_other_size[cAC3][ii],max_other_size[cAC3][ii],
-                 sum_other_size[cAC3][ii]/num_other[cAC3][ii]);
-          printf("                                      %s\n",
-                 BSMOD_STR(ac3_bsmod[ii],ac3_acmod[ii]));
-          printf("                                      audio coding mode %s\n",
-                 ACMOD_STR(ac3_acmod[ii]));
+          fprint_msg("     AC3, index %2d:         %8d",ii,num_other[cAC3][ii]);
+          fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                     min_other_size[cAC3][ii],max_other_size[cAC3][ii],
+                     sum_other_size[cAC3][ii]/num_other[cAC3][ii]);
+          fprint_msg("                                      %s\n",
+                     BSMOD_STR(ac3_bsmod[ii],ac3_acmod[ii]));
+          fprint_msg("                                      audio coding mode %s\n",
+                     ACMOD_STR(ac3_acmod[ii]));
         }
       }
       for (ii=0; ii<cDEPTH; ii++)
       {
         if (num_other[cDTS][ii] > 0)
         {
-          printf("     DTS, index %2d:         %8d",ii,num_other[cDTS][ii]);
-          printf("  min size %5d, max size %5d, mean size %7.1f\n",
-                 min_other_size[cDTS][ii],max_other_size[cDTS][ii],
-                 sum_other_size[cDTS][ii]/num_other[cDTS][ii]);
+          fprint_msg("     DTS, index %2d:         %8d",ii,num_other[cDTS][ii]);
+          fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                     min_other_size[cDTS][ii],max_other_size[cDTS][ii],
+                     sum_other_size[cDTS][ii]/num_other[cDTS][ii]);
         }
       }
       for (ii=0; ii<cDEPTH; ii++)
       {
         if (num_other[cLPCM][ii] > 0)
         {
-          printf("     LPCM, index %2d:        %8d",ii,num_other[cLPCM][ii]);
-          printf("  min size %5d, max size %5d, mean size %7.1f\n",
-                 min_other_size[cLPCM][ii],max_other_size[cLPCM][ii],
-                 sum_other_size[cLPCM][ii]/num_other[cLPCM][ii]);
+          fprint_msg("     LPCM, index %2d:        %8d",ii,num_other[cLPCM][ii]);
+          fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                     min_other_size[cLPCM][ii],max_other_size[cLPCM][ii],
+                     sum_other_size[cLPCM][ii]/num_other[cLPCM][ii]);
         }
       }
       for (ii=0; ii<cDEPTH; ii++)
       {
         if (num_other[cSUBPICTURES][ii] > 0)
         {
-          printf("     SUBPICTURES, index %2d: %8d",ii,num_other[cSUBPICTURES][ii]);
-          printf("  min size %5d, max size %5d, mean size %7.1f\n",
-                 min_other_size[cSUBPICTURES][ii],max_other_size[cSUBPICTURES][ii],
-                 sum_other_size[cSUBPICTURES][ii]/num_other[cSUBPICTURES][ii]);
+          fprint_msg("     SUBPICTURES, index %2d: %8d",ii,num_other[cSUBPICTURES][ii]);
+          fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                     min_other_size[cSUBPICTURES][ii],max_other_size[cSUBPICTURES][ii],
+                     sum_other_size[cSUBPICTURES][ii]/num_other[cSUBPICTURES][ii]);
         }
       }
       for (ii=0; ii<cDEPTH; ii++)
       {
         if (num_other[cOTHER][ii] > 0)
         {
-          printf("     OTHER, index %2d:       %8d",ii,num_other[cOTHER][ii]);
-          printf("  min size %5d, max size %5d, mean size %7.1f\n",
-                 min_other_size[cOTHER][ii],max_other_size[cOTHER][ii],
-                 sum_other_size[cOTHER][ii]/num_other[cOTHER][ii]);
+          fprint_msg("     OTHER, index %2d:       %8d",ii,num_other[cOTHER][ii]);
+          fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                     min_other_size[cOTHER][ii],max_other_size[cOTHER][ii],
+                     sum_other_size[cOTHER][ii]/num_other[cOTHER][ii]);
         }
       }
     }
     if (num_private[cPRIVATE2] > 0)
     {
-      printf("Private2 packets:           %8d",num_private[cPRIVATE2]);
-      printf("  min size %5d, max size %5d, mean size %7.1f\n",
-             min_private_size[cPRIVATE2],max_private_size[cPRIVATE2],
-             sum_private_size[cPRIVATE2]/num_private[cPRIVATE2]);
+      fprint_msg("Private2 packets:           %8d",num_private[cPRIVATE2]);
+      fprint_msg("  min size %5d, max size %5d, mean size %7.1f\n",
+                 min_private_size[cPRIVATE2],max_private_size[cPRIVATE2],
+                 sum_private_size[cPRIVATE2]/num_private[cPRIVATE2]);
     }
-    printf("Program stream maps:        %8d\n",num_maps);
-    printf("Program stream directories: %8d\n",num_maps);
+    fprint_msg("Program stream maps:        %8d\n",num_maps);
+    fprint_msg("Program stream directories: %8d\n",num_maps);
   }
   return 0;
 }
-
+  
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage: psreport [switches] [<infile>]\n"
     "\n"
     );
   REPORT_VERSION("psreport");
-  printf(
+  print_msg(
     "\n"
     "  Report on the packets in a Program Stream.\n"
     "\n"
@@ -539,8 +538,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### psreport: "
-                "Unrecognised command line switch '%s'\n",argv[ii]);
+        fprint_err("### psreport: "
+                   "Unrecognised command line switch '%s'\n",argv[ii]);
         return 1;
       }
     }
@@ -548,7 +547,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name)
       {
-        fprintf(stderr,"### psreport: Unexpected '%s'\n",argv[ii]);
+        fprint_err("### psreport: Unexpected '%s'\n",argv[ii]);
         return 1;
       }
       else
@@ -562,35 +561,35 @@ int main(int argc, char **argv)
 
   if (!had_input_name)
   {
-    fprintf(stderr,"### psreport: No input file specified\n");
+    print_err("### psreport: No input file specified\n");
     return 1;
   }
 
   err = open_PS_file(input_name,FALSE,&ps);
   if (err)
   {
-    fprintf(stderr,"### psreport: Unable to open input file %s\n",
-            (use_stdin?"<stdin>":input_name));
+    fprint_err("### psreport: Unable to open input file %s\n",
+               (use_stdin?"<stdin>":input_name));
     return 1;
   }
-  printf("Reading from %s\n",(use_stdin?"<stdin>":input_name));
+  fprint_msg("Reading from %s\n",(use_stdin?"<stdin>":input_name));
   if (is_dvd)
-    printf("Assuming data is from a DVD\n");
+    print_msg("Assuming data is from a DVD\n");
   else
-    printf("Assuming data is NOT from a DVD\n");
+    print_msg("Assuming data is NOT from a DVD\n");
 
   if (max)
-    printf("Stopping after %d PS packets\n",max);
+    fprint_msg("Stopping after %d PS packets\n",max);
 
   err = report_ps(ps,is_dvd,max,verbose);
   if (err)
-    fprintf(stderr,"### psreport: Error reporting on input stream\n");
+    print_err("### psreport: Error reporting on input stream\n");
 
   err = close_PS_file(&ps);
   if (err)
   {
-    fprintf(stderr,"### psreport: Error closing input file %s\n",
-            (use_stdin?"<stdin>":input_name));
+    fprint_err("### psreport: Error closing input file %s\n",
+               (use_stdin?"<stdin>":input_name));
     return 1;
   }
   return 0;

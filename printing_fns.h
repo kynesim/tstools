@@ -55,6 +55,10 @@ extern void fprint_err(const char *format, ...);
  * If `is_msg`, then as a normal message, else as an error
  */
 extern void fprint_msg_or_err(int is_msg, const char *format, ...);
+/*
+ * Flush the message output
+ */
+extern void flush_msg(void);
 
 // ============================================================
 // Choosing what the printing functions do
@@ -88,13 +92,15 @@ extern void redirect_output_stdout(void);
  *    appropriate arguments, and writes the result out to the "normal" output.
  * * `new_fprint_error_fn` takes a printf-style format string and the
  *    appropriate arguments, and writes the result out to the "error" output.
+ * * `new_flush_msg_fn` flushes the "normal" message output.
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
 extern int redirect_output( void (*new_print_message_fn) (const char *message),
                             void (*new_print_error_fn) (const char *message),
                             void (*new_fprint_message_fn) (const char *format, va_list arg_ptr),
-                            void (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
+                            void (*new_fprint_error_fn) (const char *format, va_list arg_ptr),
+                            void (*new_flush_msg_fn) (void)
                           );
 
 // Just for the moment

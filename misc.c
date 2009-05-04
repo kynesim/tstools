@@ -480,7 +480,7 @@ extern int open_input_as_ES(char   *name,
   }
   
   if (!quiet)
-    printf("Reading from %s\n",(use_stdin?"<stdin>":name));
+    fprint_msg("Reading from %s\n",(use_stdin?"<stdin>":name));
 
   if (force_stream_type || use_stdin)
   {
@@ -489,11 +489,11 @@ extern int open_input_as_ES(char   *name,
     else
       *is_data = VIDEO_H262;
     if (!quiet)
-      printf("Reading input as %s\n",
-             (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
-              *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
-              *is_data==VIDEO_AVS ?"AVS":
-              "???"));
+      fprint_msg("Reading input as %s\n",
+                 (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
+                  *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
+                  *is_data==VIDEO_AVS ?"AVS":
+                  "???"));
   }
   else
   {
@@ -514,7 +514,7 @@ extern int open_input_as_ES(char   *name,
 
       *is_data = video_type;
       if (!quiet)
-        printf("Input appears to be %s\n",
+        fprint_msg("Input appears to be %s\n",
                (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
                 *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
                 *is_data==VIDEO_AVS?"AVS":

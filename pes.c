@@ -820,7 +820,7 @@ static int refine_TS_program_info(PES_reader_p   reader,
     fprint_msg("PMT packet at " OFFSET_T_FORMAT ": updating program info\n",
                reader->posn);
 #endif
-    report_pmt(stdout,"      ",pmt);
+    report_pmt(TRUE,"      ",pmt);
   }
 
   free_pmt(&reader->program_map);
@@ -2565,7 +2565,7 @@ extern int read_next_PES_ES_packet(PES_reader_p       reader)
     {
       fprint_msg(".. PES packet at " OFFSET_T_FORMAT " is %x (",
                  reader->packet->posn,reader->packet->data[3]);
-      print_stream_id(stdout,reader->packet->data[3]);
+      print_stream_id(TRUE,reader->packet->data[3]);
       fprint_msg(")%s\n",(reader->packet->is_video?" VIDEO":""));
     }
 #endif
@@ -2826,7 +2826,7 @@ extern int report_PES_data_array(char   *prefix,
   //   return 0;
 
   fprint_msg("%sPES packet: stream id %02x (",prefix,stream_id);
-  print_stream_id(stdout,stream_id);
+  print_stream_id(TRUE,stream_id);
   fprint_msg("), packet length %d",packet_length);
   if (packet_length == 0)
   {

@@ -45,6 +45,7 @@
 #include "pes_fns.h"
 #include "pidint_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 
 #define DEBUG 0
 #define DEBUG_AC3 0
@@ -110,7 +111,7 @@ static inline int get_more_data(PS_reader_p   ps)
     return EOF;
   else if (len == -1)
   {
-    fprintf(stderr,"### Error reading next bytes: %s\n",strerror(errno));
+    fprint_err("### Error reading next bytes: %s\n",strerror(errno));
     return 1;
   }
   ps->data_posn += ps->data_len;  // length of the *last* buffer
@@ -138,7 +139,7 @@ extern int build_PS_reader(int           input,
   PS_reader_p new = malloc(SIZEOF_PS_READER);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate program stream read context\n");
+    print_err("### Unable to allocate program stream read context\n");
     return 1;
   }
 
@@ -150,7 +151,7 @@ extern int build_PS_reader(int           input,
   err = get_more_data(new);
   if (err)
   {
-    fprintf(stderr,"### Unable to start reading from new PS read context\n");
+    print_err("### Unable to start reading from new PS read context\n");
     free(new);
     return 1;
   }
@@ -160,9 +161,9 @@ extern int build_PS_reader(int           input,
                                   &(new->start));
   if (err)
   {
-    fprintf(stderr,"### File does not appear to be PS\n"
-            "    Cannot find PS pack header in first %d bytes of file\n",
-            PACK_HEADER_SEARCH_DISTANCE);
+    fprint_err("### File does not appear to be PS\n"
+               "    Cannot find PS pack header in first %d bytes of file\n",
+               PACK_HEADER_SEARCH_DISTANCE);
     free(new);
     return 1;
   }
@@ -171,15 +172,14 @@ extern int build_PS_reader(int           input,
   err = seek_using_PS_reader(new,new->start);
   if (err)
   {
-    fprintf(stderr,"### Error seeking to start of first pack header\n");
+    print_err("### Error seeking to start of first pack header\n");
     free(new);
     return 1;
   }
 
   if (!quiet && new->start != 0)
-    fprintf(stderr,
-            "!!! PS file does not start with pack header\n"
-            "    First PS pack header is at " OFFSET_T_FORMAT "\n",new->start);
+    fprint_err("!!! PS file does not start with pack header\n"
+               "    First PS pack header is at " OFFSET_T_FORMAT "\n",new->start);
 
   *ps = new;
   return 0;
@@ -280,7 +280,7 @@ extern int determine_if_PS_is_h264(PS_reader_p  ps,
   err = build_PS_PES_reader(ps,FALSE,FALSE,&reader);
   if (err)
   {
-    fprintf(stderr,"### Error trying to determine PS stream type\n");
+    print_err("### Error trying to determine PS stream type\n");
     return 1;
   }
   // Which knows the file type
@@ -291,7 +291,7 @@ extern int determine_if_PS_is_h264(PS_reader_p  ps,
   err = rewind_program_stream(ps);
   if (err)
   {
-    fprintf(stderr,"### Error rewinding PS file after determining its type\n");
+    print_err("### Error rewinding PS file after determining its type\n");
     return 1;
   }
   return 0;
@@ -326,7 +326,7 @@ extern int determine_PS_video_type(PS_reader_p  ps,
   err = build_PS_PES_reader(ps,FALSE,FALSE,&reader);
   if (err)
   {
-    fprintf(stderr,"### Error trying to determine PS stream type\n");
+    print_err("### Error trying to determine PS stream type\n");
     return 1;
   }
   // Which thinks it knows the file type
@@ -337,7 +337,7 @@ extern int determine_PS_video_type(PS_reader_p  ps,
   err = rewind_program_stream(ps);
   if (err)
   {
-    fprintf(stderr,"### Error rewinding PS file after determining its type\n");
+    print_err("### Error rewinding PS file after determining its type\n");
     return 1;
   }
   return 0;
@@ -430,7 +430,7 @@ static int read_PS_bytes(PS_reader_p ps,
  * Print out a stream id in a manner consistent with the PS usages
  * of the stream id values.
  */
-extern void print_stream_id(FILE  *stream,
+extern void print_stream_id(int    is_msg,
                             byte   stream_id)
 {
   byte  number;
@@ -471,21 +471,21 @@ extern void print_stream_id(FILE  *stream,
   }
 
   if (str != NULL)
-    fprintf(stream,str);
+    fprint_msg_or_err(is_msg,str);
   else if (stream_id >= 0xC0 && stream_id <=0xDF)
   {
     number = stream_id & 0x1F;
-    fprintf(stream,"Audio stream 0x%02X",number);
+    fprint_msg_or_err(is_msg,"Audio stream 0x%02X",number);
   }
   else if (stream_id >= 0xE0 && stream_id <= 0xEF)
   {
     number = stream_id & 0x0F;
-    fprintf(stream,"Video stream 0x%X",number);
+    fprint_msg_or_err(is_msg,"Video stream 0x%X",number);
   }
   else if (stream_id >= 0xFC && stream_id <= 0xFE)
-    fprintf(stream,"Reserved data stream");
+    fprint_msg_or_err(is_msg,"Reserved data stream");
   else
-    fprintf(stream,"Unrecognised stream id");
+    fprint_msg_or_err(is_msg,"Unrecognised stream id");
 }
 
 /*
@@ -533,7 +533,7 @@ extern int find_PS_packet_start(PS_reader_p ps,
         if (*ptr == 0xB9) // MPEG_program_end_code
         {
           if (verbose)
-            printf("Stopping at MPEG_program_end_code\n");
+            print_msg("Stopping at MPEG_program_end_code\n");
           *stream_id = 0xB9;
           return EOF;
         }
@@ -550,7 +550,7 @@ extern int find_PS_packet_start(PS_reader_p ps,
         count ++;
         if (count > max)
         {
-          fprintf(stderr,"### No PS packet start found in %d bytes\n",max);
+          fprint_err("### No PS packet start found in %d bytes\n",max);
           return 1;
         }
       }
@@ -600,15 +600,15 @@ extern int find_PS_pack_header_start(PS_reader_p ps,
     err = find_PS_packet_start(ps,verbose,max,posn,&stream_id);
     if (err)
     {
-      fprintf(stderr,"### Error looking for PS pack header (0xBA)\n");
+      print_err("### Error looking for PS pack header (0xBA)\n");
       return 1;
     }
     if (verbose)
     {
-      fprintf(stderr,"    Found: stream id %02X at " OFFSET_T_FORMAT " (",
-              stream_id,*posn);
-      print_stream_id(stderr,stream_id);
-      fprintf(stderr,")\n");
+      fprint_err("    Found: stream id %02X at " OFFSET_T_FORMAT " (",
+                 stream_id,*posn);
+      print_stream_id(FALSE,stream_id);
+      print_err(")\n");
     }
   }
   return 0;
@@ -642,8 +642,8 @@ extern int read_PS_packet_body(PS_reader_p  ps,
   err = read_PS_bytes(ps,2,buf,NULL);
   if (err)
   {
-    fprintf(stderr,"### %s reading PS packet length\n",
-            (err==EOF?"Unexpected end of file":"Error"));
+    fprint_err("### %s reading PS packet length\n",
+               (err==EOF?"Unexpected end of file":"Error"));
     if (packet->data!=NULL) free(packet->data);
     packet->data = NULL;
     return err;
@@ -652,7 +652,7 @@ extern int read_PS_packet_body(PS_reader_p  ps,
   packet->packet_length = (buf[0] << 8) | buf[1];
 
 #if DEBUG
-  printf("Packet length %d\n",packet->packet_length);
+  fprint_msg("Packet length %d\n",packet->packet_length);
 #endif
 
   // Remember that the packet length is the length of data
@@ -661,7 +661,7 @@ extern int read_PS_packet_body(PS_reader_p  ps,
   // - but let's check anyway
   if (packet->packet_length == 0)
   {
-    fprintf(stderr,"### Packet has length 0 - not allowed in PS\n");
+    print_err("### Packet has length 0 - not allowed in PS\n");
     if (packet->data!=NULL) free(packet->data);
     packet->data = NULL;
     return 1;
@@ -676,7 +676,7 @@ extern int read_PS_packet_body(PS_reader_p  ps,
 #endif
   if (packet->data == NULL)
   {
-    fprintf(stderr,"### Unable to allocate PS packet data buffer\n");
+    print_err("### Unable to allocate PS packet data buffer\n");
     return 1;
   }
   packet->data_len = packet->packet_length + 6;
@@ -693,8 +693,8 @@ extern int read_PS_packet_body(PS_reader_p  ps,
   err = read_PS_bytes(ps,packet->packet_length,&(packet->data[6]),NULL);
   if (err)
   {
-    fprintf(stderr,"### %s reading rest of PS packet\n",
-            (err==EOF?"Unexpected end of file":"Error"));
+    fprint_err("### %s reading rest of PS packet\n",
+               (err==EOF?"Unexpected end of file":"Error"));
     if (packet->data!=NULL) free(packet->data);
     packet->data = NULL;
     return err;
@@ -737,15 +737,15 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
   err = read_PS_bytes(ps,8,hdr->data,NULL);
   if (err)
   {
-    fprintf(stderr,"### %s reading body of PS pack header\n",
-            (err==EOF?"Unexpected end of file":"Error"));
+    fprint_err("### %s reading body of PS pack header\n",
+               (err==EOF?"Unexpected end of file":"Error"));
     return err;
   }
 
   if ((hdr->data[0] & 0xF0) == 0x20)
   {
 #if DEBUG
-    printf("ISO/IEC 11171-1/MPEG-1 pack header\n");
+    print_msg("ISO/IEC 11171-1/MPEG-1 pack header\n");
     print_data(TRUE,"Pack header",hdr->data,8,8);
 #endif
     hdr->pack_stuffing_length = 0;          // since it doesn't exist
@@ -774,13 +774,13 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
   else
   {
 #if DEBUG
-    printf("ISO/IEC 13818-1/H.222.0 pack header\n");
+    print_msg("ISO/IEC 13818-1/H.222.0 pack header\n");
 #endif
     err = read_PS_bytes(ps,2,&(hdr->data[8]),NULL);
     if (err)
     {
-      fprintf(stderr,"### %s reading last 2 bytes of body of PS pack header\n",
-              (err==EOF?"Unexpected end of file":"Error"));
+      fprint_err("### %s reading last 2 bytes of body of PS pack header\n",
+                 (err==EOF?"Unexpected end of file":"Error"));
       return err;
     }
 #if DEBUG
@@ -806,10 +806,10 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
   }
 
 #if DEBUG   // XXX
-  printf("Pack header body: scr_base " LLU_FORMAT ", scr_extn %u, scr "
-         LLU_FORMAT ", mux rate %u, stuffing %d\n",
-         hdr->scr_base,hdr->scr_extn,hdr->scr,hdr->program_mux_rate,
-         hdr->pack_stuffing_length);
+  fprint_msg("Pack header body: scr_base " LLU_FORMAT ", scr_extn %u, scr "
+             LLU_FORMAT ", mux rate %u, stuffing %d\n",
+             hdr->scr_base,hdr->scr_extn,hdr->scr,hdr->program_mux_rate,
+             hdr->pack_stuffing_length);
 #endif
 
   // And ignore that many stuffing bytes...
@@ -818,8 +818,8 @@ extern int read_PS_pack_header_body(PS_reader_p       ps,
     err = read_PS_bytes(ps,hdr->pack_stuffing_length,dummy,NULL);
     if (err)
     {
-      fprintf(stderr,"### %s reading PS pack header stuffing bytes\n",
-              (err==EOF?"Unexpected end of file":"Error"));
+      fprint_err("### %s reading PS pack header stuffing bytes\n",
+                 (err==EOF?"Unexpected end of file":"Error"));
       return err;
     }
   }
@@ -893,7 +893,7 @@ extern int read_PS_packet_start(PS_reader_p ps,
     return EOF;
   else if (err)
   {
-    fprintf(stderr,"### Error reading start of PS packet\n");
+    print_err("### Error reading start of PS packet\n");
     return 1;
   }
 
@@ -903,7 +903,7 @@ extern int read_PS_packet_start(PS_reader_p ps,
   if (buf[0] == 0 && buf[1] == 0 && buf[2] == 0)
   {
 #if 0   // XXX
-    printf("// %02x %02x %02x %02x\n",buf[0],buf[1],buf[2],buf[3]);
+    fprint_msg("// %02x %02x %02x %02x\n",buf[0],buf[1],buf[2],buf[3]);
 #endif
     while (buf[2] == 0)     // we already know buf[0] and buf[1] are zero
     {
@@ -913,32 +913,32 @@ extern int read_PS_packet_start(PS_reader_p ps,
         return EOF;
       else if (err)
       {
-        fprintf(stderr,"### Error skipping 00 bytes before start of PS packet\n");
+        print_err("### Error skipping 00 bytes before start of PS packet\n");
         return 1;
       }
     }
 #if 0   // XXX
-    printf("\\\\ %02x %02x %02x %02x\n",buf[0],buf[1],buf[2],buf[3]);
+    fprint_msg("\\\\ %02x %02x %02x %02x\n",buf[0],buf[1],buf[2],buf[3]);
 #endif
   }
 
   if (buf[0] != 0 || buf[1] != 0 || buf[2] != 1)
   {
-    fprintf(stderr,"!!! PS packet at " OFFSET_T_FORMAT " should start "
-            "00 00 01, but instead found %02X %02X %02X\n",
-            *posn,buf[0],buf[1],buf[2]);
+    fprint_err("!!! PS packet at " OFFSET_T_FORMAT " should start "
+               "00 00 01, but instead found %02X %02X %02X\n",
+               *posn,buf[0],buf[1],buf[2]);
 #if RECOVER_BROKEN_PS
-    fprintf(stderr,"!!! Attempting to find next PS pack header\n");
+    print_err("!!! Attempting to find next PS pack header\n");
     err = find_PS_pack_header_start(ps,TRUE,0,posn);
     if (err == EOF)
       return EOF;
     else if (err)
     {
-      fprintf(stderr,"### Error trying to find start of next pack header\n");
+      print_err("### Error trying to find start of next pack header\n");
       return 1;
     }
-    fprintf(stderr,"!!! Continuing with PS pack header at " OFFSET_T_FORMAT
-            "\n",*posn);
+    fprint_err("!!! Continuing with PS pack header at " OFFSET_T_FORMAT
+               "\n",*posn);
     *stream_id = 0xBA;
     return 0;
 #else
@@ -949,15 +949,15 @@ extern int read_PS_packet_start(PS_reader_p ps,
   *stream_id = buf[3];
 
 #if DEBUG
-  printf("Packet at " OFFSET_T_FORMAT ", stream id %02X (",*posn,*stream_id);
-  print_stream_id(stdout,*stream_id);
-  printf(")\n");
+  fprint_msg("Packet at " OFFSET_T_FORMAT ", stream id %02X (",*posn,*stream_id);
+  print_stream_id(TRUE,*stream_id);
+  print_msg(")\n");
 #endif
 
   if (buf[3] == 0xB9)  // MPEG_program_end_code
   {
     if (verbose)
-      printf("Stopping at MPEG_program_end_code\n");
+      print_msg("Stopping at MPEG_program_end_code\n");
     return EOF;
   }
   else
@@ -980,14 +980,14 @@ static inline void determine_ac3_details(byte *data, int verbose,
   *acmod          = (data[6] & 0xC0) >> 6;
   if (verbose)
   {
-    printf("    fscod       %x (sample rate %skHz)\n",fscod,
-           (fscod==0?"48":fscod==1?"44.1":fscod==2?"32":"??"));
-    printf("    frmsizecode %x\n",frmsizecode);
-    printf("    bsid        %x (%s)\n",bsid,
-           (bsid==8?"standard":bsid==6?"A52a alternate":
-            bsid<8?"standard subset":"???"));
-    printf("    bsmod       %x (%s)\n",*bsmod,BSMOD_STR(*bsmod,*acmod));
-    printf("    acmod       %x (%s)\n",*acmod,ACMOD_STR(*acmod));
+    fprint_msg("    fscod       %x (sample rate %skHz)\n",fscod,
+               (fscod==0?"48":fscod==1?"44.1":fscod==2?"32":"??"));
+    fprint_msg("    frmsizecode %x\n",frmsizecode);
+    fprint_msg("    bsid        %x (%s)\n",bsid,
+               (bsid==8?"standard":bsid==6?"A52a alternate":
+                bsid<8?"standard subset":"???"));
+    fprint_msg("    bsmod       %x (%s)\n",*bsmod,BSMOD_STR(*bsmod,*acmod));
+    fprint_msg("    acmod       %x (%s)\n",*acmod,ACMOD_STR(*acmod));
   }
 }
 
@@ -1024,11 +1024,11 @@ extern int identify_private1_data(struct PS_packet *packet,
   {
     int   data_alignment_indicator = (packet->data[6] & 0x04);
     if (data_alignment_indicator)
-      printf("*** Data aligned\n");
+      print_msg("*** Data aligned\n");
     else
-      printf("--- Data not aligned\n");
-    printf("*** PES header data length 0x%x (%d)\n",
-           PES_header_data_length,PES_header_data_length);
+      print_msg("--- Data not aligned\n");
+    fprint_msg("*** PES header data length 0x%x (%d)\n",
+               PES_header_data_length,PES_header_data_length);
   }
 #endif
 
@@ -1070,14 +1070,14 @@ extern int identify_private1_data(struct PS_packet *packet,
     }
     if (verbose)
     {
-      printf(">>> substream_id  %02x (%s index %d)\n",substream_id,
-             (what==SUBSTREAM_AC3?"AC3":
-              what==SUBSTREAM_DTS?"DTS":
-              what==SUBSTREAM_LPCM?"LPCM":
-              what==SUBSTREAM_SUBPICTURES?"subpictures":"???"),
-             *substream_index);
-      printf(">>> frame_count   %02x (%d)\n",frame_count,frame_count);
-      printf(">>> offset      %04x (%d)\n",offset,offset);
+      fprint_msg(">>> substream_id  %02x (%s index %d)\n",substream_id,
+                 (what==SUBSTREAM_AC3?"AC3":
+                  what==SUBSTREAM_DTS?"DTS":
+                  what==SUBSTREAM_LPCM?"LPCM":
+                  what==SUBSTREAM_SUBPICTURES?"subpictures":"???"),
+                 *substream_index);
+      fprint_msg(">>> frame_count   %02x (%d)\n",frame_count,frame_count);
+      fprint_msg(">>> offset      %04x (%d)\n",offset,offset);
     }
     // For AC3 and DTS, it's easy to check that it *does* appear to be what it
     // says, so let's do so
@@ -1091,25 +1091,25 @@ extern int identify_private1_data(struct PS_packet *packet,
       {
         // Looks like it's a silly offset, so probably NOT what we want
         if (verbose)
-          printf("*** expected %s, but data at %p is beyond"
-                 " packet->end at %p\n",(what==SUBSTREAM_DTS?"DTS":"AC3"),
-                 sub_data,packet->data+6+packet_length);
+          fprint_msg("*** expected %s, but data at %p is beyond"
+                     " packet->end at %p\n",(what==SUBSTREAM_DTS?"DTS":"AC3"),
+                     sub_data,packet->data+6+packet_length);
         what = SUBSTREAM_ERROR;  // we definitely mustn't try to interpret it!
       }
       else if (what == SUBSTREAM_AC3 &&
                !(sub_data[0] == 0x0B && sub_data[1] == 0x77))
       {
-        printf("*** expected AC3 sync 0x0B77, but found 0x%02x%02x\n",
-               sub_data[0],sub_data[1]);
+        fprint_msg("*** expected AC3 sync 0x0B77, but found 0x%02x%02x\n",
+                   sub_data[0],sub_data[1]);
         what = SUBSTREAM_ERROR;
       }
       else if (what == SUBSTREAM_DTS &&
                !(sub_data[0] == 0x7F && sub_data[1] == 0xFE &&
                  sub_data[2] == 0x80 && sub_data[3] == 0x01))
       {
-        printf("*** expected DTS sync 0x7FFE8001,"
-               " but found 0x%02x%02x%02x%02x\n",
-               sub_data[0],sub_data[1],sub_data[2],sub_data[3]);
+        fprint_msg("*** expected DTS sync 0x7FFE8001,"
+                   " but found 0x%02x%02x%02x%02x\n",
+                   sub_data[0],sub_data[1],sub_data[2],sub_data[3]);
         what = SUBSTREAM_ERROR;
       }
       if (what == SUBSTREAM_AC3)
@@ -1133,24 +1133,24 @@ extern int identify_private1_data(struct PS_packet *packet,
     switch (what)
     {
     case SUBSTREAM_AC3:
-      printf("*** Looks like AC3\n");
+      print_msg("*** Looks like AC3\n");
       break;
     case SUBSTREAM_DTS:
-      printf("*** Looks like DTS\n");
+      print_msg("*** Looks like DTS\n");
       break;
     case SUBSTREAM_LPCM:
-      printf("*** Looks like LPCM\n");
+      print_msg("*** Looks like LPCM\n");
       break;
     case SUBSTREAM_SUBPICTURES:
-      printf("*** Looks like sub-pictures\n");
+      print_msg("*** Looks like sub-pictures\n");
       break;
     case SUBSTREAM_OTHER:
-      printf("*** Other substream: %02x %02x %02x %02x\n",
-             data[0],data[1],data[2],data[3]);
+      fprint_msg("*** Other substream: %02x %02x %02x %02x\n",
+                 data[0],data[1],data[2],data[3]);
       break;
     default:
-      printf("*** Error recognising substream: %02x %02x %02x %02x\n",
-             data[0],data[1],data[2],data[3]);
+      fprint_msg("*** Error recognising substream: %02x %02x %02x %02x\n",
+                 data[0],data[1],data[2],data[3]);
       break;
     }
   }
@@ -1204,7 +1204,7 @@ static int write_video(TS_writer_p            output,
     {
       ignored_stream[this_stream] = TRUE;
       if (!quiet)
-        printf("Ignoring video stream 0x%x (%d)\n",this_stream,this_stream);
+        fprint_msg("Ignoring video stream 0x%x (%d)\n",this_stream,this_stream);
     }
     (*num_video_ignored) ++;
     return 0;
@@ -1213,10 +1213,10 @@ static int write_video(TS_writer_p            output,
   if (*num_video_written == 0)
   {
     if (!quiet)
-      printf("Video: stream %d, PID 0x%03x, stream type 0x%02x\n"
-             "       %s\n",
-             stream_id & 0x0F,prog_data->video_pid,prog_data->video_type,
-             h222_stream_type_str(prog_data->video_type));
+      fprint_msg("Video: stream %d, PID 0x%03x, stream type 0x%02x\n"
+                 "       %s\n",
+                 stream_id & 0x0F,prog_data->video_pid,prog_data->video_type,
+                 h222_stream_type_str(prog_data->video_type));
 
     err = add_stream_to_pmt(prog_data->pmt,prog_data->video_pid,
                             prog_data->video_type,0,NULL);
@@ -1233,8 +1233,7 @@ static int write_video(TS_writer_p            output,
                             prog_data->pmt);
     if (err)
     {
-      fprintf(stderr,
-              "### Error writing TS program data before video packet\n");
+      print_err("### Error writing TS program data before video packet\n");
       return 1;
     }
   }
@@ -1249,8 +1248,8 @@ static int write_video(TS_writer_p            output,
   (*num_video_written) ++;
   if (verbose)
   {
-    printf("v");
-    fflush(stdout);
+    print_msg("v");
+    flush_msg();
   }
   return 0;
 }
@@ -1293,20 +1292,20 @@ static int write_DVD_AC3_data(TS_writer_p          output,
   int err = find_PTS_in_PES(packet->data,packet->data_len,&got_pts,&pts);
   if (err)
   {
-    fprintf(stderr,"### Error looking for PTS in PES packet\n");
+    print_err("### Error looking for PTS in PES packet\n");
     return 1;
   }
 
 #if DEBUG_AC3
-  printf(".. frame_count=%d, offset=%4d, got_pts=%d ",
-         frame_count,offset,got_pts);
+  fprint_msg(".. frame_count=%d, offset=%4d, got_pts=%d ",
+             frame_count,offset,got_pts);
   if (frame_count > 0 && offset > 0)
   {
     if (data[offset+3]==0x0B && data[offset+4]==0x77)
-      printf("(frame is AC3)\n");
+      print_msg("(frame is AC3)\n");
     else
-      printf("(frame appears to start %02x %02x)\n",
-             data[offset+3],data[offset+4]);
+      fprint_msg("(frame appears to start %02x %02x)\n",
+                 data[offset+3],data[offset+4]);
   }
 #endif
 
@@ -1320,7 +1319,7 @@ static int write_DVD_AC3_data(TS_writer_p          output,
     // fields appropriately
 
 #if DEBUG_AC3
-    printf("move data down 4, leaving %4d\n",data_len-4);
+    fprint_msg("move data down 4, leaving %4d\n",data_len-4);
 #endif
 
     (void) memmove(data,data+4,data_len-4);   // 4 bytes of substream header
@@ -1344,8 +1343,8 @@ static int write_DVD_AC3_data(TS_writer_p          output,
     // packet to which the PTS applies as a separate PES packet.
 
 #if DEBUG_AC3
-    printf("write first %4d bytes, then move data down %4d, leaving %4d\n",
-           offset-1,3+offset,data_len-3-offset);
+    fprint_msg("write first %4d bytes, then move data down %4d, leaving %4d\n",
+               offset-1,3+offset,data_len-3-offset);
 #endif
 
     // First, the part before the first packet...
@@ -1442,7 +1441,7 @@ static int write_audio(TS_writer_p            output,
       if (!ignored_stream[this_stream])
       {
         ignored_stream[this_stream] = TRUE;
-        printf("Ignoring audio stream 0x%x (%d)\n",this_stream,this_stream);
+        fprint_msg("Ignoring audio stream 0x%x (%d)\n",this_stream,this_stream);
       }
     }
     (*num_audio_ignored) ++;
@@ -1472,10 +1471,10 @@ static int write_audio(TS_writer_p            output,
           {
             // We've not reported it before, and have room to remember it
             ignored_non_AC3[ii] = lookfor;
-            printf("Ignoring %sprivate_stream_1 substream 0x%x (%d)"
-                   " containing %s\n",
-                   (SUBSTREAM_IS_AUDIO(what)?"":"non-audio "),
-                   substream_index,substream_index,SUBSTREAM_STR(what));
+            fprint_msg("Ignoring %sprivate_stream_1 substream 0x%x (%d)"
+                       " containing %s\n",
+                       (SUBSTREAM_IS_AUDIO(what)?"":"non-audio "),
+                       substream_index,substream_index,SUBSTREAM_STR(what));
             break;
           }
         }
@@ -1492,8 +1491,8 @@ static int write_audio(TS_writer_p            output,
         if (!ignored_ac3_substream[substream_index])
         {
           ignored_ac3_substream[substream_index] = TRUE;
-          printf("Ignoring private_stream_1 substream 0x%x (%d) "
-                 "containing AC3\n",substream_index,substream_index);
+          fprint_msg("Ignoring private_stream_1 substream 0x%x (%d) "
+                     "containing AC3\n",substream_index,substream_index);
         }
       }
       (*num_audio_ignored) ++;
@@ -1518,18 +1517,18 @@ static int write_audio(TS_writer_p            output,
     {
       if (stream_id == PRIVATE1_AUDIO_STREAM_ID)
       {
-        printf("Audio: private stream 1,");
+        print_msg("Audio: private stream 1,");
         if (prog_data->is_dvd && is_h222_pes)
-          printf(" substream %d,",prog_data->audio_substream);
-        printf(" PID 0x%03x, AC-3 (Dolby)\n",prog_data->audio_pid);
-        printf("       %s\n       audio coding mode %s\n",
-               BSMOD_STR(bsmod,asmod),ACMOD_STR(asmod));
+          fprint_msg(" substream %d,",prog_data->audio_substream);
+        fprint_msg(" PID 0x%03x, AC-3 (Dolby)\n",prog_data->audio_pid);
+        fprint_msg("       %s\n       audio coding mode %s\n",
+                   BSMOD_STR(bsmod,asmod),ACMOD_STR(asmod));
       }
       else
       {
-        printf("Audio: stream %d, PID 0x%03x, stream type 0x%02x = %s\n",
-               stream_id & 0x1F,prog_data->audio_pid,audio_stream_type,
-               h222_stream_type_str(audio_stream_type));
+        fprint_msg("Audio: stream %d, PID 0x%03x, stream type 0x%02x = %s\n",
+                   stream_id & 0x1F,prog_data->audio_pid,audio_stream_type,
+                   h222_stream_type_str(audio_stream_type));
       }
     }
 
@@ -1563,8 +1562,7 @@ static int write_audio(TS_writer_p            output,
                             prog_data->pmt);
     if (err)
     {
-      fprintf(stderr,
-              "### Error writing TS program data before audio packet\n");
+      print_err("### Error writing TS program data before audio packet\n");
       return 1;
     }
   }
@@ -1590,8 +1588,8 @@ static int write_audio(TS_writer_p            output,
   (*num_audio_written) ++;
   if (verbose)
   {
-    printf("a");
-    fflush(stdout);
+    print_msg("a");
+    flush_msg();
   }
   return 0;
 }
@@ -1669,31 +1667,31 @@ static int _ps_to_ts(PS_reader_p          ps,
   }
 
   if (!quiet)
-    printf("Writing transport stream id 1, PMT PID 0x%02x, PCR PID 0x%02x\n",
-           prog_data->pmt_pid,prog_data->pcr_pid);
+    fprint_msg("Writing transport stream id 1, PMT PID 0x%02x, PCR PID 0x%02x\n",
+               prog_data->pmt_pid,prog_data->pcr_pid);
 
   // Read the start of the first packet (we confidently expect this
   // to be a pack header)
   err = read_PS_packet_start(ps,verbose,&posn,&stream_id);
   if (err == EOF)
   {
-    fprintf(stderr,"### Error reading first pack header\n");
-    fprintf(stderr,"    Unexpected end of PS at start of stream\n");
+    print_err("### Error reading first pack header\n");
+    print_err("    Unexpected end of PS at start of stream\n");
     return 1;
   }
   else if (err)
   {
-    fprintf(stderr,"### Error reading first pack header\n");
+    print_err("### Error reading first pack header\n");
     return 1;
   }
   count ++;
 
   if (stream_id != 0xba)
   {
-    fprintf(stderr,"### Program stream does not start with pack header\n");
-    fprintf(stderr,"    First packet has stream id %02X (",stream_id);
-    print_stream_id(stderr,stream_id);
-    fprintf(stderr,")\n");
+    print_err("### Program stream does not start with pack header\n");
+    fprint_err("    First packet has stream id %02X (",stream_id);
+    print_stream_id(FALSE,stream_id);
+    print_err(")\n");
     return 1;
   }
 
@@ -1720,7 +1718,7 @@ static int _ps_to_ts(PS_reader_p          ps,
     if (max > 0 && num_packs >= max)
     {
       if (verbose)
-        printf("Stopping after %d packs\n",num_packs);
+        fprint_msg("Stopping after %d packs\n",num_packs);
       return 0;
     }
 
@@ -1732,8 +1730,8 @@ static int _ps_to_ts(PS_reader_p          ps,
     {
       if (verbose)
       {
-        printf("PGM");
-        fflush(stdout);
+        print_msg("PGM");
+        flush_msg();
       }
       err = write_pat_and_pmt(output,
                               prog_data->transport_stream_id,
@@ -1742,7 +1740,7 @@ static int _ps_to_ts(PS_reader_p          ps,
                               prog_data->pmt);
       if (err)
       {
-        fprintf(stderr,"### Error writing out TS program data\n");
+        print_err("### Error writing out TS program data\n");
         return 1;
       }
     }
@@ -1750,9 +1748,8 @@ static int _ps_to_ts(PS_reader_p          ps,
     err = read_PS_pack_header_body(ps,&header);
     if (err)
     {
-      fprintf(stderr,
-              "### Error reading data for pack header starting at "
-              OFFSET_T_FORMAT "\n",posn);
+      fprint_err("### Error reading data for pack header starting at "
+                 OFFSET_T_FORMAT "\n",posn);
       return 1;
     }
 
@@ -1765,9 +1762,8 @@ static int _ps_to_ts(PS_reader_p          ps,
       err = read_PS_packet_body(ps,stream_id,&packet);
       if (err)
       {
-        fprintf(stderr,
-                "### Error reading system header starting at "
-                OFFSET_T_FORMAT "\n",posn);
+        fprint_err("### Error reading system header starting at "
+                   OFFSET_T_FORMAT "\n",posn);
         return 1;
       }
       num_system_headers ++;
@@ -1784,8 +1780,8 @@ static int _ps_to_ts(PS_reader_p          ps,
       err = read_PS_packet_body(ps,stream_id,&packet);
       if (err)
       {
-        fprintf(stderr,"### Error reading PS packet starting at "
-                OFFSET_T_FORMAT "\n",posn);
+        fprint_err("### Error reading PS packet starting at "
+                   OFFSET_T_FORMAT "\n",posn);
         return 1;
       }
 
@@ -1798,8 +1794,8 @@ static int _ps_to_ts(PS_reader_p          ps,
                             verbose,quiet);
           if (err)
           {
-            fprintf(stderr,"### Error writing audio packet at "
-                    OFFSET_T_FORMAT " to TS\n",posn);
+            fprint_err("### Error writing audio packet at "
+                       OFFSET_T_FORMAT " to TS\n",posn);
             return 1;
           }
         }
@@ -1810,8 +1806,8 @@ static int _ps_to_ts(PS_reader_p          ps,
                           &num_video_ignored,&num_video_written,verbose,quiet);
         if (err)
         {
-          fprintf(stderr,"### Error writing video packet at " OFFSET_T_FORMAT
-                  " to TS\n",posn);
+          fprint_err("### Error writing video packet at " OFFSET_T_FORMAT
+                     " to TS\n",posn);
           return 1;
         }
       }
@@ -1829,18 +1825,18 @@ static int _ps_to_ts(PS_reader_p          ps,
 
   clear_PS_packet(&packet);
 
-  if (verbose) printf("\n");
+  if (verbose) print_msg("\n");
   if (!quiet)
   {
-    printf("Packets (total):            %6d\n",count);
-    printf("Packs:                      %6d\n",num_packs);
-    printf("Video packets written:      %6d\n",num_video_written);
-    printf("Audio packets written:      %6d\n",num_audio_written);
+    fprint_msg("Packets (total):            %6d\n",count);
+    fprint_msg("Packs:                      %6d\n",num_packs);
+    fprint_msg("Video packets written:      %6d\n",num_video_written);
+    fprint_msg("Audio packets written:      %6d\n",num_audio_written);
 
     if (num_video_ignored > 0)
-      printf("Video packets ignored:      %6d\n",num_video_ignored);
+      fprint_msg("Video packets ignored:      %6d\n",num_video_ignored);
     if (num_audio_ignored > 0)
-      printf("Audio packets ignored:      %6d\n",num_audio_ignored);
+      fprint_msg("Audio packets ignored:      %6d\n",num_audio_ignored);
   }
   return 0;
 }

@@ -226,7 +226,7 @@ static int test1(PES_reader_p  reader,
     {
       printf("\n>> PS packet at " OFFSET_T_FORMAT " is %02x (",
              packet->posn,packet->data[3]);
-      print_stream_id(stdout,packet->data[3]);
+      print_stream_id(TRUE,packet->data[3]);
       printf(")\n");
       print_data(TRUE,"   Data",packet->data,packet->data_len,20);
 
@@ -246,7 +246,7 @@ static int test1(PES_reader_p  reader,
   {
     printf("\n>> PS packet at " OFFSET_T_FORMAT " is %02x (",
            packet->posn,packet->data[3]);
-    print_stream_id(stdout,packet->data[3]);
+    print_stream_id(TRUE,packet->data[3]);
     printf(")\n");
     print_data(TRUE,"   Data",packet->data,packet->data_len,20);
   }
@@ -284,7 +284,7 @@ static int test1(PES_reader_p  reader,
   {
     printf("\n>> PS packet at " OFFSET_T_FORMAT " is %02x (",
            packet->posn,packet->data[3]);
-    print_stream_id(stdout,packet->data[3]);
+    print_stream_id(TRUE,packet->data[3]);
     printf(")\n");
     print_data(TRUE,"   Data",packet->data,packet->data_len,20);
   }

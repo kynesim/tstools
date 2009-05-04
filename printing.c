@@ -67,6 +67,10 @@ static void fprint_message_to_stderr(const char *format, va_list arg_ptr)
 #endif
   (void) vfprintf(stderr, format, arg_ptr);
 }
+static void flush_stdout(void)
+{
+  (void) fflush(stdout);
+}
 
 // ============================================================
 // Print redirection defaults to all output going to stdout
@@ -79,12 +83,15 @@ struct print_fns
 
   void (*fprint_message_fn) (const char *format, va_list arg_ptr);
   void (*fprint_error_fn) (const char *format, va_list arg_ptr);
+
+  void (*flush_message_fn) (void);
 };
 
 static struct print_fns fns = { print_message_to_stdout,
                                 print_message_to_stdout,
                                 fprint_message_to_stdout,
-                                fprint_message_to_stdout};
+                                fprint_message_to_stdout,
+                                flush_stdout };
 
 #if DEBUG
 static void report_fns(const char *why)
@@ -185,6 +192,13 @@ extern void fprint_msg_or_err(int is_msg, const char *format, ...)
   }
   va_end(va_arg);
 }
+/*
+ * Prints the given string, as a normal message.
+ */
+extern void flush_msg(void)
+{
+  fns.flush_message_fn();
+}
 
 // ============================================================
 // Choosing what the printing functions do
@@ -201,6 +215,7 @@ extern void redirect_output_traditional(void)
   fns.print_error_fn    = &print_message_to_stderr;
   fns.fprint_message_fn = &fprint_message_to_stdout;
   fns.fprint_error_fn   = &fprint_message_to_stderr;
+  fns.flush_message_fn  = &flush_stdout;
 
 #if DEBUG
   report_fns("traditional");
@@ -220,6 +235,7 @@ extern void redirect_output_stdout(void)
   fns.print_error_fn    = &print_message_to_stdout;
   fns.fprint_message_fn = &fprint_message_to_stdout;
   fns.fprint_error_fn   = &fprint_message_to_stdout;
+  fns.flush_message_fn  = &flush_stdout;
 
 #if DEBUG
   report_fns("stdout");
@@ -243,23 +259,27 @@ extern void redirect_output_stdout(void)
  *    appropriate arguments, and writes the result out to the "normal" output.
  * * `new_fprint_error_fn` takes a printf-style format string and the
  *    appropriate arguments, and writes the result out to the "error" output.
+ * * `new_flush_msg_fn` flushes the "normal" message output.
  *
  * Returns 0 if all goes well, 1 if something goes wrong.
  */
 extern int redirect_output( void (*new_print_message_fn) (const char *message),
                             void (*new_print_error_fn) (const char *message),
                             void (*new_fprint_message_fn) (const char *format, va_list arg_ptr),
-                            void (*new_fprint_error_fn) (const char *format, va_list arg_ptr)
+                            void (*new_fprint_error_fn) (const char *format, va_list arg_ptr),
+                            void (*new_flush_msg_fn) (void)
                           )
 {
   if (new_print_message_fn == NULL || new_print_error_fn == NULL ||
-      new_fprint_message_fn == NULL || new_fprint_error_fn == NULL)
+      new_fprint_message_fn == NULL || new_fprint_error_fn == NULL ||
+      new_flush_msg_fn == NULL)
     return 1;
 
   fns.print_message_fn  = new_print_message_fn;
   fns.print_error_fn    = new_print_error_fn;
   fns.fprint_message_fn = new_fprint_message_fn;
   fns.fprint_error_fn   = new_fprint_error_fn;
+  fns.flush_message_fn  = new_flush_msg_fn;
 
 #if DEBUG
   report_fns("specific");

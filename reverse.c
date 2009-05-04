@@ -55,6 +55,7 @@
 
 #include "compat.h"
 #include "misc_defns.h"
+#include "printing_fns.h"
 #include "es_fns.h"
 #include "h262_fns.h"
 #include "nalunit_fns.h"
@@ -99,14 +100,14 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
   reverse_data_p  new = malloc(SIZEOF_REVERSE_DATA);
   if (new == NULL)
   {
-    fprintf(stderr,"### Unable to allocate reverse data datastructure\n");
+    print_err("### Unable to allocate reverse data datastructure\n");
     return 1;
   }
 
   new->start_file = malloc(newsize*sizeof(offset_t));
   if (new->start_file == NULL)
   {
-    fprintf(stderr,"### Unable to allocate reverse data array (start_file)\n");
+    print_err("### Unable to allocate reverse data array (start_file)\n");
     free(new);
     return 1;
   }
@@ -114,7 +115,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
   new->start_pkt = malloc(newsize*sizeof(int32_t));
   if (new->start_pkt == NULL)
   {
-    fprintf(stderr,"### Unable to allocate reverse data array (start_pkt)\n");
+    print_err("### Unable to allocate reverse data array (start_pkt)\n");
     free(new->start_file);
     free(new);
     return 1;
@@ -123,7 +124,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
   new->index = malloc(newsize*sizeof(uint32_t));
   if (new->index == NULL)
   {
-    fprintf(stderr,"### Unable to allocate reverse data array (index)\n");
+    print_err("### Unable to allocate reverse data array (index)\n");
     free(new->start_file);
     free(new->start_pkt);
     free(new);
@@ -132,7 +133,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
   new->data_len = malloc(newsize*sizeof(int32_t));
   if (new->data_len == NULL)
   {
-    fprintf(stderr,"### Unable to allocate reverse data array (data_len)\n");
+    print_err("### Unable to allocate reverse data array (data_len)\n");
     free(new->start_file);
     free(new->start_pkt);
     free(new->index);
@@ -150,8 +151,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
     new->seq_offset = malloc(newsize);
     if (new->seq_offset == NULL)
     {
-      fprintf(stderr,
-              "### Unable to allocate reverse data array (seq offset)\n");
+      print_err("### Unable to allocate reverse data array (seq offset)\n");
       free(new->start_file);
       free(new->start_pkt);
       free(new->index);
@@ -162,8 +162,7 @@ extern int build_reverse_data(reverse_data_p *reverse_data,
     new->afd_byte = malloc(newsize);
     if (new->afd_byte == NULL)
     {
-      fprintf(stderr,
-              "### Unable to allocate reverse data array (AFD)\n");
+      print_err("### Unable to allocate reverse data array (AFD)\n");
       free(new->seq_offset);
       free(new->start_file);
       free(new->start_pkt);
@@ -219,8 +218,8 @@ extern int add_h262_reverse_context(h262_context_p  h262,
 {
   if (reverse_data->is_h264)
   {
-    fprintf(stderr,"### Cannot add an H.262 context to an H.264 reverse data"
-            " context\n");
+    print_err("### Cannot add an H.262 context to an H.264 reverse data"
+              " context\n");
     return 1;
   }
   h262->reverse_data = reverse_data;
@@ -240,8 +239,8 @@ extern int add_access_unit_reverse_context(access_unit_context_p  context,
 {
   if (!reverse_data->is_h264)
   {
-    fprintf(stderr,"### Cannot add an H.264 access unit context to an"
-            " H.262 reverse data context\n");
+    print_err("### Cannot add an H.264 access unit context to an"
+              " H.262 reverse data context\n");
     return 1;
   }
   context->reverse_data = reverse_data;
@@ -314,14 +313,14 @@ static void debug_reverse_data_problem(reverse_data_p    reverse_data,
   tempfile = fopen(tempfilename,"a+");
   if (tempfile == NULL)
   {
-    fprintf(stderr,"### Unable to open file %s - writing diagnostics"
-            " to stderr instead\n",tempfilename);
+    fprint_err("### Unable to open file %s - writing diagnostics"
+               " to stderr instead\n",tempfilename);
     tempfile = stderr;
   }
   else
   {
     time_t  now;
-    fprintf(stderr,"### Appending diagnostics to file %s\n",tempfilename);
+    fprint_err("### Appending diagnostics to file %s\n",tempfilename);
     now = time(NULL);
     fprintf(tempfile,"** %s:\n",ctime(&now));
   }
@@ -393,20 +392,20 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
     if (cmp == 0)
     {
 #if DEBUG
-      printf("++ Added [%d] " OFFSET_T_FORMAT "/%d again\n",
-             index,start_posn.infile,start_posn.inpacket);
+      fprint_msg("++ Added [%d] " OFFSET_T_FORMAT "/%d again\n",
+                 index,start_posn.infile,start_posn.inpacket);
 #endif
       reverse_data->last_posn_added ++;
       return 0;
     }
     else
     {
-      fprintf(stderr,"### Trying to add reverse data [%d] " OFFSET_T_FORMAT
-              "/%d at index %d (again),\n    but previous entry was [%d] "
-              OFFSET_T_FORMAT "/%d\n",
-              index,start_posn.infile,start_posn.inpacket,idx,
-              reverse_data->index[idx],reverse_data->start_file[idx],
-              reverse_data->start_pkt[idx]);
+      fprint_err("### Trying to add reverse data [%d] " OFFSET_T_FORMAT
+                 "/%d at index %d (again),\n    but previous entry was [%d] "
+                 OFFSET_T_FORMAT "/%d\n",
+                 index,start_posn.infile,start_posn.inpacket,idx,
+                 reverse_data->index[idx],reverse_data->start_file[idx],
+                 reverse_data->start_pkt[idx]);
       debug_reverse_data_problem(reverse_data,index,start_posn,idx);
       return 1;
     }
@@ -419,28 +418,28 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
                                   newsize*sizeof(uint32_t));
     if (reverse_data->index == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (index)\n");
+      print_err("### Unable to extend reverse data array (index)\n");
       return 1;
     }
     reverse_data->start_file = realloc(reverse_data->start_file,
                                        newsize*sizeof(offset_t));
     if (reverse_data->start_file == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (start_file)\n");
+      print_err("### Unable to extend reverse data array (start_file)\n");
       return 1;
     }
     reverse_data->start_pkt = realloc(reverse_data->start_pkt,
                                       newsize*sizeof(int32_t));
     if (reverse_data->start_pkt == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (start_pkt)\n");
+      print_err("### Unable to extend reverse data array (start_pkt)\n");
       return 1;
     }
     reverse_data->data_len = realloc(reverse_data->data_len,
                                      newsize*sizeof(int32_t));
     if (reverse_data->data_len == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (length)\n");
+      print_err("### Unable to extend reverse data array (length)\n");
       return 1;
     }
 
@@ -449,14 +448,13 @@ extern int remember_reverse_h262_data(reverse_data_p    reverse_data,
       reverse_data->seq_offset = realloc(reverse_data->seq_offset,newsize);
       if (reverse_data->seq_offset == NULL)
       {
-        fprintf(stderr,
-                "### Unable to extend reverse data array (seq offset)\n");
+        print_err("### Unable to extend reverse data array (seq offset)\n");
         return 1;
       }
       reverse_data->afd_byte = realloc(reverse_data->afd_byte,newsize);
       if (reverse_data->afd_byte == NULL)
       {
-        fprintf(stderr,"### Unable to extend reverse data array (AFD)\n");
+        print_err("### Unable to extend reverse data array (AFD)\n");
         return 1;
       }
     }
@@ -520,20 +518,20 @@ extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
     if (cmp == 0)
     {
 #if DEBUG
-      printf("++ Added [%d] " OFFSET_T_FORMAT "/%d again\n",
-             index,start_posn.infile,start_posn.inpacket);
+      fprint_msg("++ Added [%d] " OFFSET_T_FORMAT "/%d again\n",
+                 index,start_posn.infile,start_posn.inpacket);
 #endif
       reverse_data->last_posn_added ++;
       return 0;
     }
     else
     {
-      fprintf(stderr,"### Trying to add reverse data [%d] " OFFSET_T_FORMAT
-              "/%d at index %d (again),\n    but previous entry was [%d] "
-              OFFSET_T_FORMAT "/%d\n",
-              index,start_posn.infile,start_posn.inpacket,idx,
-              reverse_data->index[idx],reverse_data->start_file[idx],
-              reverse_data->start_pkt[idx]);
+      fprint_err("### Trying to add reverse data [%d] " OFFSET_T_FORMAT
+                 "/%d at index %d (again),\n    but previous entry was [%d] "
+                 OFFSET_T_FORMAT "/%d\n",
+                 index,start_posn.infile,start_posn.inpacket,idx,
+                 reverse_data->index[idx],reverse_data->start_file[idx],
+                 reverse_data->start_pkt[idx]);
       debug_reverse_data_problem(reverse_data,index,start_posn,idx);
       return 1;
     }
@@ -546,28 +544,28 @@ extern int remember_reverse_h264_data(reverse_data_p    reverse_data,
                                   newsize*sizeof(uint32_t));
     if (reverse_data->index == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (index)\n");
+      print_err("### Unable to extend reverse data array (index)\n");
       return 1;
     }
     reverse_data->start_file = realloc(reverse_data->start_file,
                                        newsize*sizeof(offset_t));
     if (reverse_data->start_file == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (start_file)\n");
+      print_err("### Unable to extend reverse data array (start_file)\n");
       return 1;
     }
     reverse_data->start_pkt = realloc(reverse_data->start_pkt,
                                       newsize*sizeof(int32_t));
     if (reverse_data->start_pkt == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (start_pkt)\n");
+      print_err("### Unable to extend reverse data array (start_pkt)\n");
       return 1;
     }
     reverse_data->data_len = realloc(reverse_data->data_len,
                                      newsize*sizeof(int32_t));
     if (reverse_data->data_len == NULL)
     {
-      fprintf(stderr,"### Unable to extend reverse data array (length)\n");
+      print_err("### Unable to extend reverse data array (length)\n");
       return 1;
     }
     reverse_data->size = newsize;
@@ -625,8 +623,8 @@ extern int get_reverse_data(reverse_data_p    reverse_data,
 {
   if (which >= reverse_data->length || which < 0)
   {
-    fprintf(stderr,"Requested reverse data index (%d) is out of range 0-%d\n",
-            which,reverse_data->length-1);
+    fprint_err("Requested reverse data index (%d) is out of range 0-%d\n",
+               which,reverse_data->length-1);
     return 1;
   }
 
@@ -680,9 +678,9 @@ extern int collect_reverse_h262(h262_context_p h262,
 
   if (h262->reverse_data == NULL)
   {
-    fprintf(stderr,"### Unable to collect reverse data for H.262 pictures\n");
-    fprintf(stderr,"    H.262 context does not have reverse data"
-            " information attached to it\n");
+    print_err("### Unable to collect reverse data for H.262 pictures\n");
+    print_err("    H.262 context does not have reverse data"
+              " information attached to it\n");
     return 1;
   }
   
@@ -734,9 +732,9 @@ extern int collect_reverse_access_units(access_unit_context_p  acontext,
 
   if (acontext->reverse_data == NULL)
   {
-    fprintf(stderr,"### Unable to collect reverse data for access units\n");
-    fprintf(stderr,"    Access unit context does not have reverse data"
-            " information attached to it\n");
+    print_err("### Unable to collect reverse data for access units\n");
+    print_err("    Access unit context does not have reverse data"
+              " information attached to it\n");
     return 1;
   }
 
@@ -748,7 +746,7 @@ extern int collect_reverse_access_units(access_unit_context_p  acontext,
       return COMMAND_RETURN_CODE;
 
     if (verbose)
-      printf("\n");
+      print_msg("\n");
 
     err = get_next_h264_frame(acontext,quiet,verbose,&access_unit);
     if (err == EOF)
@@ -761,23 +759,23 @@ extern int collect_reverse_access_units(access_unit_context_p  acontext,
     free_access_unit(&access_unit);
 
     if (!verbose && !quiet && (access_unit_count % 5000 == 0))
-      printf("Scanned %d NAL units in %d frames,"
-             " remembered %d frames\n",
-             acontext->nac->count,access_unit_count,
-             acontext->reverse_data->length);
+      fprint_msg("Scanned %d NAL units in %d frames,"
+                 " remembered %d frames\n",
+                 acontext->nac->count,access_unit_count,
+                 acontext->reverse_data->length);
 
     // Did the logical stream end after the last access unit?
     if (acontext->end_of_stream)
     {
-      if (!quiet) printf("Found End-of-stream NAL unit\n");
+      if (!quiet) print_msg("Found End-of-stream NAL unit\n");
       break;
     }
 
     if (max > 0 && access_unit_count >= max)
     {
       if (verbose)
-        printf("\nStopping because %d frames have been read\n",
-               access_unit_count);
+        fprint_msg("\nStopping because %d frames have been read\n",
+                   access_unit_count);
       break;
     }
   }
@@ -813,7 +811,7 @@ extern int write_packet_data(WRITER   output,
                                     pid,stream_id);
     if (err)
     {
-      fprintf(stderr,"### Error writing data as TS PES packet\n");
+      print_err("### Error writing data as TS PES packet\n");
       return 1;
     }
   }
@@ -823,9 +821,9 @@ extern int write_packet_data(WRITER   output,
     size_t written = fwrite(data,1,data_len,output.es_output);
     if (written != data_len)
     {
-      fprintf(stderr,"### Error writing out data: %s\n"
-              "    Wrote %d bytes instead of %d\n",
-              strerror(errno),(int)written,data_len);
+      fprint_err("### Error writing out data: %s\n"
+                 "    Wrote %d bytes instead of %d\n",
+                 strerror(errno),(int)written,data_len);
       return 1;
     }
   }
@@ -846,7 +844,7 @@ static int write_picture_data(WRITER          output,
     err = write_h262_picture_as_TS(output.ts_output,picture,pid);
     if (err)
     {
-      fprintf(stderr,"### Error writing data as TS PES packet\n");
+      print_err("### Error writing data as TS PES packet\n");
       return 1;
     }
   }
@@ -855,7 +853,7 @@ static int write_picture_data(WRITER          output,
     err = write_h262_picture_as_ES(output.es_output,picture);
     if (err)
     {
-      fprintf(stderr,"### Error writing data as ES\n");
+      print_err("### Error writing data as ES\n");
       return 1;
     }
   }
@@ -888,7 +886,7 @@ static int read_h262_picture(h262_context_p   context,
   err = seek_ES(context->es,where);
   if (err)
   {
-    fprintf(stderr,"### Error seeking for H.262 picture to reverse\n");
+    print_err("### Error seeking for H.262 picture to reverse\n");
     return 1;
   }
 
@@ -908,7 +906,7 @@ static int read_h262_picture(h262_context_p   context,
 
   if (err)
   {
-    fprintf(stderr,"### Error reading H.262 picture when reversing\n");
+    print_err("### Error reading H.262 picture when reversing\n");
     return 1;
   }
   return 0;
@@ -939,22 +937,22 @@ static int output_sequence_header(ES_p            es,
                          NULL,NULL);
   if (err)
   {
-    fprintf(stderr,"### Error retrieving sequence header location at %d\n",
-            seq_index);
+    fprint_err("### Error retrieving sequence header location at %d\n",
+               seq_index);
     return 1;
   }
 
   if (verbose)
-    printf("Writing sequence header %2d from " OFFSET_T_FORMAT_08
-           "/%04d for %5d\n",
-           seq_index,seq_posn.infile,seq_posn.inpacket,seq_len);
+    fprint_msg("Writing sequence header %2d from " OFFSET_T_FORMAT_08
+               "/%04d for %5d\n",
+               seq_index,seq_posn.infile,seq_posn.inpacket,seq_len);
 
   err = read_ES_data(es,seq_posn,seq_len,NULL,&seq_data);
   if (err)
   {
-    fprintf(stderr,"### Error reading (sequence header) data"
-            " from " OFFSET_T_FORMAT "/%d for %d\n",
-            seq_posn.infile,seq_posn.inpacket,seq_len);
+    fprint_err("### Error reading (sequence header) data"
+               " from " OFFSET_T_FORMAT "/%d for %d\n",
+               seq_posn.infile,seq_posn.inpacket,seq_len);
     return 1;
   }
   err = write_packet_data(output,as_TS,seq_data,seq_len,reverse_data->pid,
@@ -962,8 +960,8 @@ static int output_sequence_header(ES_p            es,
   free(seq_data);
   if (err)
   {
-    fprintf(stderr,"### Error writing (sequence header) data as"
-            " TS PES packet\n");
+    print_err("### Error writing (sequence header) data as"
+              " TS PES packet\n");
     return 1;
   }
   return 0;
@@ -1009,7 +1007,7 @@ static int output_from_reverse_data(ES_p            es,
   uint32_t  uu;
 
   if (verbose)
-    printf("\nGOING BACK: offset %u, max pic index %u\n",offset,which);
+    fprint_msg("\nGOING BACK: offset %u, max pic index %u\n",offset,which);
   
   // Check we have some data to work with, so we don't try to index
   // nonexistant entries in the arrays
@@ -1021,7 +1019,7 @@ static int output_from_reverse_data(ES_p            es,
     which --;
 
   if (verbose)
-    printf("   last non-sequence header picture is %u\n",which);
+    fprint_msg("   last non-sequence header picture is %u\n",which);
 
   for (uu = 0; uu < offset; uu++)
   {
@@ -1032,7 +1030,7 @@ static int output_from_reverse_data(ES_p            es,
         which --;
     }
     if (verbose)
-      printf("   back %u to %d\n",uu,which);
+      fprint_msg("   back %u to %d\n",uu,which);
   }
 
   // And let's output that picture...
@@ -1041,9 +1039,9 @@ static int output_from_reverse_data(ES_p            es,
   if (err) return 1;
 
   if (verbose)
-    printf("Picture [%03d] %4d from " OFFSET_T_FORMAT_08
-           "/%04d for %5d\n",
-           which,index,start_posn.infile,start_posn.inpacket,num_bytes);
+    fprint_msg("Picture [%03d] %4d from " OFFSET_T_FORMAT_08
+               "/%04d for %5d\n",
+               which,index,start_posn.infile,start_posn.inpacket,num_bytes);
     
   if (with_sequence_headers)
   {
@@ -1052,8 +1050,8 @@ static int output_from_reverse_data(ES_p            es,
                                  reverse_data);
     if (err)
     {
-      fprintf(stderr,"### Error retrieving sequence header"
-              " for picture %d (offset %d)\n",which,seq_offset);
+      fprint_err("### Error retrieving sequence header"
+                 " for picture %d (offset %d)\n",which,seq_offset);
       return 1;
     }
   }
@@ -1065,15 +1063,15 @@ static int output_from_reverse_data(ES_p            es,
                             &picture);
     if (err)
     {
-      fprintf(stderr,"### Error reading H.262 picture from "
-              OFFSET_T_FORMAT "/%d for %d\n",
-              start_posn.infile,start_posn.inpacket,num_bytes);
+      fprint_err("### Error reading H.262 picture from "
+                 OFFSET_T_FORMAT "/%d for %d\n",
+                 start_posn.infile,start_posn.inpacket,num_bytes);
       return 1;
     }
     err = write_picture_data(output,as_TS,picture,reverse_data->pid);
     if (err)
     {
-      fprintf(stderr,"### Error writing picture\n");
+      print_err("### Error writing picture\n");
       free_h262_picture(&picture);
       return 1;
     }
@@ -1086,16 +1084,16 @@ static int output_from_reverse_data(ES_p            es,
     err = read_ES_data(es,start_posn,num_bytes,&data_len,&data);
     if (err)
     {
-      fprintf(stderr,"### Error reading data from " OFFSET_T_FORMAT
-              "/%d for %d\n",
-              start_posn.infile,start_posn.inpacket,num_bytes);
+      fprint_err("### Error reading data from " OFFSET_T_FORMAT
+                 "/%d for %d\n",
+                 start_posn.infile,start_posn.inpacket,num_bytes);
       return 1;
     }
     err = write_packet_data(output,as_TS,data,num_bytes,reverse_data->pid,
                             reverse_data->stream_id);
     if (err)
     {
-      fprintf(stderr,"### Error writing picture as TS PES packet\n");
+      print_err("### Error writing picture as TS PES packet\n");
       free(data);
       return 1;
     }
@@ -1248,7 +1246,7 @@ static int output_in_reverse(ES_p            es,
   if (reverse_data->length == 0)
   {
     if (!quiet)
-      printf("No data to reverse\n");
+      print_msg("No data to reverse\n");
     return 0;
   }
 
@@ -1283,11 +1281,11 @@ static int output_in_reverse(ES_p            es,
   reverse_data->first_written = start_index;
 
   if (verbose)
-    printf("REVERSING: "
-           "From index %d (picture %d) down to %d (%d), frequency %d, max %d\n",
-           start_index,reverse_data->index[start_index],
-           first_actual_picture_index,
-           reverse_data->index[first_actual_picture_index],frequency,max);
+    fprint_msg("REVERSING: "
+               "From index %d (picture %d) down to %d (%d), frequency %d, max %d\n",
+               start_index,reverse_data->index[start_index],
+               first_actual_picture_index,
+               reverse_data->index[first_actual_picture_index],frequency,max);
   
   // If `frequency` is 0, we just want to output all the pictures, backwards.
   // Otherwise, we want to output the first picture we retrieve (i.e., the
@@ -1319,33 +1317,32 @@ static int output_in_reverse(ES_p            es,
     if (err) return 1;
 
     if (verbose)
-      printf("\nPicture [%03d] %4d from " OFFSET_T_FORMAT_08
-             "/%04d for %5d\n",
-             ii,index,start_posn.infile,start_posn.inpacket,num_bytes);
+      fprint_msg("\nPicture [%03d] %4d from " OFFSET_T_FORMAT_08
+                 "/%04d for %5d\n",
+                 ii,index,start_posn.infile,start_posn.inpacket,num_bytes);
     
     // Should we write this picture out?
     if (start_posn.infile < 0)
     {
-      fprintf(stderr,
-              "!!! Start position for reverse item %d does not make sense\n"
-              "    item %d, picture %d, start posn " OFFSET_T_FORMAT
-              "/%d, num bytes %d, seq offset %d\n",ii,ii,index,
-              start_posn.infile,start_posn.inpacket,num_bytes,seq_offset);
-      fprintf(stderr,"    Ignoring item\n");
+      fprint_err("!!! Start position for reverse item %d does not make sense\n"
+                 "    item %d, picture %d, start posn " OFFSET_T_FORMAT
+                 "/%d, num bytes %d, seq offset %d\n",ii,ii,index,
+                 start_posn.infile,start_posn.inpacket,num_bytes,seq_offset);
+      print_err("    Ignoring item\n");
     }
     else if (is_h262 && seq_offset == 0)
     {
       // Sequence headers get output (if at all) when their pictures
       // are written out
-      if (verbose) printf(".. Sequence header - no need to write\n");
+      if (verbose) print_msg(".. Sequence header - no need to write\n");
     }
     else if (frequency != 0)
     {
       int  gap = last_index - index;  // gap since last picture output
       if (gap < frequency)
       {
-        if (verbose) printf("++ %d/%d DROP: [%d] %d too soon\n",
-                            gap,frequency,ii,index);
+        if (verbose) fprint_msg("++ %d/%d DROP: [%d] %d too soon\n",
+                                gap,frequency,ii,index);
       }
       else
       {
@@ -1355,9 +1352,9 @@ static int output_in_reverse(ES_p            es,
         int  pictures_wanted = pictures_seen / frequency;
         int  repeat = pictures_wanted - reverse_data->pictures_written;
         if (verbose)
-          printf("** Pictures seen = %d, wanted = %d, written = %d"
-                 " -> repeat = %d\n",pictures_seen,pictures_wanted,
-                 reverse_data->pictures_written,repeat);
+          fprint_msg("** Pictures seen = %d, wanted = %d, written = %d"
+                     " -> repeat = %d\n",pictures_seen,pictures_wanted,
+                     reverse_data->pictures_written,repeat);
         if (repeat > 0 && ((is_h262 && picture != NULL) ||
                            (!is_h262 && data != NULL)))
         {
@@ -1365,9 +1362,9 @@ static int output_in_reverse(ES_p            es,
           if (verbose)
           {
             if (repeat == 1)
-              printf(">> repeating last picture\n");
+              print_msg(">> repeating last picture\n");
             else if (repeat > 1)
-              printf(">> repeating last picture %d times\n",repeat);
+              fprint_msg(">> repeating last picture %d times\n",repeat);
           }
           for (jj=0; jj<repeat; jj++)
           {
@@ -1378,7 +1375,7 @@ static int output_in_reverse(ES_p            es,
                                       reverse_data->pid,reverse_data->stream_id);
             if (err)
             {
-              fprintf(stderr,"### Error writing (picture) data\n");
+              print_err("### Error writing (picture) data\n");
               if (data != NULL) free(data);
               if (picture != NULL) free_h262_picture(&picture);
               return 1;
@@ -1387,7 +1384,7 @@ static int output_in_reverse(ES_p            es,
           }
         }
         keep = TRUE;
-        if (verbose) printf("++ %d/%d KEEP: writing out\n",gap,frequency);
+        if (verbose) fprint_msg("++ %d/%d KEEP: writing out\n",gap,frequency);
         last_index = index;
       }
     }
@@ -1399,7 +1396,7 @@ static int output_in_reverse(ES_p            es,
     if (ii == first_actual_picture_index)
     {
       if (verbose && !keep)
-        printf("++ but KEEP first picture regardless\n");
+        print_msg("++ but KEEP first picture regardless\n");
       keep = TRUE;
     }
 
@@ -1415,8 +1412,8 @@ static int output_in_reverse(ES_p            es,
                                        reverse_data);
           if (err)
           {
-            fprintf(stderr,"### Error retrieving sequence header"
-                    " for picture %d (offset %d)\n",ii,seq_offset);
+            fprint_err("### Error retrieving sequence header"
+                       " for picture %d (offset %d)\n",ii,seq_offset);
             if (data != NULL) free(data);
             if (picture != NULL) free_h262_picture(&picture);
             return 1;
@@ -1426,9 +1423,9 @@ static int output_in_reverse(ES_p            es,
       }
 
       if (verbose)
-        printf("Writing picture [%03d] %4d from " OFFSET_T_FORMAT_08
-               "/%04d for %5d\n",
-               ii,index,start_posn.infile,start_posn.inpacket,num_bytes);
+        fprint_msg("Writing picture [%03d] %4d from " OFFSET_T_FORMAT_08
+                   "/%04d for %5d\n",
+                   ii,index,start_posn.infile,start_posn.inpacket,num_bytes);
 
       if (is_h262)
       {
@@ -1437,15 +1434,15 @@ static int output_in_reverse(ES_p            es,
                                 verbose,&picture);
         if (err)
         {
-          fprintf(stderr,"### Error reading H.262 picture from "
-                  OFFSET_T_FORMAT "/%d for %d\n",
-                  start_posn.infile,start_posn.inpacket,num_bytes);
+          fprint_err("### Error reading H.262 picture from "
+                     OFFSET_T_FORMAT "/%d for %d\n",
+                     start_posn.infile,start_posn.inpacket,num_bytes);
           return 1;
         }
         err = write_picture_data(output,as_TS,picture,reverse_data->pid);
         if (err)
         {
-          fprintf(stderr,"### Error writing picture\n");
+          print_err("### Error writing picture\n");
           free_h262_picture(&picture);
           return 1;
         }
@@ -1455,9 +1452,9 @@ static int output_in_reverse(ES_p            es,
         err = read_ES_data(es,start_posn,num_bytes,&data_len,&data);
         if (err)
         {
-          fprintf(stderr,"### Error reading data from " OFFSET_T_FORMAT
-                  "/%d for %d\n",
-                  start_posn.infile,start_posn.inpacket,num_bytes);
+          fprint_err("### Error reading data from " OFFSET_T_FORMAT
+                     "/%d for %d\n",
+                     start_posn.infile,start_posn.inpacket,num_bytes);
           if (data != NULL) free(data);
           return 1;
         }
@@ -1465,7 +1462,7 @@ static int output_in_reverse(ES_p            es,
                                 reverse_data->stream_id);
         if (err)
         {
-          fprintf(stderr,"### Error writing picture\n");
+          print_err("### Error writing picture\n");
           if (data != NULL) free(data);
           return 1;
         }
@@ -1489,15 +1486,15 @@ static int output_in_reverse(ES_p            es,
       reverse_data->last_posn_added = ii;
 
       if (verbose)
-        printf("Last written [%03d], picture index %d, last_posn_added %d\n",
-               ii,reverse_data->index[ii],ii);
+        fprint_msg("Last written [%03d], picture index %d, last_posn_added %d\n",
+                   ii,reverse_data->index[ii],ii);
     }
    
     if (max != 0 && (int)(final_index - index + 1) >= max)
     {
       if (verbose)
-        printf("Break: max %d, final_index %d, index %d\n",
-               max,final_index,index);
+        fprint_msg("Break: max %d, final_index %d, index %d\n",
+                   max,final_index,index);
       break;
     }
   }
@@ -1505,7 +1502,7 @@ static int output_in_reverse(ES_p            es,
   if (picture != NULL) free_h262_picture(&picture);
 
   if (verbose)
-    printf("END OF REVERSE\n");
+    print_msg("END OF REVERSE\n");
   return 0;
 }
 
