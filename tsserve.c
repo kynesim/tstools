@@ -57,6 +57,7 @@
 #include "accessunit_fns.h"
 #include "nalunit_fns.h"
 #include "misc_fns.h"
+#include "printing_fns.h"
 #include "tswrite_fns.h"
 #include "es_fns.h"
 #include "h262_fns.h"
@@ -213,7 +214,7 @@ static int build_stream(ES_p             es,
     err = build_h262_context(es,&(stream->u.h262));
     if (err)
     {
-      fprintf(stderr,"### Error building H.262 context\n");
+      print_err("### Error building H.262 context\n");
       return 1;
     }
   }
@@ -222,7 +223,7 @@ static int build_stream(ES_p             es,
     err = build_access_unit_context(es,&(stream->u.h264));
     if (err)
     {
-      fprintf(stderr,"### Error building H.264 access unit context\n");
+      print_err("### Error building H.264 access unit context\n");
       return 1;
     }
   }
@@ -244,7 +245,7 @@ static int build_and_attach_reverse(stream_context   stream,
   err = build_reverse_data(reverse_data,!stream.is_h262);
   if (err)
   {
-    fprintf(stderr,"### Unable to build reverse memory\n");
+    print_err("### Unable to build reverse memory\n");
     return 1;
   }
 
@@ -404,19 +405,19 @@ static void print_picture(picture  pic)
   if (pic.is_h262)
   {
     if (pic.type == 0xff)
-      printf("sequence header");
+      print_msg("sequence header");
     else
-      printf("%s picture",H262_PICTURE_CODING_STR(pic.type));
+      fprint_msg("%s picture",H262_PICTURE_CODING_STR(pic.type));
   }
   else
   {
     if (pic.u.h264->primary_start == NULL)
-      printf("<null>");
+      print_msg("<null>");
     else
-      printf("idc %d/type %d (%s)",
-             pic.u.h264->primary_start->nal_ref_idc,
-             pic.u.h264->primary_start->nal_unit_type,
-             NAL_UNIT_TYPE_STR(pic.u.h264->primary_start->nal_unit_type));
+      fprint_msg("idc %d/type %d (%s)",
+                 pic.u.h264->primary_start->nal_ref_idc,
+                 pic.u.h264->primary_start->nal_unit_type,
+                 NAL_UNIT_TYPE_STR(pic.u.h264->primary_start->nal_unit_type));
   }
 }
 
@@ -537,7 +538,7 @@ static int play_normal(stream_context  stream,
   ES_p es = EXTRACT_ES_FROM_STREAM(stream);
   PES_reader_p reader = es->reader;
 
-  if (extra_info) printf("Playing at normal speed\n");
+  if (extra_info) print_msg("Playing at normal speed\n");
 
   /* Do not write program data if we're in tsdirect mode -
    *  it'll change and some programs can't cope
@@ -584,7 +585,7 @@ static int flush_after_normal(stream_context  stream,
   PES_reader_p reader = es->reader;
   ES_offset    item_start;
 
-  if (extra_info)  printf("Flushing PES data after normal play\n");
+  if (extra_info)  print_msg("Flushing PES data after normal play\n");
 
   if (reader->packet == NULL)
   {
@@ -615,7 +616,7 @@ static int flush_after_normal(stream_context  stream,
   {
     if (stream.u.h262->last_item == NULL)
     {
-      if (extra_info) printf(".. no H.262 last item\n");
+      if (extra_info) print_msg(".. no H.262 last item\n");
       return 0;  // not much else we can do
     }
     // The ES item that comes after (and thus marks the end of) the
@@ -638,8 +639,8 @@ static int flush_after_normal(stream_context  stream,
     }
   }
 
-  if (extra_info) printf(".. last item starts at " OFFSET_T_FORMAT "/%d\n",
-                         item_start.infile,item_start.inpacket);
+  if (extra_info) fprint_msg(".. last item starts at " OFFSET_T_FORMAT "/%d\n",
+                             item_start.infile,item_start.inpacket);
 
   // We know we haven't written out any data for the current PES packet
   // - do we need to?
@@ -649,20 +650,20 @@ static int flush_after_normal(stream_context  stream,
     // already output. We should read in the next picture, and output
     // that part of it which hasn't already been output.
     picture  picture;
-    if (extra_info) printf(".. which is in the previous packet - "
-                           "reading spanning picture into next packet\n");
+    if (extra_info) print_msg(".. which is in the previous packet - "
+                              "reading spanning picture into next packet\n");
     
     err = get_next_picture(stream,verbose,quiet,&picture);
     if (err == EOF)
     {
       // Clearly there is no next picture
-      if (extra_info) printf("End of file\n");
+      if (extra_info) print_msg("End of file\n");
       return err;
     }
     else if (err)
     {
-      fprintf(stderr,"### Error trying to read into next packet whilst"
-              " flushing after normal play\n");
+      print_err("### Error trying to read into next packet whilst"
+                " flushing after normal play\n");
       return 1;
     }
     free_picture(&picture);
@@ -678,22 +679,22 @@ static int flush_after_normal(stream_context  stream,
       else
         item_start = stream.u.h264->pending_nal->unit.start_posn;
     }
-    if (extra_info) printf(".. new last item starts at " OFFSET_T_FORMAT
-                           "/%d\n",item_start.infile,item_start.inpacket);
+    if (extra_info) fprint_msg(".. new last item starts at " OFFSET_T_FORMAT
+                               "/%d\n",item_start.infile,item_start.inpacket);
   }
 
   if (item_start.inpacket == 0)
   {
     // The terminating item started at the beginning of this packet,
     // so we don't have any outstanding data to output.
-    if (extra_info) printf(".. so there's no need to output any of this"
-                           " packet\n");
+    if (extra_info) print_msg(".. so there's no need to output any of this"
+                              " packet\n");
     return 0;
   }
 
   // We need to output whatever came before the terminating item
-  if (extra_info) printf(".. so need to output %d bytes of this"
-                         " packet\n",item_start.inpacket);
+  if (extra_info) fprint_msg(".. so need to output %d bytes of this"
+                             " packet\n",item_start.inpacket);
 
   err = write_ES_as_TS_PES_packet(output,
                                   reader->packet->es_data,
@@ -702,8 +703,7 @@ static int flush_after_normal(stream_context  stream,
                                   DEFAULT_VIDEO_STREAM_ID);
   if (err)
   {
-    fprintf(stderr,
-            "### Error flushing start of PES packet after normal play\n");
+    print_err("### Error flushing start of PES packet after normal play\n");
     return 1;
   }
   return 0;
@@ -725,7 +725,7 @@ static int output_next_reference_picture(stream_context  stream,
   int      err;
   picture  picture;
 
-  if (extra_info)  printf(".. outputting next reference picture\n");
+  if (extra_info)  print_msg(".. outputting next reference picture\n");
   
   for (;;)
   {
@@ -733,20 +733,20 @@ static int output_next_reference_picture(stream_context  stream,
     if (err == EOF)
     {
       // Clearly there is no next picture - so we can't output it
-      if (extra_info) printf("End of file\n");
+      if (extra_info) print_msg("End of file\n");
       return err;
     }
     else if (err)
     {
-      fprintf(stderr,"### Error trying to resynchronise after fast forward\n");
+      print_err("### Error trying to resynchronise after fast forward\n");
       return 1;
     }
 
     if (extra_info)
     {
-      printf(".. read next picture: ");
+      print_msg(".. read next picture: ");
       print_picture(picture);
-      printf("\n");
+      print_msg("\n");
     }
 
     if (is_non_frame(picture))
@@ -755,11 +755,11 @@ static int output_next_reference_picture(stream_context  stream,
       // it as it will in practise be followed by an I picture
       // A sequence end will be followed by a sequence header, so we can
       // treat it similarly
-      if (extra_info) printf(".. writing it out\n");
+      if (extra_info) print_msg(".. writing it out\n");
       err = write_picture_as_TS(stream,output,picture);
       if (err)
       {
-        fprintf(stderr,"### Error writing out picture list\n");
+        print_err("### Error writing out picture list\n");
         free_picture(&picture);
         return 1;
       }
@@ -767,18 +767,18 @@ static int output_next_reference_picture(stream_context  stream,
     else if (( I_only && is_I_or_IDR_picture(picture)) ||
              (!I_only && is_reference_picture(picture)))
     {
-      if (extra_info) printf(".. picture acceptable\n");
+      if (extra_info) print_msg(".. picture acceptable\n");
       break;
     }
     free_picture(&picture);
   }
   // So we've got something sensible to continue with
   // - don't forget to write it out!
-  if (extra_info) printf(".. writing it out\n");
+  if (extra_info) print_msg(".. writing it out\n");
   err = write_picture_as_TS(stream,output,picture);
   if (err)
   {
-    fprintf(stderr,"### Error writing out picture list\n");
+    print_err("### Error writing out picture list\n");
     free_picture(&picture);
     return 1;
   }
@@ -805,7 +805,7 @@ static int resync_after_reverse(stream_context  stream,
   int   err;
   ES_p  es = EXTRACT_ES_FROM_STREAM(stream);
 
-  if (extra_info)  printf("\nResynchronising PES packets after reverse\n");
+  if (extra_info)  print_msg("\nResynchronising PES packets after reverse\n");
 
   // When reversing, data is read directly from the required locations
   // in the input file, without using the normal "get next picture"
@@ -818,11 +818,11 @@ static int resync_after_reverse(stream_context  stream,
   reset_stream(stream);
 
   if (extra_info)
-    printf("   triple byte = %02x,%02x,%02x, next byte to be from "
-           OFFSET_T_FORMAT "/%d\n",
-           es->prev2_byte,es->prev1_byte,es->cur_byte,
-           es->posn_of_next_byte.infile,
-           es->posn_of_next_byte.inpacket);
+    fprint_msg("   triple byte = %02x,%02x,%02x, next byte to be from "
+               OFFSET_T_FORMAT "/%d\n",
+               es->prev2_byte,es->prev1_byte,es->cur_byte,
+               es->posn_of_next_byte.infile,
+               es->posn_of_next_byte.inpacket);
 
   // @@@ The following is not true, methinks, as we've been outputting IDR
   //     and I frames (since there are not enough I frames, in hp-trail
@@ -847,8 +847,8 @@ static int resync_after_reverse(stream_context  stream,
     return EOF;
   else if (err)
   {
-    fprintf(stderr,"### Error outputting next reference picture,"
-            " after reversing\n");
+    print_err("### Error outputting next reference picture,"
+              " after reversing\n");
     return 1;
   }
   return 0;
@@ -866,7 +866,7 @@ static int resync_after_reverse(stream_context  stream,
  */
 static int rewind_stream(stream_context  stream)
 {
-  if (extra_info)  printf("\nRewinding\n");
+  if (extra_info)  print_msg("\nRewinding\n");
   if (stream.is_h262)
     return rewind_h262_context(stream.u.h262);
   else
@@ -891,7 +891,7 @@ static int resync_after_filter(stream_context  stream,
 {
   int  err;
 
-  if (extra_info)  printf("\nResynchronising after fast fast forward\n");
+  if (extra_info)  print_msg("\nResynchronising after fast fast forward\n");
   
   // Fast forwarding with "filter" drops reference frames.
   // B pictures refer "back" (in decoding order) to two the last two
@@ -923,8 +923,8 @@ static int resync_after_filter(stream_context  stream,
     return EOF;
   else if (err)
   {
-    fprintf(stderr,"### Error outputting next reference picture,"
-            " after fast forwarding\n");
+    print_err("### Error outputting next reference picture,"
+              " after fast forwarding\n");
     return 1;
   }
   return 0;
@@ -951,7 +951,7 @@ static int back_to_normal(stream_context  stream,
   PES_reader_p reader = es->reader;
   ES_offset    item_start;
 
-  if (extra_info)  printf("\nResynchronising PES packets for normal play\n");
+  if (extra_info)  print_msg("\nResynchronising PES packets for normal play\n");
 
 
   if (reader->packet == NULL)
@@ -992,8 +992,8 @@ static int back_to_normal(stream_context  stream,
   {
     if (stream.u.h262->last_item == NULL)
     {
-      if (extra_info) printf(".. no H.262 last item, presumably been"
-                             " reversing\n");
+      if (extra_info) print_msg(".. no H.262 last item, presumably been"
+                                " reversing\n");
       item_start = es->posn_of_next_byte;
       // In which case, we've already output the data for our "last" item
       // and only some of the following cases can occur...
@@ -1024,16 +1024,16 @@ static int back_to_normal(stream_context  stream,
   
   if (extra_info)
   {
-    printf(".. posn_of_next_byte is " OFFSET_T_FORMAT "/%d\n",
-           es->posn_of_next_byte.infile,es->posn_of_next_byte.inpacket);
+    fprint_msg(".. posn_of_next_byte is " OFFSET_T_FORMAT "/%d\n",
+               es->posn_of_next_byte.infile,es->posn_of_next_byte.inpacket);
 
     if (stream.is_h262)
     {
       if (stream.u.h262->last_item)
       {
-        printf("   last item starts at " OFFSET_T_FORMAT "/%d,\n",
-               stream.u.h262->last_item->unit.start_posn.infile,
-               stream.u.h262->last_item->unit.start_posn.inpacket);
+        fprint_msg("   last item starts at " OFFSET_T_FORMAT "/%d,\n",
+                   stream.u.h262->last_item->unit.start_posn.infile,
+                   stream.u.h262->last_item->unit.start_posn.inpacket);
         print_data(TRUE,"   last item",
                    stream.u.h262->last_item->unit.data,
                    stream.u.h262->last_item->unit.data_len,20);
@@ -1043,22 +1043,22 @@ static int back_to_normal(stream_context  stream,
     {
       if (stream.u.h264->pending_nal)
       {
-        printf("   last item starts at " OFFSET_T_FORMAT "/%d,\n",
-               stream.u.h264->pending_nal->unit.start_posn.infile,
-               stream.u.h264->pending_nal->unit.start_posn.inpacket);
+        fprint_msg("   last item starts at " OFFSET_T_FORMAT "/%d,\n",
+                   stream.u.h264->pending_nal->unit.start_posn.infile,
+                   stream.u.h264->pending_nal->unit.start_posn.inpacket);
         print_data(TRUE,"   pending NAL unit",
                    stream.u.h264->pending_nal->unit.data,
                    stream.u.h264->pending_nal->unit.data_len,20);
       }
     }
-    printf(".. i.e., last item starts at " OFFSET_T_FORMAT "/%d\n",
-           item_start.infile,item_start.inpacket);
-    printf("   PES ES data length is %d\n"
-           "   difference is %d\n",
-           reader->packet->es_data_len,
-           reader->packet->es_data_len-item_start.inpacket);
-    printf("   reader->packet->posn is " OFFSET_T_FORMAT "\n",
-           reader->packet->posn);
+    fprint_msg(".. i.e., last item starts at " OFFSET_T_FORMAT "/%d\n",
+               item_start.infile,item_start.inpacket);
+    fprint_msg("   PES ES data length is %d\n"
+               "   difference is %d\n",
+               reader->packet->es_data_len,
+               reader->packet->es_data_len-item_start.inpacket);
+    fprint_msg("   reader->packet->posn is " OFFSET_T_FORMAT "\n",
+               reader->packet->posn);
   }
 
   if (item_start.infile < reader->packet->posn)
@@ -1076,8 +1076,8 @@ static int back_to_normal(stream_context  stream,
     if (stream.is_h262)
     {
       length_wanted = stream.u.h262->last_item->unit.data_len - curposn;
-      if (extra_info) printf(".. next byte is %d, so length wanted is %d"
-                             " - outputting it\n",curposn,length_wanted);
+      if (extra_info) fprint_msg(".. next byte is %d, so length wanted is %d"
+                                 " - outputting it\n",curposn,length_wanted);
       err = write_ES_as_TS_PES_packet(output,
                                       stream.u.h262->last_item->unit.data,
                                       length_wanted,
@@ -1089,8 +1089,8 @@ static int back_to_normal(stream_context  stream,
       // @@@ For H.264, do we know, when we get here, that we always
       // have a pending NAL unit?
       length_wanted = stream.u.h264->pending_nal->unit.data_len - curposn;
-      if (extra_info) printf(".. next byte is %d, so length wanted is %d"
-                             " - outputting it\n",curposn,length_wanted);
+      if (extra_info) fprint_msg(".. next byte is %d, so length wanted is %d"
+                                 " - outputting it\n",curposn,length_wanted);
       err = write_ES_as_TS_PES_packet(output,
                                       stream.u.h264->pending_nal->unit.data,
                                       length_wanted,
@@ -1099,8 +1099,7 @@ static int back_to_normal(stream_context  stream,
     }
     if (err)
     {
-      fprintf(stderr,
-              "### Error flushing (start of) last item after fast forward\n");
+      print_err("### Error flushing (start of) last item after fast forward\n");
       return 1;
     }
     // That leaves us with the whole of this packet still to output,
@@ -1112,7 +1111,7 @@ static int back_to_normal(stream_context  stream,
     // Said last item started at the start of this PES packet
     // so there's nothing to flush, and we can leave the automated
     // mechanism to sort out this packet, as above
-    if (extra_info) printf(".. i.e., at start of packet, nothing to do\n");
+    if (extra_info) print_msg(".. i.e., at start of packet, nothing to do\n");
   }
   else
   {
@@ -1121,7 +1120,7 @@ static int back_to_normal(stream_context  stream,
     int32_t length_wanted = reader->packet->es_data_len - start_offset;
     if (extra_info)
     {
-      printf(".. so output %d bytes at end of PES packet\n",length_wanted);
+      fprint_msg(".. so output %d bytes at end of PES packet\n",length_wanted);
       print_data(TRUE,".. end bytes",&reader->packet->es_data[start_offset],
                  length_wanted,20);
     }
@@ -1133,8 +1132,7 @@ static int back_to_normal(stream_context  stream,
                                     DEFAULT_VIDEO_STREAM_ID);
     if (err)
     {
-      fprintf(stderr,
-              "### Error flushing rest of PES packet after fast forward\n");
+      print_err("### Error flushing rest of PES packet after fast forward\n");
       return 1;
     }
 
@@ -1183,7 +1181,7 @@ static int play_stripped(stream_context  stream,
       if (err) return err;
     }
 
-  if (extra_info) printf("Fast forwarding (strip)\n");
+  if (extra_info) print_msg("Fast forwarding (strip)\n");
 
   for (;;)
   {
@@ -1202,7 +1200,7 @@ static int play_stripped(stream_context  stream,
     }
     else if (err)
     {
-      fprintf(stderr,"### Error getting next stripped picture\n");
+      print_err("### Error getting next stripped picture\n");
       return 1;
     }
     if (with_seq_hdrs && !is_null_picture(seq_hdr))
@@ -1210,7 +1208,7 @@ static int play_stripped(stream_context  stream,
       err = write_picture_as_TS(stream,output,seq_hdr);
       if (err)
       {
-        fprintf(stderr,"### Error writing out sequence header\n");
+        print_err("### Error writing out sequence header\n");
         free_picture(&this_picture);
         return 1;
       }
@@ -1218,7 +1216,7 @@ static int play_stripped(stream_context  stream,
     err = write_picture_as_TS(stream,output,this_picture);
     if (err)
     {
-      fprintf(stderr,"### Error writing out picture list\n");
+      print_err("### Error writing out picture list\n");
       free_picture(&this_picture);
       return 1;
     }
@@ -1273,7 +1271,7 @@ static int play_filtered(stream_context  stream,
       if (err) return err;
     }
 
-  if (extra_info) printf("Fast forwarding (filter)\n");
+  if (extra_info) print_msg("Fast forwarding (filter)\n");
 
   unset_picture(stream.is_h262,&this_picture);
   unset_picture(stream.is_h262,&last_picture);
@@ -1296,7 +1294,7 @@ static int play_filtered(stream_context  stream,
     }
     else if (err)
     {
-      fprintf(stderr,"### Error getting next filtered picture\n");
+      print_err("### Error getting next filtered picture\n");
       free_picture(&last_picture);
       return 1;
     }
@@ -1313,7 +1311,7 @@ static int play_filtered(stream_context  stream,
         err = write_picture_as_TS(stream,output,seq_hdr);
         if (err)
         {
-          fprintf(stderr,"### Error writing out sequence header\n");
+          print_err("### Error writing out sequence header\n");
           free_picture(&this_picture);
           free_picture(&last_picture);
           return 1;
@@ -1322,7 +1320,7 @@ static int play_filtered(stream_context  stream,
       err = write_picture_as_TS(stream,output,this_picture);
       if (err)
       {
-        fprintf(stderr,"### Error writing out picture\n");
+        print_err("### Error writing out picture\n");
         free_picture(&this_picture);
         free_picture(&last_picture);
         return 1;
@@ -1356,7 +1354,7 @@ static int play_filtered(stream_context  stream,
                                          reverse_data);
     if (err && err != COMMAND_RETURN_CODE)
     {
-      fprintf(stderr,"### Error outputting 'last' picture at EOF\n");
+      print_err("### Error outputting 'last' picture at EOF\n");
       return err;
     }
     // Which means we need to adjust back to normal playing *this* way
@@ -1418,7 +1416,7 @@ static int skip_forwards(stream_context  stream,
       if (err) return err;
     }
 
-  if (extra_info) printf("Skipping forwards (%d frames)\n",num_to_skip);
+  if (extra_info) fprint_msg("Skipping forwards (%d frames)\n",num_to_skip);
 
   unset_picture(stream.is_h262,&this_picture);
 
@@ -1434,7 +1432,7 @@ static int skip_forwards(stream_context  stream,
       return err;
     else
     {
-      fprintf(stderr,"### Error skipping pictures\n");
+      print_err("### Error skipping pictures\n");
       return 1;
     }
   }
@@ -1450,7 +1448,7 @@ static int skip_forwards(stream_context  stream,
                                          reverse_data);
     if (err)
     {
-      fprintf(stderr,"### Error outputting 'last' picture at EOF\n");
+      print_err("### Error outputting 'last' picture at EOF\n");
       tswrite_set_command_atomic(output,FALSE);
       return err;
     }
@@ -1470,7 +1468,7 @@ static int skip_forwards(stream_context  stream,
     // picture back
     if (is_null_picture(this_picture))
     {
-      fprintf(stderr,"### Skipping returned a NULL picture\n");
+      print_err("### Skipping returned a NULL picture\n");
       free_picture(&this_picture);
       tswrite_set_command_atomic(output,FALSE);
       return 1;
@@ -1480,7 +1478,7 @@ static int skip_forwards(stream_context  stream,
       err = write_picture_as_TS(stream,output,seq_hdr);
       if (err)
       {
-        fprintf(stderr,"### Error writing out sequence header\n");
+        print_err("### Error writing out sequence header\n");
         free_picture(&this_picture);
         tswrite_set_command_atomic(output,FALSE);
         return 1;
@@ -1489,7 +1487,7 @@ static int skip_forwards(stream_context  stream,
     err = write_picture_as_TS(stream,output,this_picture);
     if (err)
     {
-      fprintf(stderr,"### Error writing out picture\n");
+      print_err("### Error writing out picture\n");
       free_picture(&this_picture);
       tswrite_set_command_atomic(output,FALSE);
       return 1;
@@ -1508,11 +1506,11 @@ static int skip_forwards(stream_context  stream,
 #if TIME_SKIPPING
   end_clock = clock();
   end_time = time(NULL);
-  printf("Started  skipping at %s",ctime(&start_time));
-  printf("Finished skipping at %s",ctime(&end_time));
-  printf("Elapsed time %.3fs\n",difftime(end_time,start_time));
-  printf("Process time %.3fs\n",
-         ((double)(end_clock-start_clock)/CLOCKS_PER_SEC));
+  fprint_msg("Started  skipping at %s",ctime(&start_time));
+  fprint_msg("Finished skipping at %s",ctime(&end_time));
+  fprint_msg("Elapsed time %.3fs\n",difftime(end_time,start_time));
+  fprint_msg("Process time %.3fs\n",
+             ((double)(end_clock-start_clock)/CLOCKS_PER_SEC));
 #endif
 
   // Remember to allow future commands to be interrupted
@@ -1549,7 +1547,7 @@ static int skip_backwards(stream_context  stream,
       if (err) return err;
     }
 
-  if (extra_info) printf("Skipping backwards (%d frames)\n",num_to_skip);
+  if (extra_info) fprint_msg("Skipping backwards (%d frames)\n",num_to_skip);
 
   // Say that we don't want our skipping to be interrupted by the next command
   tswrite_set_command_atomic(output,TRUE);
@@ -1558,7 +1556,7 @@ static int skip_backwards(stream_context  stream,
                                 -1,num_to_skip,reverse_data);
   if (err && err != COMMAND_RETURN_CODE)
   {
-    fprintf(stderr,"### Error skipping backwards\n");
+    print_err("### Error skipping backwards\n");
     tswrite_set_command_atomic(output,FALSE);
     return err;
   }
@@ -1597,7 +1595,7 @@ static int play_reverse(stream_context   stream,
   ES_p es = EXTRACT_ES_FROM_STREAM(stream);
   PES_reader_p reader = es->reader;
 
-  if (extra_info) printf("Reversing\n");
+  if (extra_info) print_msg("Reversing\n");
 
   if (tsdirect)
     {
@@ -1613,17 +1611,17 @@ static int play_reverse(stream_context   stream,
     int ii;
     for (ii=0; ii<reverse_data->length; ii++)
       if (stream.is_h262 && reverse_data->seq_offset[ii] == 0)
-        printf("%3d: seqh at " OFFSET_T_FORMAT "/%d for %d\n",
-               ii,
-               reverse_data->start_file[ii],
-               reverse_data->start_pkt[ii],
-               reverse_data->data_len[ii]);
+        fprint_msg("%3d: seqh at " OFFSET_T_FORMAT "/%d for %d\n",
+                   ii,
+                   reverse_data->start_file[ii],
+                   reverse_data->start_pkt[ii],
+                   reverse_data->data_len[ii]);
       else
-        printf("%3d: %4d at " OFFSET_T_FORMAT "/%d for %d\n",
-               ii,reverse_data->index[ii],
-               reverse_data->start_file[ii],
-               reverse_data->start_pkt[ii],
-               reverse_data->data_len[ii]);
+        fprint_msg("%3d: %4d at " OFFSET_T_FORMAT "/%d for %d\n",
+                   ii,reverse_data->index[ii],
+                   reverse_data->start_file[ii],
+                   reverse_data->start_pkt[ii],
+                   reverse_data->data_len[ii]);
   }
 #endif
 
@@ -1631,7 +1629,7 @@ static int play_reverse(stream_context   stream,
                                 -1,num_reverse,reverse_data);
   if (err && err != COMMAND_RETURN_CODE)
   {
-    fprintf(stderr,"### Error outputting reversed data\n");
+    print_err("### Error outputting reversed data\n");
     return err;
   }
 
@@ -1675,14 +1673,14 @@ static int obey_command(char            this_command,
   for (;;)
   {
 #ifdef DEBUG_COMMANDS
-    printf("__ obeying command '%c'\n",this_command);
+    fprint_msg("__ obeying command '%c'\n",this_command);
 #endif
     switch (this_command)
     {
     case COMMAND_NORMAL:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Forwards, normal speed\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Forwards, normal speed\n",
+                             tswriter->where.socket,which);
       if (last_command != COMMAND_NORMAL && started[which])
       {
         err = back_to_normal(stream[which],tswriter,tsdirect);
@@ -1698,17 +1696,17 @@ static int obey_command(char            this_command,
       break;
 
     case COMMAND_PAUSE:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Pause\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Pause\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       err = wait_for_command(tswriter);
       break;
 
     case COMMAND_FAST:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Fast forwards\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Fast forwards\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_stripped(stream[which],scontext[which],tswriter,
@@ -1716,9 +1714,9 @@ static int obey_command(char            this_command,
       break;
 
     case COMMAND_FAST_FAST:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Fast fast forwards\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Fast fast forwards\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_filtered(stream[which],fcontext[which],tswriter,
@@ -1726,9 +1724,9 @@ static int obey_command(char            this_command,
       break;
 
     case COMMAND_REVERSE:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Reverse\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Reverse\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_reverse(stream[which],tswriter,verbose,quiet,
@@ -1736,16 +1734,16 @@ static int obey_command(char            this_command,
                          rfrequency,0,reverse_data[which]);
       if (err == 0)
       {
-        if (!quiet) printf("Start of file %d\n",which);
+        if (!quiet) fprint_msg("Start of file %d\n",which);
         this_command = COMMAND_PAUSE;
         break;
       }
       break;
 
     case COMMAND_FAST_REVERSE:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Reverse (faster)\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Reverse (faster)\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = play_reverse(stream[which],tswriter,verbose,quiet,
@@ -1753,16 +1751,16 @@ static int obey_command(char            this_command,
                          2*rfrequency,0,reverse_data[which]);
       if (err == 0)
       {
-        if (!quiet) printf("Start of file %d\n",which);
+        if (!quiet) fprint_msg("Start of file %d\n",which);
         this_command = COMMAND_PAUSE;
         break;
       }
       break;
       
     case COMMAND_SKIP_FORWARD:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Skip forwards 10 seconds\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Skip forwards 10 seconds\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_forwards(stream[which],tswriter,
@@ -1772,9 +1770,9 @@ static int obey_command(char            this_command,
       break;
       
     case COMMAND_SKIP_BACKWARD:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Skip backwards 10 seconds\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Skip backwards 10 seconds\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_backwards(stream[which],tswriter,SMALL_SKIP_DISTANCE,
@@ -1783,9 +1781,9 @@ static int obey_command(char            this_command,
       break;
       
     case COMMAND_SKIP_FORWARD_LOTS:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Skip forwards 3 minutes\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Skip forwards 3 minutes\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_forwards(stream[which],tswriter,
@@ -1795,9 +1793,9 @@ static int obey_command(char            this_command,
       break;
       
     case COMMAND_SKIP_BACKWARD_LOTS:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Skip backwards 3 minutes\n",
-                         tswriter->where.socket,which);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Skip backwards 3 minutes\n",
+                             tswriter->where.socket,which);
       stop_server_output(reader[which]);
       set_PES_reader_video_only(reader[which],TRUE);
       err = skip_backwards(stream[which],tswriter,BIG_SKIP_DISTANCE,
@@ -1846,13 +1844,13 @@ static int obey_command(char            this_command,
       goto change_stream;
 
     change_stream:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Select file\n",
-                         tswriter->where.socket,new_stream);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Select file\n",
+                             tswriter->where.socket,new_stream);
       if (reader[new_stream] == NULL)
       {
-        printf(".. No input file defined for stream %d - ignored\n",
-               new_stream);
+        fprint_msg(".. No input file defined for stream %d - ignored\n",
+                   new_stream);
       }
       else
       {
@@ -1882,13 +1880,13 @@ static int obey_command(char            this_command,
       break;
       
     case COMMAND_QUIT:
-      if (!quiet) printf("****************************************\n"
-                         "** [%3d] File %d: Quitting\n",
-                         which,tswriter->where.socket);
+      if (!quiet) fprint_msg("****************************************\n"
+                             "** [%3d] File %d: Quitting\n",
+                             which,tswriter->where.socket);
       return EOF;
       
     default:
-      fprintf(stderr,"!!! Command '%c' ignored\n",this_command);
+      fprint_err("!!! Command '%c' ignored\n",this_command);
       this_command = COMMAND_NORMAL;
       break;
     }
@@ -1900,11 +1898,11 @@ static int obey_command(char            this_command,
     case COMMAND_RETURN_CODE:
       break;
     case EOF:
-      if (!quiet) printf("End of file %d\n",which);
+      if (!quiet) fprint_msg("End of file %d\n",which);
       this_command = COMMAND_PAUSE;
       break;
     default:
-      fprintf(stderr,"!!! Error playing file %d - pausing\n",which);
+      fprint_err("!!! Error playing file %d - pausing\n",which);
       this_command = COMMAND_PAUSE;
       break;
       // return 1;
@@ -1956,13 +1954,13 @@ static int play(int             default_index,
   // Select our current PES reader
   if (reader[which] == NULL)
   {
-    fprintf(stderr,"### Default input stream %d has no associated file\n",
-            which);
+    fprint_err("### Default input stream %d has no associated file\n",
+               which);
     return 1;
   }
 
   if (!quiet)
-    printf("Starting with input stream %d\n",which);
+    fprint_msg("Starting with input stream %d\n",which);
 
 #if 0  // Shouldn't need to do this, as any command that *does* anything will output it
   // Ensure we output program data before anything else "sensible"
@@ -1980,8 +1978,8 @@ static int play(int             default_index,
     this_command = tswriter->command;
 
 #ifdef DEBUG_COMMANDS
-    printf("xx Command is '%c', last command '%c'\n",
-           this_command,last_command);
+    fprint_msg("xx Command is '%c', last command '%c'\n",
+               this_command,last_command);
 #endif
 
     err = obey_command(this_command,last_command,&which,
@@ -1992,7 +1990,7 @@ static int play(int             default_index,
       return 0;  // The user gave the 'q'uit command
     else if (err)
     {
-      fprintf(stderr,"### Error terminated play\n");
+      print_err("### Error terminated play\n");
       return 1;
     }
     last_command = this_command;
@@ -2020,7 +2018,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
   filter_context  scontext[MAX_INPUT_FILES];
 
   if (!quiet)
-    printf("\nSetting up environment\n");
+    print_msg("\nSetting up environment\n");
 
   // Request that packets be written out to the TS writer as a "side effect" of
   // reading them in. The default is to write PES packets (just for the video
@@ -2067,7 +2065,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
       continue;
 
     if (!quiet)
-      printf("Setting up stream %d\n",ii);
+      fprint_msg("Setting up stream %d\n",ii);
     
 
     // Wrap our PES stream up as an ES stream
@@ -2080,8 +2078,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     err = build_elementary_stream_PES(reader[ii],&es[ii]);
     if (err)
     {
-      fprintf(stderr,
-              "### Error trying to build ES reader for PES reader %d\n",ii);
+      fprint_err("### Error trying to build ES reader for PES reader %d\n",ii);
       goto tidy_up;
     }
 
@@ -2089,7 +2086,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     err = build_stream(es[ii],!(reader[ii]->is_h264),ii+1,&stream[ii]);
     if (err)
     {
-      fprintf(stderr,"### Unable to build input stream %d\n",ii);
+      fprint_err("### Unable to build input stream %d\n",ii);
       goto tidy_up;
     }
 
@@ -2097,7 +2094,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     err = build_and_attach_reverse(stream[ii],&reverse_data[ii]);
     if (err)
     {
-      fprintf(stderr,"### Unable to build reverse memory for stream %d\n",ii);
+      fprint_err("### Unable to build reverse memory for stream %d\n",ii);
       goto tidy_up;
     }
 
@@ -2113,7 +2110,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     err = build_filter_context(stream[ii],FALSE,context->ffrequency,&fcontext[ii]);
     if (err)
     {
-      fprintf(stderr,"### Unable to build filter context for stream %d\n",ii);
+      fprint_err("### Unable to build filter context for stream %d\n",ii);
       goto tidy_up;
     }
 
@@ -2121,7 +2118,7 @@ static int play_pes_packets(PES_reader_p       reader[MAX_INPUT_FILES],
     err = build_filter_context(stream[ii],TRUE,0,&scontext[ii]);
     if (err)
     {
-      fprintf(stderr,"### Unable to build strip context for stream %d\n",ii);
+      fprint_err("### Unable to build strip context for stream %d\n",ii);
       goto tidy_up;
     }
   }
@@ -2175,7 +2172,7 @@ static int test_play(PES_reader_p    reader,
   if (num_fast == 0 && num_faster == 0 && num_reverse == 0)
   {
     // Special case -- just play through
-    printf(">> Just playing at normal speed\n");
+    print_msg(">> Just playing at normal speed\n");
     set_PES_reader_video_only(reader,video_only);
     err = play_normal(stream,tswriter,verbose,quiet,tsdirect,0,reverse_data);
     if (err == EOF)
@@ -2184,13 +2181,13 @@ static int test_play(PES_reader_p    reader,
       return err;
   }
 
-  printf(">> Going through sequence twice\n");
+  print_msg(">> Going through sequence twice\n");
 
   for (ii=0; ii<2; ii++)
   {
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Normal speed for %d\n",num_normal);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Normal speed for %d\n",num_normal);
     if (started)
     {
       err = back_to_normal(stream,tswriter,tsdirect);
@@ -2214,8 +2211,8 @@ static int test_play(PES_reader_p    reader,
     stop_server_output(reader);
     
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Fast forward for %d\n",num_fast);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Fast forward for %d\n",num_fast);
     set_PES_reader_video_only(reader,TRUE);
     err = play_stripped(stream,scontext,tswriter,verbose,quiet,tsdirect,
                         num_fast,
@@ -2226,8 +2223,8 @@ static int test_play(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Normal speed for %d\n",num_normal);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Normal speed for %d\n",num_normal);
 
     err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
@@ -2248,8 +2245,8 @@ static int test_play(PES_reader_p    reader,
     stop_server_output(reader);
     
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Faster forward for %d\n",num_faster);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Faster forward for %d\n",num_faster);
     set_PES_reader_video_only(reader,TRUE);
     err = play_filtered(stream,fcontext,tswriter,verbose,quiet,tsdirect,
                         num_faster,
@@ -2260,8 +2257,8 @@ static int test_play(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Normal speed for %d\n",num_normal);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Normal speed for %d\n",num_normal);
 
     err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
@@ -2282,8 +2279,8 @@ static int test_play(PES_reader_p    reader,
     stop_server_output(reader);
     
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Reverse for %d\n",num_reverse);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Reverse for %d\n",num_reverse);
     set_PES_reader_video_only(reader,TRUE);
     err = play_reverse(stream,tswriter,verbose,quiet,rfrequency,
                        tsdirect,
@@ -2294,11 +2291,11 @@ static int test_play(PES_reader_p    reader,
       return 1;
   }
 
-  if (verbose || extra_info) printf("\n\n");
+  if (verbose || extra_info) print_msg("\n\n");
   if (err == EOF)
-    printf("** End of file\n");
+    print_msg("** End of file\n");
   else
-    printf(">> End of sequences\n");
+    print_msg(">> End of sequences\n");
   return 0;
 }
 
@@ -2325,15 +2322,15 @@ static int test_skip(PES_reader_p    reader,
   int  started = FALSE;
   int  ii;
   
-  printf(">> Going through sequence once\n");
+  print_msg(">> Going through sequence once\n");
 
   for (ii=0; ii<1; ii++)
   {
-    printf("\n>> Iteration %d\n\n",ii);
+    fprint_msg("\n>> Iteration %d\n\n",ii);
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Normal speed for %d\n",num_normal);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Normal speed for %d\n",num_normal);
     if (started)
     {
       err = back_to_normal(stream,tswriter,tsdirect);
@@ -2355,8 +2352,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Skip forwards\n");
+    if (verbose || extra_info) print_msg("\n\n");
+    print_msg("** Skip forwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_forwards(stream,tswriter,fcontext,with_seq_hdrs,
@@ -2367,8 +2364,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Skip forwards\n");
+    if (verbose || extra_info) print_msg("\n\n");
+    print_msg("** Skip forwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_forwards(stream,tswriter,fcontext,with_seq_hdrs,
@@ -2379,8 +2376,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Normal speed for %d\n",num_normal);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Normal speed for %d\n",num_normal);
 
     err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
@@ -2399,8 +2396,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
     
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Skip backwards\n");
+    if (verbose || extra_info) print_msg("\n\n");
+    print_msg("** Skip backwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_backwards(stream,tswriter,1,verbose,quiet,tsdirect,reverse_data);
@@ -2410,8 +2407,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
     
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Skip backwards\n");
+    if (verbose || extra_info) print_msg("\n\n");
+    print_msg("** Skip backwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_backwards(stream,tswriter,1,verbose,quiet,tsdirect,reverse_data);
@@ -2421,8 +2418,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Normal speed for %d\n",num_normal);
+    if (verbose || extra_info) print_msg("\n\n");
+    fprint_msg("** Normal speed for %d\n",num_normal);
 
     err = back_to_normal(stream,tswriter,tsdirect);
     if (err) return 1;
@@ -2441,8 +2438,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
 
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Skip forwards\n");
+    if (verbose || extra_info) print_msg("\n\n");
+    print_msg("** Skip forwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_forwards(stream,tswriter,fcontext,with_seq_hdrs,
@@ -2453,8 +2450,8 @@ static int test_skip(PES_reader_p    reader,
       return 1;
     
     // ------------------------------------------------------------
-    if (verbose || extra_info) printf("\n\n");
-    printf("** Skip backwards\n");
+    if (verbose || extra_info) print_msg("\n\n");
+    print_msg("** Skip backwards\n");
     stop_server_output(reader);
     set_PES_reader_video_only(reader,TRUE);
     err = skip_backwards(stream,tswriter,1,verbose,quiet,tsdirect,reverse_data);
@@ -2466,8 +2463,8 @@ static int test_skip(PES_reader_p    reader,
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   num_normal = 100;
-  if (verbose || extra_info) printf("\n\n");
-  printf("** Normal speed for %d\n",num_normal);
+  if (verbose || extra_info) print_msg("\n\n");
+  fprint_msg("** Normal speed for %d\n",num_normal);
 
   err = back_to_normal(stream,tswriter,tsdirect);
   if (err) return 1;
@@ -2476,7 +2473,7 @@ static int test_skip(PES_reader_p    reader,
   err = play_normal(stream,tswriter,verbose,quiet,tsdirect,num_normal,reverse_data);
   if (err == EOF)
   {
-    printf("** End of file\n");
+    print_msg("** End of file\n");
     return 0;
   }
   else if (err)
@@ -2485,18 +2482,18 @@ static int test_skip(PES_reader_p    reader,
   err = flush_after_normal(stream,tswriter,verbose,quiet);
   if (err == EOF)
   {
-    printf("** End of file\n");
+    print_msg("** End of file\n");
     return 0;
   }
   else if (err)
     return 1;
 
   // ------------------------------------------------------------
-  if (verbose || extra_info) printf("\n\n");
+  if (verbose || extra_info) print_msg("\n\n");
   if (err == EOF)
-    printf("** End of file\n");
+    print_msg("** End of file\n");
   else
-    printf(">> End of sequences\n");
+    print_msg(">> End of sequences\n");
   return 0;
 }
 
@@ -2558,7 +2555,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
   err = build_elementary_stream_PES(reader,&es);
   if (err)
   {
-    fprintf(stderr,"### Error trying to build ES reader from PES reader\n");
+    print_err("### Error trying to build ES reader from PES reader\n");
     return 1;
   }
 
@@ -2566,7 +2563,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
   err = build_reverse_data(&reverse_data,reader->is_h264);
   if (err)
   {
-    fprintf(stderr,"### Unable to build reverse memory\n");
+    print_err("### Unable to build reverse memory\n");
     close_elementary_stream(&es);
     return 1;
   }
@@ -2582,8 +2579,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
     err = build_access_unit_context(es,&acontext);
     if (err)
     {
-      fprintf(stderr,
-              "### Error trying to build access unit reader from ES reader\n");
+      print_err("### Error trying to build access unit reader from ES reader\n");
       close_elementary_stream(&es);
       free_reverse_data(&reverse_data);
       return 1;
@@ -2593,7 +2589,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
     err = build_h264_filter_context(&fcontext4,acontext,ffrequency);
     if (err)
     {
-      fprintf(stderr,"### Unable to build filter context\n");
+      print_err("### Unable to build filter context\n");
       close_elementary_stream(&es);
       free_reverse_data(&reverse_data);
       free_access_unit_context(&acontext);
@@ -2603,7 +2599,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
     err = build_h264_filter_context_strip(&scontext4,acontext,TRUE);
     if (err)
     {
-      fprintf(stderr,"### Unable to build strip context\n");
+      print_err("### Unable to build strip context\n");
       close_elementary_stream(&es);
       free_reverse_data(&reverse_data);
       free_access_unit_context(&acontext);
@@ -2640,8 +2636,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
     err = build_h262_context(es,&h262);
     if (err)
     {
-      fprintf(stderr,
-              "### Error trying to build H.262 reader from ES reader\n");
+      print_err("### Error trying to build H.262 reader from ES reader\n");
       close_elementary_stream(&es);
       free_reverse_data(&reverse_data);
       return 1;
@@ -2651,7 +2646,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
     err = build_h262_filter_context(&fcontext2,h262,ffrequency);
     if (err)
     {
-      fprintf(stderr,"### Unable to build filter context\n");
+      print_err("### Unable to build filter context\n");
       close_elementary_stream(&es);
       free_reverse_data(&reverse_data);
       free_h262_context(&h262);
@@ -2661,7 +2656,7 @@ static int test_play_pes_packets(PES_reader_p       reader,
     err = build_h262_filter_context_strip(&scontext2,h262,TRUE);
     if (err)
     {
-      fprintf(stderr,"### Unable to build strip context\n");
+      print_err("### Unable to build strip context\n");
       close_elementary_stream(&es);
       free_reverse_data(&reverse_data);
       free_h262_context(&h262);
@@ -2702,24 +2697,24 @@ static int open_input_file(tsserve_context_p context,
                             !quiet,verbose,reader);
   if (err)
   {
-    fprintf(stderr,"### Error opening file %s\n",
-            context->input_names[context->default_file_index]);
+    fprint_err("### Error opening file %s\n",
+               context->input_names[context->default_file_index]);
     return 1;
   }
 
   if (!quiet)
-    printf("Opened input file %s (as %s)\n",
-           context->input_names[context->default_file_index],
-           ((*reader)->is_TS?"TS":"PS"));
+    fprint_msg("Opened input file %s (as %s)\n",
+               context->input_names[context->default_file_index],
+               ((*reader)->is_TS?"TS":"PS"));
 
   // If it's PS data, check if we're overriding its stream type
   if (!(*reader)->is_TS && context->force_stream_type &&
       (*reader)->is_h264 == context->want_h262)
   {
     if (!quiet)
-      printf("File appeared to contain %s, forcing %s\n",
-             (*reader)->is_h264?"MPEG-4/AVC (H.264)":"MPEG-2 (H.272)",
-             context->want_h262?"MPEG-2":"MPEG-4/AVC");
+      fprint_msg("File appeared to contain %s, forcing %s\n",
+                 (*reader)->is_h264?"MPEG-4/AVC (H.264)":"MPEG-2 (H.272)",
+                 context->want_h262?"MPEG-2":"MPEG-4/AVC");
     set_PES_reader_h264(*reader);
   }
   
@@ -2754,21 +2749,21 @@ static int open_input_files(tsserve_context_p context,
     }
 
     if (!quiet)
-      printf("\nLooking at input file %d, %s\n",ii,context->input_names[ii]);
+      fprint_msg("\nLooking at input file %d, %s\n",ii,context->input_names[ii]);
 
     err = open_PES_reader(context->input_names[ii],!quiet,verbose,&reader[ii]);
     if (err)
     {
-      fprintf(stderr,"!!! Error opening file %d (%s)\n",
-              ii,context->input_names[ii]);
+      fprint_err("!!! Error opening file %d (%s)\n",
+                 ii,context->input_names[ii]);
       // return 1;
       reader[ii] = NULL;
       continue;
     }
 
     if (!quiet)
-      printf("Opened input file %2d, %s, as %s\n",ii,context->input_names[ii],
-             (reader[ii]->is_TS?"TS":"PS"));
+      fprint_msg("Opened input file %2d, %s, as %s\n",ii,context->input_names[ii],
+                 (reader[ii]->is_TS?"TS":"PS"));
 
     // If it's PS data, check if we're overriding its stream type
     // (for the moment, we only allow overriding of *all* files,
@@ -2777,9 +2772,9 @@ static int open_input_files(tsserve_context_p context,
         reader[ii]->is_h264 == context->want_h262)
     {
       if (!quiet)
-        printf("File appeared to contain %s, forcing %s\n",
-               reader[ii]->is_h264?"MPEG-4/AVC (H.264)":"MPEG-2 (H.272)",
-               context->want_h262?"MPEG-2":"MPEG-4/AVC");
+        fprint_msg("File appeared to contain %s, forcing %s\n",
+                   reader[ii]->is_h264?"MPEG-4/AVC (H.264)":"MPEG-2 (H.272)",
+                   context->want_h262?"MPEG-2":"MPEG-4/AVC");
       set_PES_reader_h264(reader[ii]);
     }
   
@@ -2821,13 +2816,13 @@ static int tsserve_child_process(struct server_args *args)
   int                quiet = args->quiet;
   PES_reader_p       reader[MAX_INPUT_FILES];
 
-  if (!quiet) printf("Establishing connection with client on socket %d\n",
-                     tswriter->where.socket);
+  if (!quiet) fprint_msg("Establishing connection with client on socket %d\n",
+                         tswriter->where.socket);
   
   err = tswrite_start_input(tswriter,tswriter->where.socket);
   if (err) 
   {
-    fprintf(stderr,"### Unable to start command input from client\n");
+    print_err("### Unable to start command input from client\n");
     (void) tswrite_close(tswriter,TRUE);
     return 1;
   }
@@ -2835,26 +2830,26 @@ static int tsserve_child_process(struct server_args *args)
   err = open_input_files(context,quiet,verbose,reader);
   if (err)
   {
-    fprintf(stderr,"### Unable to open input file\n");
+    print_err("### Unable to open input file\n");
     (void) tswrite_close(tswriter,TRUE);
     return 1;
   }
 
   // And play...
-  if (!quiet) printf("Playing to client via socket %d\n",
-                     tswriter->where.socket);
+  if (!quiet) fprint_msg("Playing to client via socket %d\n",
+                         tswriter->where.socket);
 
   err = play_pes_packets(reader,tswriter,context,verbose,quiet);
   if (err)
   {
-    fprintf(stderr,"!!! Error playing PES packets to client\n");
+    print_err("!!! Error playing PES packets to client\n");
     (void) tswrite_close(tswriter,TRUE);
     for (ii=0;ii<MAX_INPUT_FILES;ii++)
       (void) close_PES_reader(&reader[ii]);
     return 0;  // Treat as normal completion, so we continue
   }
 
-  if (!quiet) printf("Finished talking to client\n");
+  if (!quiet) print_msg("Finished talking to client\n");
   err = tswrite_close(tswriter,quiet);
   if (err)
   {
@@ -2869,8 +2864,8 @@ static int tsserve_child_process(struct server_args *args)
     err = close_PES_reader(&reader[ii]);
     if (err)
     {
-      fprintf(stderr,"### Error closing input file %d, %s\n",ii,
-              context->input_names[ii]);
+      fprint_err("### Error closing input file %d, %s\n",ii,
+                 context->input_names[ii]);
       had_err = TRUE;
     }
   }
@@ -2912,7 +2907,7 @@ static int start_child(tsserve_context_p  context,
   args = malloc(sizeof(struct server_args));
   if (args == NULL)
   {
-    fprintf(stderr,"### Unable to allocate memory for child datastructure\n");
+    print_err("### Unable to allocate memory for child datastructure\n");
     return 1;
   }
   
@@ -2924,7 +2919,7 @@ static int start_child(tsserve_context_p  context,
   child_thread = (HANDLE) _beginthread(child_thread_fn,0,(void_p)args);
   if (child_thread == (HANDLE) -1)
   {
-    fprintf(stderr,"Error creating child process: %s\n",strerror(errno));
+    fprint_err("Error creating child process: %s\n",strerror(errno));
     return 1;
   }
   return 0;
@@ -2947,7 +2942,7 @@ static int start_child(tsserve_context_p  context,
   pid = fork();
   if (pid == -1)
   {
-    fprintf(stderr,"Error forking: %s\n",strerror(errno));
+    fprint_err("Error forking: %s\n",strerror(errno));
     return 1;
   }
   else if (pid == 0)
@@ -2966,7 +2961,7 @@ static void set_child_exit_handler();
 static void on_child_exit()
 {
 #if 0
-  printf("sighandler: starting\n");
+  print_msg("sighandler: starting\n");
 #endif
   for (;;)
   {
@@ -2974,9 +2969,9 @@ static void on_child_exit()
     int pid = waitpid(-1, &status, WNOHANG);
 #if 0
     if (pid > 0)    
-      printf("sighandler: finished with child %08x\n",pid);
+      fprint_msg("sighandler: finished with child %08x\n",pid);
     else
-      printf("sighandler: finished with %d\n",pid);
+      fprint_msg("sighandler: finished with %d\n",pid);
 #endif
     if (pid <= 0)
       break;
@@ -2998,10 +2993,10 @@ static void set_child_exit_handler()
   sigemptyset(&action.sa_mask);
   // If it goes wrong, there's not much we can do apart from grumble...
 #if 0
-  printf("sighandler: Setting up signal handler to reap child processes\n");
+  print_msg("sighandler: Setting up signal handler to reap child processes\n");
 #endif
   ret = sigaction(SIGCHLD,&action,0);
-  if (ret < 0) fprintf(stderr,"!!! tsserve: Error starting signal handler to reap child processes\n");
+  if (ret < 0) print_err("!!! tsserve: Error starting signal handler to reap child processes\n");
 }
 #endif  // _WIN32
 
@@ -3030,11 +3025,11 @@ static int run_server(tsserve_context_p  context,
   {
 #ifdef _WIN32
     err = WSAGetLastError();
-    fprintf(stderr,"### Unable to create socket: ");
+    print_err("### Unable to create socket: ");
     print_winsock_err(err);
-    fprintf(stderr,"\n");
+    print_err("\n");
 #else  // _WIN32      
-    fprintf(stderr,"### Unable to create socket: %s\n",strerror(errno));
+    fprint_err("### Unable to create socket: %s\n",strerror(errno));
 #endif // _WIN32
     return 1;
   }
@@ -3054,12 +3049,12 @@ static int run_server(tsserve_context_p  context,
   {
 #ifdef _WIN32
     err = WSAGetLastError();
-    fprintf(stderr,"### Unable to bind to port %d: ",listen_port);
+    fprint_err("### Unable to bind to port %d: ",listen_port);
     print_winsock_err(err);
-    fprintf(stderr,"\n");
+    print_err("\n");
 #else  // _WIN32      
-    fprintf(stderr,"### Unable to bind to port %d: %s\n",
-            listen_port,strerror(errno));
+    fprint_err("### Unable to bind to port %d: %s\n",
+               listen_port,strerror(errno));
 #endif // _WIN32
     return 1;
   }
@@ -3068,8 +3063,8 @@ static int run_server(tsserve_context_p  context,
   {
     TS_writer_p  tswriter = NULL;
 
-    if (!quiet) printf("\nListening for a connection on port %d"
-                       " with socket %d\n",listen_port,server_socket);
+    if (!quiet) fprint_msg("\nListening for a connection on port %d"
+                           " with socket %d\n",listen_port,server_socket);
 
 #ifdef _WIN32
     // tswrite_close calls winsock_cleanup(), so we need to make sure that
@@ -3078,7 +3073,7 @@ static int run_server(tsserve_context_p  context,
     err = winsock_startup();
     if (err)
     {
-      fprintf(stderr,"### Error calling winsock_startup before listening\n");
+      print_err("### Error calling winsock_startup before listening\n");
       return 1;
     }
 #endif // _WIN32
@@ -3086,8 +3081,8 @@ static int run_server(tsserve_context_p  context,
     err = tswrite_wait_for_client(server_socket,quiet,&tswriter);
     if (err)
     {
-      fprintf(stderr,"### Error listening for client on port %d\n",
-              listen_port);
+      fprint_err("### Error listening for client on port %d\n",
+                 listen_port);
       return 1;
     }
 
@@ -3100,7 +3095,7 @@ static int run_server(tsserve_context_p  context,
     err = start_child(context,tswriter,verbose,quiet);
     if (err)
     {
-      fprintf(stderr,"### Error spawning child server\n");
+      print_err("### Error spawning child server\n");
       return 1;
     }
 #if 0 // The following was a temporary fix to stop zombies without a signal handler
@@ -3109,7 +3104,7 @@ static int run_server(tsserve_context_p  context,
     err = tswrite_close(tswriter,TRUE);
     if (err)
     {
-      fprintf(stderr,"### Error closing socket in parent process\n");
+      print_err("### Error closing socket in parent process\n");
       return 1;
     }
 #endif
@@ -3142,7 +3137,7 @@ static int test_reader(tsserve_context_p  context,
                      output_name,NULL,port,quiet,&tswriter);
   if (err)
   {
-    fprintf(stderr,"### Unable to connect to %s\n",output_name);
+    fprint_err("### Unable to connect to %s\n",output_name);
     return 1;
   }
 
@@ -3155,7 +3150,7 @@ static int test_reader(tsserve_context_p  context,
   err = open_input_file(context,quiet,verbose,&reader);
   if (err)
   {
-    fprintf(stderr,"### Unable to open input file\n");
+    print_err("### Unable to open input file\n");
     (void) tswrite_close(tswriter,TRUE);
     return 1;
   }
@@ -3169,7 +3164,7 @@ static int test_reader(tsserve_context_p  context,
                               skiptest,context->with_seq_hdrs);
   if (err)
   {
-    fprintf(stderr,"### Error playing PES packets\n");
+    print_err("### Error playing PES packets\n");
     (void) tswrite_close(tswriter,TRUE);
     (void) close_PES_reader(&reader);
     return 1;
@@ -3178,16 +3173,16 @@ static int test_reader(tsserve_context_p  context,
   err = tswrite_close(tswriter,quiet);
   if (err)
   {
-    fprintf(stderr,"### Error closing output %s: %s\n",output_name,
-            strerror(errno));
+    fprint_err("### Error closing output %s: %s\n",output_name,
+               strerror(errno));
     (void) close_PES_reader(&reader);
     return 1;
   }
   err = close_PES_reader(&reader);
   if (err)
   {
-    fprintf(stderr,"### Error closing input file %s\n",
-            context->input_names[context->default_file_index]);
+    fprint_err("### Error closing input file %s\n",
+               context->input_names[context->default_file_index]);
     return 1;
   }
   return 0;
@@ -3211,7 +3206,7 @@ static int command_reader(tsserve_context_p  context,
   err = tswrite_open(TS_W_TCP,output_name,NULL,port,quiet,&tswriter);
   if (err)
   {
-    fprintf(stderr,"### Unable to connect to %s\n",output_name);
+    fprint_err("### Unable to connect to %s\n",output_name);
     return 1;
   }
 
@@ -3226,23 +3221,23 @@ static int command_reader(tsserve_context_p  context,
   if (use_stdin)
   {
     if (!quiet)
-      printf("Commands from standard input:\n"
-             "   q    = quit\n"
-             "   n    = normal speed\n"
-             "   p    = pause (the initial state)\n"
-             "   f    = fast forward\n"
-             "   F    = fast fast forward\n"
-             "   r    = reverse\n"
-             "   R    = fast reverse\n"
-             "   > <  = skip forwards, back by 10 seconds\n"
-             "   ] [  = skip forwards, back by 3 minutes\n"
-             "   0..9 = select file 0 through 9 (if defined),\n"
-             "          rewind it and play at normal speed\n"
-             "Use newline to 'send' a command or sequence of commands.\n");
+      print_msg("Commands from standard input:\n"
+                "   q    = quit\n"
+                "   n    = normal speed\n"
+                "   p    = pause (the initial state)\n"
+                "   f    = fast forward\n"
+                "   F    = fast fast forward\n"
+                "   r    = reverse\n"
+                "   R    = fast reverse\n"
+                "   > <  = skip forwards, back by 10 seconds\n"
+                "   ] [  = skip forwards, back by 3 minutes\n"
+                "   0..9 = select file 0 through 9 (if defined),\n"
+                "          rewind it and play at normal speed\n"
+                "Use newline to 'send' a command or sequence of commands.\n");
     err= tswrite_start_input(tswriter,STDIN_FILENO);
     if (err) 
     {
-      fprintf(stderr,"### Unable to start command input from stdin\n");
+      print_err("### Unable to start command input from stdin\n");
       (void) tswrite_close(tswriter,TRUE);
       return 1;
     }
@@ -3253,8 +3248,8 @@ static int command_reader(tsserve_context_p  context,
     err= tswrite_start_input(tswriter,tswriter->where.socket);
     if (err) 
     {
-      fprintf(stderr,"### Unable to start command input from %s\n",
-              output_name);
+      fprint_err("### Unable to start command input from %s\n",
+                 output_name);
       (void) tswrite_close(tswriter,TRUE);
       return 1;
     }
@@ -3263,7 +3258,7 @@ static int command_reader(tsserve_context_p  context,
   err = open_input_files(context,quiet,verbose,reader);
   if (err)
   {
-    fprintf(stderr,"### Unable to open input file\n");
+    print_err("### Unable to open input file\n");
     (void) tswrite_close(tswriter,TRUE);
     return 1;
   }
@@ -3272,7 +3267,7 @@ static int command_reader(tsserve_context_p  context,
   err = play_pes_packets(reader,tswriter,context,verbose,quiet);
   if (err)
   {
-    fprintf(stderr,"### Error playing PES packets\n");
+    print_err("### Error playing PES packets\n");
     (void) tswrite_close(tswriter,TRUE);
     for (ii=0;ii<MAX_INPUT_FILES;ii++)
       (void) close_PES_reader(&reader[ii]);
@@ -3282,8 +3277,8 @@ static int command_reader(tsserve_context_p  context,
   err = tswrite_close(tswriter,quiet);
   if (err)
   {
-    fprintf(stderr,"### Error closing output %s: %s\n",output_name,
-            strerror(errno));
+    fprint_err("### Error closing output %s: %s\n",output_name,
+               strerror(errno));
     for (ii=0;ii<MAX_INPUT_FILES;ii++)
       (void) close_PES_reader(&reader[ii]);
     return 1;
@@ -3294,8 +3289,8 @@ static int command_reader(tsserve_context_p  context,
     err = close_PES_reader(&reader[ii]);
     if (err)
     {
-      fprintf(stderr,"### Error closing input file %d, %s\n",ii,
-              context->input_names[ii]);
+      fprint_err("### Error closing input file %d, %s\n",ii,
+                 context->input_names[ii]);
       had_err = TRUE;
     }
   }
@@ -3304,7 +3299,7 @@ static int command_reader(tsserve_context_p  context,
 
 static void print_usage()
 {
-  printf(
+  print_msg(
     "Usage:\n"
     "           tsserve <infile>\n"
     "           tsserve <infile> -port <n>\n"
@@ -3312,7 +3307,7 @@ static void print_usage()
     "\n"
     );
   REPORT_VERSION("tsserve");
-  printf(
+  print_msg(
     "\n"
     "  Act as a server which plays the given file (containing Transport\n"
     "  Stream or Program Stream data). The output is always Transport\n"
@@ -3363,7 +3358,7 @@ static void print_usage()
 
 static void print_detailed_usage()
 {
-  printf(
+  print_msg(
     "Usage: tsserve [switches] <infile>\n"
     "\n"
     "  Copyright (c) 2004 SJ Consulting Ltd.\n"
@@ -3695,7 +3690,7 @@ int main(int argc, char **argv)
       {
         if (ii+2 >= argc)
         {
-          fprintf(stderr,"### tsserve: -drop requires two arguments\n");
+          print_err("### tsserve: -drop requires two arguments\n");
           return 1;
         }
         err = int_value("tsserve",argv[argno],argv[argno+1],TRUE,0,
@@ -3743,7 +3738,7 @@ int main(int argc, char **argv)
           context.dolby_is_dvb = FALSE;
         else
         {
-          fprintf(stderr,"### tsserve: -dolby must be followed by dvb or atsc\n");
+          print_err("### tsserve: -dolby must be followed by dvb or atsc\n");
           return 1;
         }
         ii++;
@@ -3870,8 +3865,8 @@ int main(int argc, char **argv)
       }
       else
       {
-        fprintf(stderr,"### tsserve: "
-                "Unrecognised command line switch '%s'\n",argv[argno]);
+        fprint_err("### tsserve: "
+                   "Unrecognised command line switch '%s'\n",argv[argno]);
         return 1;
       }
     }
@@ -3879,7 +3874,7 @@ int main(int argc, char **argv)
     {
       if (had_input_name)
       {
-        fprintf(stderr,"### tsserve: Unexpected '%s'\n",argv[argno]);
+        fprint_err("### tsserve: Unexpected '%s'\n",argv[argno]);
         return 1;
       }
       else
@@ -3893,28 +3888,28 @@ int main(int argc, char **argv)
 
   if (!had_input_name)
   {
-    fprintf(stderr,"### tsserve: No input file specified\n");
+    print_err("### tsserve: No input file specified\n");
     return 1;
   }
   if (!had_output_name && action != ACTION_SERVER)
   {
-    fprintf(stderr,"### tsserve: No output specified\n");
+    print_err("### tsserve: No output specified\n");
     return 1;
   }
   if (output_to_file && action != ACTION_TEST)
   {
-    fprintf(stderr,"### tsserve: Output to a file (-output) is only allowed"
-            " with -test\n");
+    print_err("### tsserve: Output to a file (-output) is only allowed"
+              " with -test\n");
     return 1;
   }
 
   if (!quiet)
   {
-    printf("Input files:\n");
+    print_msg("Input files:\n");
     for (ii = 0; ii < MAX_INPUT_FILES; ii++)
     {
       if (context.input_names[ii] != NULL)
-        printf("   %2d: %s\n",ii,context.input_names[ii]);
+        fprint_msg("   %2d: %s\n",ii,context.input_names[ii]);
     }
   }
 
@@ -3923,18 +3918,18 @@ int main(int argc, char **argv)
     if (context.input_names[ii] != NULL)
     {
       context.default_file_index = ii;
-      if (!quiet) printf("File %d (%s) selected as default\n",
-                         ii,context.input_names[ii]);
+      if (!quiet) fprint_msg("File %d (%s) selected as default\n",
+                             ii,context.input_names[ii]);
       break;
     }
   }
 
   if (context.tsdirect && !quiet)
-    printf("Serving all TS packets, not just video/audio streams\n");
+    print_msg("Serving all TS packets, not just video/audio streams\n");
 
   if (context.drop_packets && !quiet)
-    printf("DROPPING: Keeping %d TS packet%s, then dropping (throwing away) %d\n",
-           context.drop_packets,(context.drop_packets==1?"":"s"),
+    fprint_msg("DROPPING: Keeping %d TS packet%s, then dropping (throwing away) %d\n",
+               context.drop_packets,(context.drop_packets==1?"":"s"),
            context.drop_number);
   
   switch (action)
@@ -3943,7 +3938,7 @@ int main(int argc, char **argv)
     err = run_server(&context,listen_port,verbose,quiet);
     if (err)
     {
-      fprintf(stderr,"### tsserve: Error in server\n");
+      print_err("### tsserve: Error in server\n");
       return 1;
     }
     break;
@@ -3954,7 +3949,7 @@ int main(int argc, char **argv)
                       verbose,quiet,context.tsdirect);
     if (err)
     {
-      fprintf(stderr,"### tsserve: Error playing to %s\n",output_name);
+      fprint_err("### tsserve: Error playing to %s\n",output_name);
       return 1;
     }
     break;
@@ -3964,13 +3959,13 @@ int main(int argc, char **argv)
                          use_stdin,verbose,quiet);
     if (err)
     {
-      fprintf(stderr,"### tsserve: Error playing to %s\n",output_name);
+      fprint_err("### tsserve: Error playing to %s\n",output_name);
       return 1;
     }
     break;
 
   default:
-    fprintf(stderr,"### No action specified\n");
+    print_err("### No action specified\n");
     return 1;
   }
   return 0;
