@@ -234,7 +234,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
   if (continuity_cnt_pid != INVALID_PID)
   {
-    file_cnt = fopen("continuity_counter.txt","w"); //lorenzo
+    file_cnt = fopen("continuity_counter.txt","w");
     if (file_cnt == NULL)
     {
       print_err("### tsreport: Unable to open file continuity_counter.txt\n");
@@ -377,10 +377,10 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         {
           if (stats[index].cc_dup_count++ != 0)
           {
+            if (continuity_cnt_pid == pid)
+              fprintf(file_cnt, "[Duplicate error] ");
             if (stats[index].err_cc_dup_error++ == 0)
             {
-              if (continuity_cnt_pid == pid)
-                fprintf(file_cnt, "[Duplicate error] ");
               fprint_msg("### PID(%d): Continuity Counter >1 duplicate %d at " OFFSET_T_FORMAT "\n",
                          stats[index].pid, cc, posn);
             }
@@ -392,10 +392,10 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           stats[index].cc_dup_count = 0;
           if (((stats[index].last_cc + 1) & 15) != cc)
           {
+            if (continuity_cnt_pid == pid)
+              fprintf(file_cnt, "[Discontinuity] ");
             if (stats[index].err_cc_error++ == 0)
             {
-              if (continuity_cnt_pid == pid)
-                fprintf(file_cnt, "[Discontinuity] ");
               fprint_msg("### PID(%d): Continuity Counter discontinuity %d->%d at " OFFSET_T_FORMAT "\n",
                 stats[index].pid, stats[index].last_cc, cc, posn);
             }
@@ -579,7 +579,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   if (continuity_cnt_pid != INVALID_PID)
   {
     fprintf(file_cnt, "\n");
-    fclose(file_cnt); //lorenzo
+    fclose(file_cnt);
   }
 
   if (!quiet)
