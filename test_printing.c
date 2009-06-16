@@ -89,7 +89,7 @@ int main(int argc, char **argv)
   printf("-------------------------------------------\n");
   printf("Choosing 'traditional' output and repeating\n");
   printf("-------------------------------------------\n");
-  redirect_output_traditional();
+  redirect_output_stderr();
   print_msg("1. Printing a normal message\n");
   print_err("2. Printing an error message\n");
   fprint_msg("3. Printing a formatted '%s'\n","message");

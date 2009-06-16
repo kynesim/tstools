@@ -286,8 +286,11 @@ static void print_usage(void)
 	 "  <outfile> is an H.222 Transport Stream file (but see -stdout)\n"
 	 "\n"
 	 "General Switches:\n"
+         "  -err stdout          Write error messages to standard output (the default)\n"
+         "  -err stderr          Write error messages to standard error (Unix traditional)\n"
 	 "  -stdin               Input from standard input instead of a file\n"
 	 "  -stdout              Output to standard output instead of a file\n"
+         "                       Forces -quiet and -err stderr.\n"
 	 "  -verbose, -v         Output informational/diagnostic messages\n"
 	 "  -quiet, -q           Only output error messages\n"
 	 "  -buffer <n>, -b <n>  Number of TS packets to buffer for reordering\n"
@@ -358,6 +361,23 @@ int main(int argc, char *argv[])
       {
 	use_stdout = TRUE;
 	had_output_name = TRUE; // ish
+        redirect_output_stderr();
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("m2ts2ts",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### m2ts2ts: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else
       {

@@ -688,6 +688,8 @@ static void print_usage()
     "Switches:\n"
     "  -verbose, -v      Preface the output with an explanation of the\n"
     "                    characters being used.\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -stdin            Take input from <stdin>, instead of a named file\n"
     "  -max <n>, -m <n>  Maximum number of entities to read\n"
     "  -pes, -ts         The input file is TS or PS, to be read via the\n"
@@ -756,6 +758,22 @@ int main(int argc, char **argv)
       {
         print_usage();
         return 0;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("esdots",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### esdots: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-stdin",argv[ii]))
       {

@@ -3325,6 +3325,8 @@ static void print_usage()
     "General Switches:\n"
     "  -details          Print out more detailed help information,\n"
     "                    including some less common options.\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -quiet, -q        Suppress informational and warning messages.\n"
     "  -verbose, -v      Output additional diagnostic messages\n"
     "  -port <n>         Listen for a client on port <n> (default 88)\n"
@@ -3606,6 +3608,22 @@ int main(int argc, char **argv)
       {
         print_usage();
         return 0;
+      }
+      else if (!strcmp("-err",argv[argno]))
+      {
+        CHECKARG("tsserve",argno);
+        if (!strcmp(argv[argno+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[argno+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### tsserve: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[argno+1]);
+          return 1;
+        }
+        argno++;
       }
       else if (!strcmp("-details",argv[argno]))
       {

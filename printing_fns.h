@@ -68,7 +68,7 @@ extern void flush_msg(void);
  * to go to stdout. This is the "traditional" mechanism used by
  * Unices.
  */
-extern void redirect_output_traditional(void);
+extern void redirect_output_stderr(void);
 /*
  * Calling this causes all output to go to stdout. This is simpler,
  * and is likely to be more use to most users.

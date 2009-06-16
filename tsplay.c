@@ -865,12 +865,14 @@ static void print_usage(int summary)
     );
   if (summary)
     print_msg(
-      "  -stdout           Output is to standard output. Forces -quiet.\n"
+      "  -stdout           Output is to standard output. Forces -quiet and -err stderr.\n"
       );
   else
     print_msg(
-      "  -stdout           Output is to standard output. This does not\n"
-      "                    make sense with -tcp or -udp. This forces -quiet.\n"
+      "  -err stdout       Write error messages to standard output (the default)\n"
+      "  -err stderr       Write error messages to standard error (Unix traditional)\n"
+      "  -stdout           Output is to standard output. This does not make sense\n"
+      "                    with -tcp or -udp. This forces -quiet and -err stderr.\n"
       );
   print_msg(
     "\n"
@@ -1229,6 +1231,22 @@ int main(int argc, char **argv)
         use_network = FALSE;
         how = TS_W_STDOUT;
         output_name = NULL;
+        redirect_output_stderr();
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("tsplay",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### tsplay: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
         ii++;
       }
       else if (!strcmp("-tcp",argv[ii]))

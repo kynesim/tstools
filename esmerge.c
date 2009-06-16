@@ -602,6 +602,8 @@ static void print_usage()
     "  <output-file> is the resultant TS file.\n"
     "\n"
     "Switches:\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -quiet, -q        Only output error messages.\n"
     "  -verbose, -v      Output information about each audio/video frame.\n"
     "  -x                Output diagnostic information.\n"
@@ -678,6 +680,22 @@ int main(int argc, char **argv)
       {
         print_usage();
         return 0;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("esmerge",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### esmerge: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-verbose",argv[ii]) || !strcmp("-v",argv[ii]))
       {

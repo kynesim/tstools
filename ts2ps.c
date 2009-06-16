@@ -186,14 +186,14 @@ static int extract_data(int      input,
 #define MAX_LENGTH 0xFFFF
       if (PES_packet_length > MAX_LENGTH)
       {
-        fprint_msg("PES packet of 'zero' length is really %6d - too long for one packet\n",
+        fprint_err("PES packet of 'zero' length is really %6d - too long for one packet\n",
                    PES_packet_length);
         // Output what we can of the original packet
         reader->packet->data[4] = (MAX_LENGTH & 0xFF00) >> 8;
         reader->packet->data[5] = (MAX_LENGTH & 0x00FF);
         // Remember that we also write out the 6 bytes preceding those
         // MAX_LENGTH bytes...
-        fprint_msg(".. writing out %5d (%5d total)\n",MAX_LENGTH,MAX_LENGTH+6);
+        fprint_err(".. writing out %5d (%5d total)\n",MAX_LENGTH,MAX_LENGTH+6);
         count = fwrite(reader->packet->data,MAX_LENGTH+6,1,output);
         if (count != 1)
         {
@@ -214,7 +214,7 @@ static int extract_data(int      input,
           // we can write is three less than the (otherwise) maximum.
           int this_length = min(MAX_LENGTH-3,PES_packet_length);
           int err;
-          fprint_msg(".. writing out %5d\n",this_length);
+          fprint_err(".. writing out %5d\n",this_length);
           err = write_PES_packet(output,start,this_length,
                                  reader->packet->data[3]);
           if (err)
@@ -229,7 +229,7 @@ static int extract_data(int      input,
       }
       else
       {
-        fprint_msg("PES packet of 'zero' length, adjusting to %6d-6=%6d"
+        fprint_err("PES packet of 'zero' length, adjusting to %6d-6=%6d"
                    " (stream id %02x, 'length' %d)\n",
                    reader->packet->data_len,PES_packet_length,
                    reader->packet->data[3],reader->packet->length);
@@ -286,9 +286,11 @@ static void print_usage()
     "  <outfile> is an H.222 Program Stream file (but see -stdout)\n"
     "\n"
     "General switches:\n"
+    "  -err stdout        Write error messages to standard output (the default)\n"
+    "  -err stderr        Write error messages to standard error (Unix traditional)\n"
     "  -stdin             Input from standard input, instead of a file\n"
     "  -stdout            Output to standard output, instead of a file\n"
-    "                     Forces -quiet.\n"
+    "                     Forces -quiet and -err stderr.\n"
     "  -verbose, -v       Output informational/diagnostic messages\n"
     "  -quiet, -q         Only output error messages\n"
     "  -max <n>, -m <n>   Maximum number of TS packets to read\n"
@@ -368,6 +370,23 @@ int main(int argc, char **argv)
       {
         use_stdout = TRUE;
         had_output_name = TRUE;  // so to speak
+        redirect_output_stderr();
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("ts2ps",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### ts2ps: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else
       {

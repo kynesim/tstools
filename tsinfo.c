@@ -296,6 +296,8 @@ static void print_usage()
     "  <infile>  is an H.222 Transport Stream file (but see -stdin)\n"
     "\n"
     "Switches:\n"
+    "  -err stdout        Write error messages to standard output (the default)\n"
+    "  -err stderr        Write error messages to standard error (Unix traditional)\n"
     "  -stdin             Input from standard input, instead of a file\n"
     "  -verbose, -v       Output extra information about packets\n"
     "  -max <n>, -m <n>   Number of TS packets to scan. Defaults to 10000.\n"
@@ -332,6 +334,22 @@ int main(int argc, char **argv)
       {
         print_usage();
         return 0;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("tsinfo",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### tsinfo: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-verbose",argv[ii]) || !strcmp("-v",argv[ii]))
       {

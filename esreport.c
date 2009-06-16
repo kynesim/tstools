@@ -997,6 +997,8 @@ static void print_usage()
     "  (in fact, both of these imply -frame).\n"
     "\n"
     "Other switches:\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -verbose, -v      For H.262 data, output information about the data\n"
     "                    in each MPEG-2 item. For ES units, output information\n"
     "                    about the data in each ES unit. Ignored for H.264 data.\n"
@@ -1070,6 +1072,22 @@ int main(int argc, char **argv)
       {
         print_usage();
         return 0;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("esreport",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### esreport: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-avc",argv[ii]) || !strcmp("-h264",argv[ii]))
       {

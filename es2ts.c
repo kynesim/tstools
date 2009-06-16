@@ -159,9 +159,11 @@ static void print_usage()
     "  -verbose, -v      Output summary information about each ES packet\n"
     "                    as it is read\n"
     "  -quiet, -q        Only output error messages\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -stdin            Take input from <stdin>, instead of a named file\n"
     "  -stdout           Write output to <stdout>, instead of a named file\n"
-    "                    Forces -quiet.\n"
+    "                    Forces -quiet and -err stderr.\n"
     "  -host <host>, -host <host>:<port>\n"
     "                    Writes output (over TCP/IP) to the named <host>,\n"
     "                    instead of to a named file. If <port> is not\n"
@@ -254,6 +256,23 @@ int main(int argc, char **argv)
       {
         had_output_name = TRUE; // more or less
         use_stdout = TRUE;
+        redirect_output_stderr();
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("es2ts",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### es2ts: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-host",argv[ii]))
       {

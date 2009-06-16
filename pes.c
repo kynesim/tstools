@@ -1037,16 +1037,20 @@ static int determine_TS_program_info(PES_reader_p   reader)
     print_err("### Error finding TS program information\n");
     return 1;
   }
-  err = seek_using_TS_reader(reader->tsreader,0);
-  if (err)
+  // It's only possible to rewind if we're not reading from standard
+  // input. If it's not feasible, don't try.
+  if (reader->tsreader->file != STDIN_FILENO)
   {
-    print_err("### Error rewinding TS stream after finding initial"
-              " program information\n");
-    return 1;
+    if (err)
+    {
+      print_err("### Error rewinding TS stream after finding initial"
+                " program information\n");
+      return 1;
+    }
+    // Having rewound, we mustn't forget to reset our notion of the TS packet
+    // position
+    reader->posn = 0;
   }
-  // Having rewound, we mustn't forget to reset our notion of the TS packet
-  // position
-  reader->posn = 0;
   return 0;
 }
 

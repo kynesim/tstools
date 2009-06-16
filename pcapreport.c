@@ -361,6 +361,9 @@ static void print_usage()
     "  -skew-discontinuity-threshold <number>\n"
     "  -skew <number>            Gives the skew discontinuity threshold in 90kHz units.\n"
     "\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
+    "\n"
     " Specifying 0.0.0.0 for destination IP will capture all hosts, specifying 0 destination\n"
     " port will capture all ports on the destination host.\n"
     "\n"
@@ -395,6 +398,22 @@ int main(int argc, char **argv)
       {
         print_usage();
         return 0;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("pcapreport",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### pcapreport: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("--output", argv[ii]) ||
                !strcmp("-output", argv[ii]) || !strcmp("-o", argv[ii]))

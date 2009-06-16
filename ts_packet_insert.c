@@ -175,6 +175,8 @@ static void print_usage()
     "  <infile>          An H.222 Transport Stream file.\n"
     "\n"
     "Switches:\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -p <positions>    This a a colon (':') delimited string of numbers\n"
     "                    between 0 and 1, representing how far through to put \n"
     "                    each TS packet.  E.g., -p 0.1:0.4:0.7:0.9 will insert\n"
@@ -289,6 +291,22 @@ int main(int argc, char **argv)
         sort_positions(positions,n_pos);
         assert(pos_index == n_pos);
 
+      }
+      else if (!strcmp("-err",argv[argno]))
+      {
+        CHECKARG("ts_packet_insert",argno);
+        if (!strcmp(argv[argno+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[argno+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### ts_packet_insert: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[argno+1]);
+          return 1;
+        }
+        argno++;
       }
       else if (!strcmp("-pid",argv[argno]))
       {

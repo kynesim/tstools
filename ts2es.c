@@ -432,9 +432,11 @@ static void print_usage()
     "                     named in the (first) PMT\n"
     "\n"
     "General switches:\n"
+    "  -err stdout        Write error messages to standard output (the default)\n"
+    "  -err stderr        Write error messages to standard error (Unix traditional)\n"
     "  -stdin             Input from standard input, instead of a file\n"
     "  -stdout            Output to standard output, instead of a file\n"
-    "                     Forces -quiet.\n"
+    "                     Forces -quiet and -err stderr.\n"
     "  -verbose, -v       Output informational/diagnostic messages\n"
     "  -quiet, -q         Only output error messages\n"
     "  -max <n>, -m <n>   Maximum number of TS packets to read\n"
@@ -530,6 +532,23 @@ int main(int argc, char **argv)
       {
         use_stdout = TRUE;
         had_output_name = TRUE;  // so to speak
+        redirect_output_stderr();
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("ts2es",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### ts2es: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else
       {

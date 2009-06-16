@@ -377,6 +377,8 @@ static void print_usage()
     "  <infile>           is the file to analyse\n"
     "\n"
     "Switches:\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -verbose, -v      Output more detailed information about how it is\n"
     "                    making its decision\n"
     "  -quiet, -q        Only output error messages\n"
@@ -415,6 +417,22 @@ int main(int argc, char **argv)
       {
         verbose = TRUE;
         quiet = FALSE;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("stream_type",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### stream_type: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-quiet",argv[ii]) || !strcmp("-q",argv[ii]))
       {

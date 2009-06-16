@@ -209,7 +209,7 @@ extern void flush_msg(void)
  * to go to stdout. This is the "traditional" mechanism used by
  * Unices.
  */
-extern void redirect_output_traditional(void)
+extern void redirect_output_stderr(void)
 {
   fns.print_message_fn  = &print_message_to_stdout;
   fns.print_error_fn    = &print_message_to_stderr;

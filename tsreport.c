@@ -1022,6 +1022,8 @@ static void print_usage()
     "  By default, normal operation just reports the number of TS packets.\n"
     "  -timing, -t       Report timing information based on the PCRs.\n"
     "  -data             Show TS packet/payload data as bytes\n"
+    "  -err stdout       Write error messages to standard output (the default)\n"
+    "  -err stderr       Write error messages to standard error (Unix traditional)\n"
     "  -verbose, -v      Also output (fairly detailed) information on each TS packet.\n"
     "  -quiet, -q        Only output summary information (this is the default)\n"
     "  -max <n>, -m <n>  Maximum number of TS packets to read\n"
@@ -1110,6 +1112,22 @@ int main(int argc, char **argv)
       {
         verbose = TRUE;
         quiet = FALSE;
+      }
+      else if (!strcmp("-err",argv[ii]))
+      {
+        CHECKARG("tsreport",ii);
+        if (!strcmp(argv[ii+1],"stderr"))
+          redirect_output_stderr();
+        else if (!strcmp(argv[ii+1],"stdout"))
+          redirect_output_stdout();
+        else
+        {
+          fprint_err("### tsreport: "
+                     "Unrecognised option '%s' to -err (not 'stdout' or"
+                     " 'stderr')\n",argv[ii+1]);
+          return 1;
+        }
+        ii++;
       }
       else if (!strcmp("-timing",argv[ii]) || !strcmp("-t",argv[ii]))
       {

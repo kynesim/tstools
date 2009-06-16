@@ -168,13 +168,17 @@ extern int build_PS_reader(int           input,
     return 1;
   }
 
-  // But we don't *really* want to have read its start yet
-  err = seek_using_PS_reader(new,new->start);
-  if (err)
+  // Seeking won't work on standard input, so don't even try
+  if (input != STDIN_FILENO)
   {
-    print_err("### Error seeking to start of first pack header\n");
-    free(new);
-    return 1;
+    // But we don't *really* want to have read its start yet
+    err = seek_using_PS_reader(new,new->start);
+    if (err)
+    {
+      print_err("### Error seeking to start of first pack header\n");
+      free(new);
+      return 1;
+    }
   }
 
   if (!quiet && new->start != 0)
