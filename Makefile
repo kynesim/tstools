@@ -109,6 +109,7 @@ OBJS = \
  printing.o \
  reverse.o \
  ts.o \
+ tsplay_innards.o \
  tswrite.o \
  pcap.o \
  ethernet.o \
@@ -251,7 +252,7 @@ $(BINDIR)/tsreport:	$(OBJDIR)/tsreport.o $(STATIC_LIB)
 $(BINDIR)/tsserve:	$(OBJDIR)/tsserve.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsserve $(LDFLAGS) $(LIBOPTS)
 
-$(BINDIR)/tsplay:		$(OBJDIR)/tsplay.o $(STATIC_LIB)
+$(BINDIR)/tsplay:	$(OBJDIR)/tsplay.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsplay $(LDFLAGS) $(LIBOPTS)
 
 $(BINDIR)/test_ps:	$(OBJDIR)/test_ps.o $(STATIC_LIB)
@@ -344,7 +345,7 @@ $(OBJDIR)/tsserve.o:     tsserve.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) v
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/ts_packet_insert.o:     ts_packet_insert.c 
 	$(CC) -c $< -o $@ $(CFLAGS)
-$(OBJDIR)/tsplay.o:       tsplay.c $(TS_H) misc_fns.h $(PS_H) $(PES_H) version.h
+$(OBJDIR)/tsplay.o:       tsplay.c $(TS_H) misc_fns.h $(PS_H) $(PES_H) version.h tsplay_fns.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tswrite.o:      tswrite.c misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
