@@ -111,7 +111,7 @@ LIB_OBJS = \
  $(OBJDIR)\ps.obj \
  $(OBJDIR)\reverse.obj \
  $(OBJDIR)\ts.obj \
- $(OBJDIR)\ts_innards.obj \
+ $(OBJDIR)\tsplay_innards.obj \
  $(OBJDIR)\tswrite.obj
 
 # Object files for the programs
