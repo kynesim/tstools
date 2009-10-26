@@ -92,6 +92,9 @@ struct pcapreport_stream_struct {
   uint32_t output_dest_addr;
   uint32_t output_dest_port;
 
+  FILE * csv_file;
+  const char * csv_name;
+
   int stream_no;
   int force;  // We have an explicit filter - try harder
   int ts_good;  // Not a boolean -ve is bad, +ve is good
@@ -126,13 +129,17 @@ typedef struct pcapreport_ctx_struct
 {
   int use_stdin;
   char *input_name;
+  const char * base_name;
   int had_input_name;
+  int extract_data;
   int dump_data;
   int dump_extra;
   int time_report;
   int verbose;
   int analyse;
+  int extract;
   int stream_count;
+  int csv_gen;
   PCAP_reader_p pcreader;
   pcap_hdr_t pcap_hdr;
 
@@ -462,6 +469,21 @@ static int digest_times(pcapreport_ctx_t *ctx,
                              skew_rate, cur_jitter);
                 }
 
+                if (st->csv_name != NULL)  // We should be outputting to file
+                {
+                  if (st->csv_file == NULL)
+                  {
+                    if ((st->csv_file = fopen(st->csv_name, "wt")) == NULL)
+                    {
+                      fprint_err("### pcapreport: Cannot open %s .\n", 
+                                 st->csv_name);
+                      exit(1);
+                    }
+                    fprintf(st->csv_file, "\"PKT\",\"Time\",\"PCR\",\"Skew\",\"Jitter\"\n");
+                  }
+                  fprintf(st->csv_file, "%d,%llu,%llu,%lld,%u\n", ctx->pkt_counter, t_pcr - ctx->time_start, pcr, skew, cur_jitter);
+                }
+
                 // Remember where we are for posterity
                 tsect->pcr_last = pcr;
                 tsect->time_last = t_pcr;
@@ -567,11 +589,12 @@ stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint
   // If the dest:port is fully specified then avoid guesswork
   st->force = ctx->filter_dest_addr != 0 && ctx->filter_dest_port != 0;
 
-  if (ctx->output_name_base != NULL)
+  if (ctx->extract)
   {
-    size_t len = strlen(ctx->output_name_base);
+    const char * const base_name = ctx->output_name_base != NULL ? ctx->output_name_base : ctx->base_name;
+    size_t len = strlen(base_name);
     st->output_name = malloc(len + 32);
-    memcpy(st->output_name, ctx->output_name_base, len + 1);
+    memcpy(st->output_name, base_name, len + 1);
 
     // If we have been given a unique filter then assume they actually want
     // that name!
@@ -582,6 +605,24 @@ stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint
         (dest_addr >> 8) & 0xff, dest_addr & 0xff,
         dest_port);
     }
+  }
+
+  if (ctx->csv_gen)
+  {
+    const size_t len = strlen(ctx->base_name);
+    char * const name = malloc(len + 32);
+    memcpy(name, ctx->base_name, len + 1);
+
+    if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
+    {
+      sprintf(name + len, "_%u.%u.%u.%u_%u.csv",
+        dest_addr >> 24, (dest_addr >> 16) & 0xff,
+        (dest_addr >> 8) & 0xff, dest_addr & 0xff,
+        dest_port);
+    }
+    else
+      strcpy(name + len, ".csv");
+    st->csv_name = name;
   }
 
   if (st->output_name != NULL)
@@ -673,8 +714,22 @@ stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
   pcapreport_stream_t * const st = *pst;
   *pst = NULL;
 
+  {
+    // Free off all our section data
+    pcapreport_section_t * p = st->section_first;
+    while (p != NULL)
+    {
+      pcapreport_section_t * np = p->next;
+      free(p);
+      p = np;
+    }
+  }
   if (st->output_file != NULL)
     fclose(st->output_file);
+  if (st->csv_file != NULL)
+    fclose(st->csv_file);
+  if (st->csv_name != NULL)
+    free((void *)st->csv_name);
   if (st->output_name != NULL)
     free(st->output_name);
   free(st);
@@ -691,10 +746,16 @@ static void print_usage()
     "\n"
     "Report on a pcap capture file.\n"
     "\n"
-    "  -output\n"
+    "  --name <file>\n"
+    "  -n <file>          Set the default base name for output files; by default\n"
+    "                     this will be the input name without any .pcap suffix\n"
+    "  -x, --extract      Extract TS(s) to files of the default name\n"
+    "  -c, --csvgen       Create a .csv file for each stream containing timing info\n"
+    "  -output <file>\n"
     "  -o <file>,         Dump selected UDP payloads to output file(s)\n"
     "                     Uses given filename if <ip>:<port> specified,\n"
     "                     otherwise appends <ip>_<port> to filename per TS\n"
+    "                     Is much the same as -x -n <name>\n"
     "  -a                 Analyse.  Produces summary info on every TS in the pcap\n"
     "  -d <dest ip>:<port>\n"
     "  -d <dest ip>       Select data with the given destination IP and port.\n"
@@ -769,6 +830,7 @@ int main(int argc, char **argv)
       {
         CHECKARG("pcapreport",ii);
         ctx->output_name_base = argv[++ii];
+        ctx->extract_data = TRUE;
       }
       else if (!strcmp("--times", argv[ii]) || 
                !strcmp("-times", argv[ii]) || !strcmp("-t", argv[ii]))
@@ -825,6 +887,19 @@ int main(int argc, char **argv)
         ctx->opt_skew_discontinuity_threshold = val;
         ++ii;
       }
+      else if (strcmp("-n", argv[ii]) == 0 || strcmp("--name", argv[ii]) == 0)
+      {
+        CHECKARG("pcapreport",ii);
+        ctx->base_name = strdup(argv[++ii]);  // So we know it is always malloced
+      }
+      else if (strcmp("-x", argv[ii]) == 0 || strcmp("--extract", argv[ii]) == 0)
+      {
+        ctx->extract = TRUE;
+      }
+      else if (strcmp("-c", argv[ii]) == 0 || strcmp("--csvgen", argv[ii]) == 0)
+      {
+        ctx->csv_gen = TRUE;
+      }
       else
       {
         fprint_err( "### pcapreport: "
@@ -852,6 +927,18 @@ int main(int argc, char **argv)
   {
     print_err("### pcapreport: No input file specified\n");
     return 1;
+  }
+
+  if (ctx->base_name == NULL)
+  {
+    // If we have no default name then use the input name as a base after
+    // stripping off any .pcap
+    const char * input_name = ctx->input_name == NULL ? "pcap" : ctx->input_name;
+    char * buf = strdup(ctx->input_name);
+    size_t len = strlen(input_name);
+    if (len > 5 && strcmp(".pcap", buf + len - 5) == 0)
+      buf[len - 5] = 0;
+    ctx->base_name = buf;
   }
 
   fprint_msg("%s\n",ctx->input_name);
@@ -1045,7 +1132,7 @@ int main(int argc, char **argv)
               {
                 ++sent_to_output;
   
-                if (ctx->time_report || ctx->analyse)
+                if (ctx->time_report || ctx->analyse || ctx->csv_gen)
                 {
                   rv =digest_times(ctx, 
                                    st,
@@ -1056,7 +1143,7 @@ int main(int argc, char **argv)
                                    data, len);
                   if (rv) { return rv; }
                 }
-                if (st->output_name)
+                if (ctx->extract)
                 {
                   rv = write_out_packet(ctx, st, data, len);
                   if (rv) { return rv; }
