@@ -113,6 +113,9 @@ struct pcapreport_stream_struct {
   // ts packet counter for error reporting.
   uint32_t ts_counter;
 
+  // Count overlength packets
+  uint32_t pkts_overlength;
+
   /*! How far do we need to skew (in 90kHz units) to signal a discontinuity? */
   int64_t skew_discontinuity_threshold;
 
@@ -325,10 +328,17 @@ static int digest_times(pcapreport_ctx_t *ctx,
   }
 
   // Add all our data to the pool.
+  {
+    unsigned int pkts = len / 188;
+    unsigned int pktlen = pkts * 188;
 
-  st->tmp_buf = (byte *)realloc(st->tmp_buf, st->tmp_len + len);
-  memcpy(&st->tmp_buf[st->tmp_len], data, len);
-  st->tmp_len += len;
+    if (pktlen != len)
+      ++st->pkts_overlength;
+
+    st->tmp_buf = (byte *)realloc(st->tmp_buf, st->tmp_len + pktlen);
+    memcpy(&st->tmp_buf[st->tmp_len], data, pktlen);
+    st->tmp_len += pktlen;
+  }
 
   // Now read out all the ts packets we can.
   while (1)
@@ -507,11 +517,16 @@ static int write_out_packet(pcapreport_ctx_t * const ctx,
                             const uint32_t len)
 {
   int rv;
+  unsigned int pkts = len / 188;
 
   if (st->output_name)
   {
     if (!st->output_file)
     {
+      fprint_msg("pcapreport: Dumping all packets for %s:%d to %s\n",
+                 ipv4_addr_to_string(st->output_dest_addr),
+                 st->output_dest_port,
+                 st->output_name);
       st->output_file = fopen(st->output_name, "wb");
       if (!st->output_file)
       {
@@ -525,8 +540,8 @@ static int write_out_packet(pcapreport_ctx_t * const ctx,
     {
       fprint_msg("++   Dumping %d bytes to output file.\n", len);
     }
-    rv = fwrite(data, len, 1, st->output_file);
-    if (rv != 1)
+    rv = fwrite(data, 188, pkts, st->output_file);
+    if (rv != pkts)
     {
       fprint_err( "### pcapreport: Couldn't write %d bytes"
                   " to %s (error = %d).\n", 
@@ -625,14 +640,6 @@ stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint
     st->csv_name = name;
   }
 
-  if (st->output_name != NULL)
-  {
-    fprint_msg("pcapreport: Dumping all packets for %s:%d to %s\n",
-               ipv4_addr_to_string(st->output_dest_addr),
-               st->output_dest_port,
-               st->output_name);
-  }
-
   return st;
 }
 
@@ -654,7 +661,7 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
   {
     const pcapreport_section_t * tsect;
 
-    fprint_msg("  Pkts: Good=%d, Bad=%d\n", st->seen_good, st->seen_bad);
+    fprint_msg("  Pkts: Good=%d, Bad=%d, Overlength=%u\n", st->seen_good, st->seen_bad, st->pkts_overlength);
     fprint_msg("  PCR PID: %d (%#x)%s\n", st->pcr_pid, st->pcr_pid,
       !st->multiple_pcr_pids ? "" : " ### Other PCR PIDs in stream - not tracked");
 
@@ -669,7 +676,7 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
       fprint_msg("    Tim: %llu->%llu (%lld)\n", tsect->time_start - time_offset, tsect->time_last - time_offset, time_len);
       fprint_msg("    PCR: %llu->%llu (%lld)\n", tsect->pcr_start, tsect->pcr_last, pcr_len);
       fprint_msg("    Drift: diff=%lld; rate=%lld/min; 1s per %llds\n",
-        time_len - pcr_len, drift * 60LL * 90000LL / time_len,
+        time_len - pcr_len, time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len,
         drift == 0 ? 0LL : time_len / drift);
       fprint_msg("    Max jitter: %d\n", tsect->jitter_max);
     }
