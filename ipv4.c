@@ -61,8 +61,8 @@ int ipv4_from_payload(const uint8_t *data,
   cur_field = uint_32_be(&data[4]);
   
   out_hdr->ident = (cur_field >> 16) & 0xffff;
-  out_hdr->flags = (cur_field >> 14) & 3;
-  out_hdr->frag_offset = (cur_field & 0x3fff);
+  out_hdr->flags = (cur_field >> 13) & 7;
+  out_hdr->frag_offset = (cur_field & 0x1fff);
   
   // Field 2
   cur_field = uint_32_be(&data[8]);

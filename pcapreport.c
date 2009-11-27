@@ -52,6 +52,7 @@
 #include "version.h"
 #include "misc_fns.h"
 #include "ts_fns.h"
+#include "fmtx.h"
 
 typedef struct pcapreport_stream_struct pcapreport_stream_t;
 
@@ -77,11 +78,14 @@ struct pcapreport_section_struct {
   unsigned int section_no;
   unsigned int jitter_max;
   uint32_t pkt_start;
-  uint32_t pkt_last;
+  uint32_t pkt_final;
   uint64_t time_start;  // 90kHz
-  uint64_t time_last;
+  uint64_t time_last;   // time @ last PCR
+  uint64_t time_final;
   uint64_t pcr_start;   // 90kHz
   uint64_t pcr_last;
+  uint64_t ts_byte_start;
+  uint64_t ts_byte_final;
 };
 
 struct pcapreport_stream_struct {
@@ -121,11 +125,28 @@ struct pcapreport_stream_struct {
 
   int64_t last_time_offset;
 
+  uint64_t ts_bytes;
+
   pcapreport_section_t * section_first;
   pcapreport_section_t * section_last;
 
   jitter_env_t jitter;
 };
+
+
+typedef struct pcapreport_fragment_struct
+{
+  int in_use;
+  uint16_t ident;
+  uint16_t current_len;
+  byte pkt[65536];
+} pcapreport_fragment_t;
+
+typedef struct pcapreport_reassembly_struct
+{
+  pcapreport_fragment_t frag;
+} pcapreport_reassembly_t;
+
 
 
 typedef struct pcapreport_ctx_struct
@@ -146,6 +167,8 @@ typedef struct pcapreport_ctx_struct
   PCAP_reader_p pcreader;
   pcap_hdr_t pcap_hdr;
 
+  unsigned int tfmt;
+
   // packet counter.
   uint32_t pkt_counter;
 
@@ -161,6 +184,7 @@ typedef struct pcapreport_ctx_struct
   time_t time_sec;
 
   pcapreport_stream_t * stream_hash[256];
+  pcapreport_reassembly_t reassembly_env;
 } pcapreport_ctx_t;
 
 
@@ -313,6 +337,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
                         const uint32_t len)
 {
   int rv;
+  const uint64_t ts_byte_start = st->ts_bytes;
 
   if (st->ts_r == NULL)
   {
@@ -338,6 +363,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
     st->tmp_buf = (byte *)realloc(st->tmp_buf, st->tmp_len + pktlen);
     memcpy(&st->tmp_buf[st->tmp_len], data, pktlen);
     st->tmp_len += pktlen;
+    st->ts_bytes += pktlen;
   }
 
   // Now read out all the ts packets we can.
@@ -356,6 +382,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
 
     // Right. Split it ..
     {
+      const uint64_t t_pcr = pkt_time(pcap_pkt_hdr);
       uint32_t pid;
       int pusi;
       byte *adapt;
@@ -381,7 +408,6 @@ static int digest_times(pcapreport_ctx_t *ctx,
         {
           int has_pcr;
           uint64_t pcr;
-          const uint64_t t_pcr = pkt_time(pcap_pkt_hdr);
           int64_t pcr_time_offset;
 
           get_PCR_from_adaptation_field(adapt, adapt_len, &has_pcr,
@@ -441,12 +467,14 @@ static int digest_times(pcapreport_ctx_t *ctx,
                              pcap_pkt_hdr->ts_usec);
                 }
 
-                tsect->pkt_last =
+                tsect->pkt_final =
                 tsect->pkt_start = ctx->pkt_counter;
                 tsect->pcr_last =
                 tsect->pcr_start = pcr;
                 tsect->time_last =
                 tsect->time_start = t_pcr;
+                tsect->ts_byte_start =
+                tsect->ts_byte_final = ts_byte_start;
 
                 jitter_clear(&st->jitter);
                 st->last_time_offset = 0;
@@ -497,12 +525,21 @@ static int digest_times(pcapreport_ctx_t *ctx,
                 // Remember where we are for posterity
                 tsect->pcr_last = pcr;
                 tsect->time_last = t_pcr;
-                tsect->pkt_last = ctx->pkt_counter;
 
                 st->last_time_offset = pcr_time_offset;
               }
             }
           }
+        }
+      }
+
+      {
+        pcapreport_section_t * const tsect = st->section_last;
+        if (tsect != NULL)
+        {
+          tsect->time_final = t_pcr;
+          tsect->ts_byte_final = st->ts_bytes;
+          tsect->pkt_final = ctx->pkt_counter;
         }
       }
 
@@ -647,6 +684,10 @@ void
 stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
 {
   uint32_t dest_addr = st->output_dest_addr;
+
+  if (ctx->verbose < 1 && st->seen_good == 0)
+    return;
+
   fprint_msg("Stream %d: Dest %u.%u.%u.%u:%u\n",
     st->stream_no,
     dest_addr >> 24, (dest_addr >> 16) & 0xff,
@@ -669,16 +710,30 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
     {
       uint64_t time_offset = ctx->time_start;
       int64_t time_len = tsect->time_last - tsect->time_start;
+      int64_t time_len2 = tsect->time_final - tsect->time_start;
       int64_t pcr_len = tsect->pcr_last - tsect->pcr_start;
       int64_t drift = time_len - pcr_len;
-      fprint_msg("  Section %d:", tsect->section_no);
-      fprint_msg("    Pkt: %u->%u\n", tsect->pkt_start, tsect->pkt_last);
-      fprint_msg("    Tim: %llu->%llu (%lld)\n", tsect->time_start - time_offset, tsect->time_last - time_offset, time_len);
-      fprint_msg("    PCR: %llu->%llu (%lld)\n", tsect->pcr_start, tsect->pcr_last, pcr_len);
-      fprint_msg("    Drift: diff=%lld; rate=%lld/min; 1s per %llds\n",
-        time_len - pcr_len, time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len,
+      fprint_msg("  Section %d:\n", tsect->section_no);
+      fprint_msg("    Pkts: %u->%u\n", tsect->pkt_start, tsect->pkt_final);
+      fprint_msg("    Bytes: %llu (%llu bits/sec)\n", tsect->ts_byte_final - tsect->ts_byte_start, 
+        time_len2 == 0LL ? 0LL : (tsect->ts_byte_final - tsect->ts_byte_start) * 8ULL * 90000ULL / time_len2);
+      fprint_msg("    Time (Total): %s->%s (%s)\n",
+        fmtx_timestamp(tsect->time_start - time_offset, ctx->tfmt),
+        fmtx_timestamp(tsect->time_final - time_offset, ctx->tfmt),
+        fmtx_timestamp(time_len2, ctx->tfmt));
+      fprint_msg("    Time (PCRs): %s->%s (%s)\n",
+        fmtx_timestamp(tsect->time_start - time_offset, ctx->tfmt),
+        fmtx_timestamp(tsect->time_last - time_offset, ctx->tfmt),
+        fmtx_timestamp(time_len, ctx->tfmt));
+      fprint_msg("    PCR: %s->%s (%s)\n",
+        fmtx_timestamp(tsect->pcr_start, ctx->tfmt),
+        fmtx_timestamp(tsect->pcr_last, ctx->tfmt),
+        fmtx_timestamp(pcr_len, ctx->tfmt));
+      fprint_msg("    Drift: diff=%s; rate=%s/min; 1s per %llds\n",
+        fmtx_timestamp(time_len - pcr_len, ctx->tfmt),
+        fmtx_timestamp(time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len, ctx->tfmt),
         drift == 0 ? 0LL : time_len / drift);
-      fprint_msg("    Max jitter: %d\n", tsect->jitter_max);
+      fprint_msg("    Max jitter: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt));
     }
   }
 
@@ -742,6 +797,88 @@ stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
   free(st);
 }
 
+static int
+ip_reassemble(pcapreport_reassembly_t * const reas, const ipv4_header_t * const ip, void * const in_data,
+  void ** const out_pdata, uint32_t * const out_plen)
+{
+  uint32_t frag_len = ip->length - ip->hdr_length * 4;
+  uint32_t frag_offset = ip->frag_offset * 8;  // bytes
+  int frag_final = (ip->flags & 1) == 0;
+
+  // Discard unless we succeed
+  *out_pdata = NULL;
+  *out_plen = 0;
+
+  if (frag_final && frag_offset == 0)
+  {
+    // Normal case - no fragmentation
+    *out_pdata = in_data;
+    *out_plen = frag_len;
+    return 0;
+  }
+
+  if ((frag_len & 7) != 0 && !frag_final)
+  {
+    // Only final fragment may have length that is not a multiple of 8
+    fprint_err("### Non-final fragment with bad length: %d\n", frag_len);
+    return -1;
+  }
+
+  if (frag_len + frag_offset >= 0x10000)
+  {
+    // I can't find this explicitly prohibited in RFC791 but it can't be good
+    // and the limit should probably be a little less if we were being pedantic
+    fprint_err("### Fragment end >= 64k: %d+%d\n", frag_offset, frag_len);
+    return -1;
+  }
+
+  // Very limited reassembly
+  {
+    pcapreport_fragment_t * frag = &reas->frag;
+
+    if (frag->in_use && frag->ident != ip->ident)
+    {
+      fprint_err("### Multi-packet fragment reassembly NIF - previous packet discarded\n");
+      frag->in_use = 0;
+    }
+
+    // If previously idle then reset stuff
+    if (!frag->in_use)
+    {
+      frag->in_use = 1;
+      frag->current_len = 0;
+      frag->ident = ip->ident;
+    }
+
+    if (frag->current_len != frag_offset)
+    {
+      fprint_err("### Reordering fragment reassembly NIF - packet discarded\n");
+      frag->in_use = 0;
+      return -1;
+    }
+
+    frag->current_len = frag_offset + frag_len;
+
+    memcpy(frag->pkt + ip->frag_offset * 8, in_data, frag_len);
+
+    if (!frag_final)
+      return 1;
+
+    *out_pdata = frag->pkt;
+    *out_plen = frag->current_len;
+    frag->in_use = 0;
+    return 0;
+  }
+}
+
+static int
+ip_reassembly_init(pcapreport_reassembly_t * const reas)
+{
+  memset(reas, 0, sizeof(*reas));
+  return 0;
+}
+
+
 static void print_usage()
 {
   print_msg(
@@ -753,6 +890,8 @@ static void print_usage()
     "\n"
     "Report on a pcap capture file.\n"
     "\n"
+    "  -h                 This help\n"
+    "  -h detail          More detail on what some terms used by pcapreport mean\n"
     "  --name <file>\n"
     "  -n <file>          Set the default base name for output files; by default\n"
     "                     this will be the input name without any .pcap suffix\n"
@@ -768,6 +907,7 @@ static void print_usage()
     "  -d <dest ip>       Select data with the given destination IP and port.\n"
     "                     If the <port> is not specified, it defaults to 0\n"
     "                     (see below).\n"
+    "  -tfmt 32|90|ms|hms Set time format in report [default = 90kHz units]\n"
     "  -dump-data, -D     Dump any data in the input file to stdout.\n"
     "  -extra-dump, -e    Dump only data which isn't being sent to the -o file.\n"
     "  -times,  -t        Report continuously on PCR vs PCAP timing for the\n"
@@ -790,6 +930,94 @@ static void print_usage()
     );
 }
 
+static char manpage[] =
+"Times (packet and PCR)\n"
+"----------------------\n"
+"\n"
+"The times associated with packets and PCR are held internally in 90kHz units\n"
+"and are displayed in those units by default\n"
+"\n"
+"Stream\n"
+"------\n"
+"\n"
+"A set of packets to the same IP & Port.  TS streams are detected by looking\n"
+"for 0x47s at appropriate places in the packets\n"
+"\n"
+"Section\n"
+"-------\n"
+"A part of a stream which appears to have a continuous TS embedded in it.  If\n"
+"the PCR jumps then a new section should be started (though this will not\n"
+"generate a separate .ts file if the extraction option is in effect, nor will\n"
+"it generate a new .csv file.)\n"
+"\n"
+"As it stands pcapreport will only report on a single PCR pid within a TS. If\n"
+"multiple pids with PCRs are detected then this will be reported but the other\n"
+"PCRs will be ignored\n"
+"\n"
+"Skew\n"
+"----\n"
+"\n"
+"This is the difference between the time in the pcap for a UDP packet and any\n"
+"PCR found in the TS contained within that packet.  The accuracy of this figure\n"
+"obviously depends on how good the clock was in the capture process.  Skew is\n"
+"arbitrarily set to zero at the start of a section.  A skew of >6s is assumed\n"
+"to be a discontinuity and will start a new section.\n"
+"\n"
+"Drift\n"
+"-----\n"
+"\n"
+"This is skew over time and (assuming that the playout process is good)\n"
+"represents the difference in speed between the transmitters clock and the\n"
+"receivers clock.  The algorithm for determining this isn't very sophisticated\n"
+"so if you have a large maximum jitter or a short sample this should be taken\n"
+"with a pinch of salt.  Beware also that PC clocks (like the one in the m/c\n"
+"doing the tcpdump) are not always amongst the most stable or accurate; however\n"
+"they should be good enough to detect gross errors\n"
+"\n"
+"Jitter\n"
+"------\n"
+"\n"
+"This is measured as the difference between the maximum and minimum skews over\n"
+"a 10sec (max 1024 samples) period.  This should be long enough to capture a\n"
+"good baseline but short enough that drift has a negligible effect\n"
+"\n"
+"Max Jitter\n"
+"----------\n"
+"\n"
+"The maximum value of jitter (see above) found in a section\n"
+"";
+
+
+const char *onechararg[26] =
+{
+  "analyse", // a
+  "", // b
+  "csvgen", // c
+  "destip", // d
+  "", // e
+  "", // f
+  "", // g
+  "help", // h
+  "", // i
+  "", // j
+  "", // k
+  "", // l
+  "", // m
+  "name", // n
+  "output", // o
+  "", // p
+  "", // q
+  "", // r
+  "", // s
+  "times", // t
+  "", // u
+  "verbose", // v
+  "", // w
+  "extract", // x
+  "", // y
+  ""  // z
+};
+
 
 int main(int argc, char **argv)
 {
@@ -799,6 +1027,9 @@ int main(int argc, char **argv)
   pcapreport_ctx_t  * const ctx = &sctx;
 
   ctx->opt_skew_discontinuity_threshold = SKEW_DISCONTINUITY_THRESHOLD;
+  ctx->tfmt = FMTX_TS_DISPLAY_90kHz_RAW;
+
+  ip_reassembly_init(&ctx->reassembly_env);
 
   if (argc < 2)
   {
@@ -810,13 +1041,22 @@ int main(int argc, char **argv)
   {
     if (argv[ii][0] == '-')
     {
-      if (!strcmp("--help", argv[ii]) || !strcmp("-h", argv[ii]) ||
-          !strcmp("-help", argv[ii]))
+      // remove double dashes
+      const char c = argv[ii][1];
+      const char * const arg = c >= 'a' && c <= 'z' && argv[ii][2] == 0 ? onechararg[c - 'a'] :
+        argv[ii][1] == '-' ? argv[ii] + 2 : argv[ii] + 1;
+
+      if (strcmp("help", arg) == 0)
       {
+        if (ii + 1 < argc && strcmp("detail", argv[ii + 1]) == 0)
+        {
+          fwrite(manpage, sizeof(manpage), 1, stdout);
+          exit(0);
+        }
         print_usage();
         return 0;
       }
-      else if (!strcmp("-err",argv[ii]))
+      else if (!strcmp("err",arg))
       {
         CHECKARG("pcapreport",ii);
         if (!strcmp(argv[ii+1],"stderr"))
@@ -832,30 +1072,25 @@ int main(int argc, char **argv)
         }
         ii++;
       }
-      else if (!strcmp("--output", argv[ii]) ||
-               !strcmp("-output", argv[ii]) || !strcmp("-o", argv[ii]))
+      else if (!strcmp("output", arg))
       {
         CHECKARG("pcapreport",ii);
         ctx->output_name_base = argv[++ii];
         ctx->extract_data = TRUE;
       }
-      else if (!strcmp("--times", argv[ii]) || 
-               !strcmp("-times", argv[ii]) || !strcmp("-t", argv[ii]))
+      else if (!strcmp("times", arg))
       {
         ++ctx->time_report;
       }
-      else if (!strcmp("--analyse", argv[ii]) || 
-               !strcmp("-a", argv[ii]))
+      else if (!strcmp("analyse", arg))
       {
         ctx->analyse = TRUE;
       }
-      else if (!strcmp("--verbose", argv[ii]) || 
-               !strcmp("-verbose", argv[ii]) || !strcmp("-v", argv[ii]))
+      else if (!strcmp("verbose", arg))
       {
         ++ctx->verbose;
       }
-      else if (!strcmp("--d", argv[ii]) ||
-               !strcmp("-d", argv[ii]))
+      else if (!strcmp("destip", arg))
       {
         char *hostname;
         int port = 0;
@@ -873,19 +1108,16 @@ int main(int argc, char **argv)
           return 1;
         }
       }
-      else if (!strcmp("--dump-data", argv[ii]) ||
-               !strcmp("-dump-data", argv[ii]) || !strcmp("-D", argv[ii]))
+      else if (!strcmp("dump-data", arg) || !strcmp("D", arg))
       {
         ++ctx->dump_data;
       }
-      else if (!strcmp("--extra-dump", argv[ii]) || 
-               !strcmp("-extra-dump", argv[ii]) || !strcmp("-E", argv[ii]))
+      else if (!strcmp("extra-dump", arg) || !strcmp("E", arg))
       {
         ++ctx->dump_extra;
       }
-      else if (!strcmp("--skew-discontinuity-threshold", argv[ii]) ||
-               !strcmp("-skew-discontinuity-threshold", argv[ii]) ||
-               !strcmp("-skew", argv[ii]))
+      else if (!strcmp("skew-discontinuity-threshold", arg) ||
+               !strcmp("skew", arg))
       {
         int val;
         CHECKARG("pcapreport",ii);
@@ -894,18 +1126,30 @@ int main(int argc, char **argv)
         ctx->opt_skew_discontinuity_threshold = val;
         ++ii;
       }
-      else if (strcmp("-n", argv[ii]) == 0 || strcmp("--name", argv[ii]) == 0)
+      else if (strcmp("name", arg) == 0)
       {
         CHECKARG("pcapreport",ii);
         ctx->base_name = strdup(argv[++ii]);  // So we know it is always malloced
       }
-      else if (strcmp("-x", argv[ii]) == 0 || strcmp("--extract", argv[ii]) == 0)
+      else if (strcmp("extract", arg) == 0)
       {
         ctx->extract = TRUE;
       }
-      else if (strcmp("-c", argv[ii]) == 0 || strcmp("--csvgen", argv[ii]) == 0)
+      else if (strcmp("csvgen", arg) == 0)
       {
         ctx->csv_gen = TRUE;
+      }
+      else if (strcmp("tfmt", arg) == 0)
+      {
+        int tfmt;
+        CHECKARG("pcapreport",ii);
+        if ((tfmt = fmtx_str_to_timestamp_flags(argv[ii + 1])) < 0)
+        {
+          fprint_err("### Bad timeformat: %s\n", argv[ii + 1]);
+          exit(1);
+        }
+        ctx->tfmt = tfmt;
+        ++ii;
       }
       else
       {
@@ -1101,6 +1345,11 @@ int main(int argc, char **argv)
 
             data = &data[out_st];
             len = out_len;
+
+            if (ip_reassemble(&ctx->reassembly_env, &ipv4_hdr, data, (void**)&data, &len) != 0)
+            {
+              goto dump_out;
+            }
 
             if (!(IPV4_HDR_IS_UDP(&ipv4_hdr)))
             {
