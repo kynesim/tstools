@@ -77,6 +77,21 @@ struct diff_from_pcr
   unsigned int  num;          // the number of TS records compared
 };
 
+typedef struct avg_rate_elss
+{
+  uint64_t time;
+  uint64_t bytes;
+} avg_rate_el_t;
+
+typedef struct avg_ratess
+{
+  unsigned int max_els;
+  unsigned int in_el;
+  unsigned int out_el;
+  avg_rate_el_t * els;
+  uint64_t max_rate;
+} avg_rate_t;
+
 struct stream_data {
   uint32_t       pid;
   int           stream_type;
@@ -92,6 +107,7 @@ struct stream_data {
   // PTS/DTS in the file, when we're finishing up
   uint64_t       pts;
   uint64_t       dts;
+  uint64_t       pcr;
 
   int           err_pts_lt_dts;
   int           err_dts_lt_prev_dts;
@@ -103,6 +119,11 @@ struct stream_data {
   struct diff_from_pcr        pcr_dts_diff;
 
   int           pts_ne_dts;
+
+  int           pcr_seen;
+  uint64_t      first_pcr;
+  uint64_t      ts_bytes;
+  avg_rate_t    rate;
 };
 
 static int pid_index(struct stream_data *data,
@@ -115,6 +136,59 @@ static int pid_index(struct stream_data *data,
       return ii;
   return -1;
 }
+
+// (x - y) with allowance for PCR wrap - unsigned version
+static uint64_t
+pcr_unsigned_diff(uint64_t x, uint64_t y)
+{
+  return x > y ? x - y :
+    300ULL * (1ULL << 33) - (y - x);
+}
+
+unsigned int
+avg_rate_inc(avg_rate_t * ar, unsigned int n)
+{
+  return n + 1 >= ar->max_els ? 0 : n + 1;
+}
+
+static void
+avg_rate_add(avg_rate_t * ar, uint64_t time, uint64_t bytes)
+{
+  uint64_t gap = 27000000 / 2;  // 0.5 sec
+  uint64_t delta_b;
+  uint64_t delta_t;
+  uint64_t rate;
+
+  if (ar->els == NULL)
+  {
+    ar->max_els = 1024;
+    ar->els = calloc(ar->max_els, sizeof(ar->els[0]));
+  }
+
+  while (ar->in_el != ar->out_el && pcr_unsigned_diff(time, ar->els[ar->out_el].time) > gap)
+  {
+    ar->out_el = avg_rate_inc(ar, ar->out_el);
+  }
+
+  ar->els[ar->in_el].time = time;
+  ar->els[ar->in_el].bytes = bytes;
+
+  delta_b = bytes - ar->els[ar->out_el].bytes;
+  delta_t = pcr_unsigned_diff(time, ar->els[ar->out_el].time);
+
+  if (delta_t != 0)
+  {
+    rate = (delta_b * 8LL * 27000000LL) / delta_t;
+    if (rate > ar->max_rate)
+    {
+      ar->max_rate = rate;
+    }
+  }
+
+  ar->in_el = avg_rate_inc(ar, ar->in_el);
+}
+
+
 
 /*
  * Report on the given file
@@ -178,6 +252,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     stats[ii].pcr_dts_diff.min = LONG_MAX;
     stats[ii].pcr_pts_diff.max = LONG_MIN;
     stats[ii].pcr_dts_diff.max = LONG_MIN;
+    stats[ii].first_pcr = ~(uint64_t)0;
     stats[ii].last_cc = -1;
   }
   predict.min_pcr_error = LONG_MAX;
@@ -355,6 +430,14 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         predict.prev_pcr = adapt_pcr;
         predict.prev_pcr_posn = posn;
       }
+
+      {
+        int i;
+        for (i = 0; i != num_streams; ++i)
+        {
+          stats[i].pcr_seen = TRUE;
+        }
+      }
     }   // end of working with a PCR PID packet
     // ========================================================================
 
@@ -403,6 +486,19 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         }
       }
       stats[index].last_cc = cc;
+    }
+
+    if (index != -1)
+    {
+      if (stats[index].pcr_seen)
+      {
+        stats[index].pcr_seen = FALSE;
+        avg_rate_add(&stats[index].rate, acc_pcr, stats[index].ts_bytes);
+      }
+      if (stats[index].first_pcr == ~(uint64_t)0)
+        stats[index].first_pcr = acc_pcr;
+      stats[index].pcr = acc_pcr;
+      stats[index].ts_bytes += 188;
     }
 
     if (index != -1 && payload && payload_unit_start_indicator)
@@ -647,6 +743,13 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       fprint_msg("  First DTS %8s, last %8s\n",
                  fmtx_timestamp(stats[ii].first_dts, tfmt_abs),
                  fmtx_timestamp(stats[ii].dts, tfmt_abs));
+
+    {
+      // Calculate rate over the range of PCRs seen in this stream
+      uint64_t avg = stats[ii].pcr == stats[ii].first_pcr ? 0LL :
+         ((stats[ii].ts_bytes - 188LL) * 8LL * 27000000LL) / (stats[ii].pcr - stats[ii].first_pcr);
+      fprint_msg("  Stream: %llu bytes; rate: avg %llu bits/s, max %llu bits/s\n", stats[ii].ts_bytes, avg, stats[ii].rate.max_rate);
+    }
 
     if (stats[ii].err_cc_error != 0)
       fprint_msg("  ### CC error * %d\n", stats[ii].err_cc_error);
@@ -1031,7 +1134,8 @@ static void print_usage()
     "Buffering information:\n"
     "  -buffering, -b    Report on the differences between PCR and PTS, and\n"
     "                    between PCR and DTS. This is relevant to the size of\n"
-    "                    buffers needed in the decoder.\n"
+    "                    buffers needed in the decoder.  Also reports bitrates;\n"
+    "                    the max bitrate is calculated over 0.5sec\n"
     "  -o <file>         Output CSV data for -buffering to the named file.\n"
     "  -32               Truncate 33 bit values in the CSV output to 32 bits\n"
     "                    (losing the top bit).\n"
