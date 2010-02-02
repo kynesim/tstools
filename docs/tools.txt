@@ -272,14 +272,17 @@ For instance::
     ... lines omitted ...
     pppppppppppppppippppppppppppppppppppppppppppppppppppppppppppppp
     Found 2550 NAL units in 2548 access units
+    0 IDR, 5 I, 78 P, 0 B access units
     GOP size (s): max=1.1200, min=0.0400, mean=0.67682
 
     $ esdots /data/CharliesAngels.es -max 1000
     Reading from /data/CharliesAngels.es
     Input appears to be MPEG-2 (H.262)
     [E>iEUUbEUbEUpEUbEUbEUpEUbEUbEUpEUbEUbEU[E>iEUUbEUbEUpEUbEUbEUpEUbEUbEU
+    ... lines omitted ...
     pEUbEUbEU[E>iEUUbEU
     Found 1000 MPEG2 items
+    30 I, 60 P, 98 B
     GOP times (s): max=0.4800, min=0.1200, mean=0.448125
 
 

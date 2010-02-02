@@ -64,7 +64,7 @@ int umod(unsigned int a, unsigned int b)
 /*
  * Print out a single character representative of our item.
  */
-static void h262_item_dot(h262_item_p  item, 
+static int h262_item_dot(h262_item_p  item, 
 				          double *delta_gop, 
 				          int    show_gop_time)
 {
@@ -72,6 +72,7 @@ static void h262_item_dot(h262_item_p  item,
 
   static int frames = 0;
   static int temp_frames = 0;
+  int pic_coding_type = 0;
 
   // print the time every time we find a random access point (time between two GOPs)
   if (item->unit.start_code == 0xB3)
@@ -97,6 +98,7 @@ static void h262_item_dot(h262_item_p  item,
            item->picture_coding_type==2?"p":
            item->picture_coding_type==3?"b":
            item->picture_coding_type==4?"d":"x");
+    pic_coding_type = item->picture_coding_type;
     break;
   case 0xB0: str = "R"; break; // Reserved
   case 0xB1: str = "R"; break; // Reserved
@@ -112,7 +114,7 @@ static void h262_item_dot(h262_item_p  item,
     if (str == NULL)
     {
       if (item->unit.start_code >= 0x01 && item->unit.start_code <= 0xAF)
-        return; //str = "."; // Don't report slice data explicitly
+        return 0; //str = "."; // Don't report slice data explicitly
       else
         str = "?";
     }
@@ -120,6 +122,7 @@ static void h262_item_dot(h262_item_p  item,
   }
   print_msg(str);
   fflush(stdout);
+  return pic_coding_type;
 }
 
 /*
@@ -143,6 +146,10 @@ static int report_h262_file_as_dots(ES_p    es,
   double time_gop_max = 0.0;
   double time_gop_min = 1000.0;
   double time_gop_tot = 0.0;
+  int pic_coding_type;
+  unsigned long num_i = 0; // number of I frames
+  unsigned long num_p = 0; // number of P frames
+  unsigned long num_b = 0; // number of B frames
 
   if (verbose)
     print_msg("\n"
@@ -179,7 +186,15 @@ static int report_h262_file_as_dots(ES_p    es,
       return err;
     }
     count++;
-    h262_item_dot(item, &time_gop, show_gop_time);
+    pic_coding_type = h262_item_dot(item, &time_gop, show_gop_time);
+    switch (pic_coding_type) {
+      case 1: num_i++; break;
+      case 2: num_p++; break;
+      case 3: num_b++; break;
+      default: break;
+    }
+    
+
     if(item->unit.start_code == 0xB3)
     {
       time_gop_max = max(time_gop_max, time_gop);
@@ -195,6 +210,7 @@ static int report_h262_file_as_dots(ES_p    es,
       break;
   }
   fprint_msg("\nFound %d MPEG2 item%s\n",count,(count==1?"":"s"));
+  fprint_msg("%lu I, %lu P, %lu B\n",num_i,num_p,num_b);
   fprint_msg("GOP times (s): max=%2.4f, min=%2.4f, mean=%2.6f (frame rate = %2.2f)\n",time_gop_max,
          time_gop_min,time_gop_tot/(gops-1), frame_rate);
   return 0;
@@ -405,6 +421,10 @@ static int dots_by_access_unit(ES_p  es,
   int size_gop_tot = 0;
   int is_first_k_frame = TRUE;
   char char_nal_type = 'a';
+  unsigned long num_idr = 0;
+  unsigned long num_i = 0;
+  unsigned long num_p = 0;
+  unsigned long num_b = 0;
 
   if (verbose)
     print_msg("\n"
@@ -464,6 +484,18 @@ static int dots_by_access_unit(ES_p  es,
       k_frame = access_unit_count;
     }
 
+    switch (char_nal_type) {
+      case 'I':
+      case 'i': num_i++; break;
+      case 'D':
+      case 'd': num_idr++; break;
+      case 'P':
+      case 'p': num_p++; break;
+      case 'B':
+      case 'b': num_b++; break;
+      default: break;
+    }
+
     fprint_msg("%c", char_nal_type);
     access_unit_count++;
 
@@ -498,6 +530,8 @@ static int dots_by_access_unit(ES_p  es,
   fprint_msg("\nFound %d NAL unit%s in %d access unit%s\n",
              context->nac->count,(context->nac->count==1?"":"s"),
              access_unit_count,(access_unit_count==1?"":"s"));
+  fprint_msg("%lu IDR, %lu I, %lu P, %lu B access units\n",num_idr, num_i, num_p, num_b);
+
   if (gops) //only if there is more than 1 gop
     fprint_msg("GOP size (s): max=%2.4f, min=%2.4f, mean=%2.5f (frame rate = %2.2f)\n",
                (double)size_gop_max/frame_rate, (double)size_gop_min/frame_rate,
