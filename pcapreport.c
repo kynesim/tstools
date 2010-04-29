@@ -102,8 +102,9 @@ struct pcapreport_stream_struct {
   int stream_no;
   int force;  // We have an explicit filter - try harder
   int ts_good;  // Not a boolean -ve is bad, +ve is good
-  int seen_good;
+  int seen_good;  // Includes those seen_dodgy
   int seen_bad;
+  int seen_dodgy;  // Count of packets that we aren't completely happy with but have declared good
   int multiple_pcr_pids;
 
   TS_reader_p ts_r;
@@ -164,6 +165,7 @@ typedef struct pcapreport_ctx_struct
   int extract;
   int stream_count;
   int csv_gen;
+  int good_ts_only;
   PCAP_reader_p pcreader;
   pcap_hdr_t pcap_hdr;
 
@@ -596,34 +598,40 @@ stream_ts_check(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
                             const uint32_t len)
 {
   const byte * ptr;
+  int good = 0;
+  int bad = 0;
 
   if (st->force)
     st->ts_good = 10;  
 
   if (len % 188 != 0)
-    --st->ts_good;
+    ++bad;
   else
-    ++st->ts_good;
+    ++good;
 
   for (ptr = data; ptr < data + len; ptr += 188)
   {
     if (*ptr != 0x47)
-      --st->ts_good;
+      ++bad;
     else
-      ++st->ts_good;
+      ++good;
   }
+
+  st->ts_good += good - bad;
 
   if (st->ts_good > 10)
     st->ts_good = 10;
   if (st->ts_good < -10)
     st->ts_good = -10;
 
-  if (st->ts_good <= 0)
+  if (st->ts_good <= 0 || (bad != 0 && ctx->good_ts_only))
   {
     ++st->seen_bad;
     return FALSE;
   }
 
+  if (bad != 0)
+    ++st->seen_dodgy;
   ++st->seen_good;
   return TRUE;
 }
@@ -702,7 +710,8 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
   {
     const pcapreport_section_t * tsect;
 
-    fprint_msg("  Pkts: Good=%d, Bad=%d, Overlength=%u\n", st->seen_good, st->seen_bad, st->pkts_overlength);
+    fprint_msg("  Pkts: Good=%d, Dodgy=%d, Bad=%d, Overlength=%u\n",
+      st->seen_good - st->seen_dodgy, st->seen_dodgy, st->seen_bad, st->pkts_overlength);
     fprint_msg("  PCR PID: %d (%#x)%s\n", st->pcr_pid, st->pcr_pid,
       !st->multiple_pcr_pids ? "" : " ### Other PCR PIDs in stream - not tracked");
 
@@ -787,7 +796,21 @@ stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
     }
   }
   if (st->output_file != NULL)
+  {
+    if (st->seen_dodgy != 0)
+    {
+      fprint_msg(">%d> WARNING: %d dodgy packet%s written to: %s\n",
+                 st->stream_no,
+                 st->seen_dodgy, st->seen_dodgy == 1 ? "" : "s", st->output_name);
+    }
+    if (st->seen_bad != 0)
+    {
+      fprint_msg(">%d> WARNING: %d bad packet%s excluded from: %s\n",
+                 st->stream_no,
+                 st->seen_bad, st->seen_bad == 1 ? "" : "s", st->output_name);
+    }
     fclose(st->output_file);
+  }
   if (st->csv_file != NULL)
     fclose(st->csv_file);
   if (st->csv_name != NULL)
@@ -907,6 +930,10 @@ static void print_usage()
     "  -d <dest ip>       Select data with the given destination IP and port.\n"
     "                     If the <port> is not specified, it defaults to 0\n"
     "                     (see below).\n"
+    "  -g, --good-ts-only Only extract/analyse packets that seem entirely good.\n"
+    "                     By default there is a bit of slack in determining if a\n"
+    "                     packet is good and some dodgy packets are let through\n"
+    "                     This switch ensures that all packets pass simple testing\n"
     "  -tfmt 32|90|ms|hms Set time format in report [default = 90kHz units]\n"
     "  -dump-data, -D     Dump any data in the input file to stdout.\n"
     "  -extra-dump, -e    Dump only data which isn't being sent to the -o file.\n"
@@ -996,7 +1023,7 @@ const char *onechararg[26] =
   "destip", // d
   "", // e
   "", // f
-  "", // g
+  "good-ts-only", // g
   "help", // h
   "", // i
   "", // j
@@ -1138,6 +1165,10 @@ int main(int argc, char **argv)
       else if (strcmp("csvgen", arg) == 0)
       {
         ctx->csv_gen = TRUE;
+      }
+      else if (strcmp("good-ts-only", arg) == 0)
+      {
+        ctx->good_ts_only = TRUE;
       }
       else if (strcmp("tfmt", arg) == 0)
       {
