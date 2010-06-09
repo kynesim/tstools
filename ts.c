@@ -1661,6 +1661,15 @@ extern int read_first_TS_packet_from_buffer(TS_reader_p  tsreader,
     return 1;
   }
 
+  // Reset things
+  tsreader->pcrbuf->TS_buffer_next = 0;
+  tsreader->pcrbuf->TS_buffer_end_pcr = 0;
+  tsreader->pcrbuf->TS_buffer_prev_pcr = 0;
+  tsreader->pcrbuf->TS_buffer_posn = start_count;
+  tsreader->pcrbuf->TS_buffer_len = 0;
+  tsreader->pcrbuf->TS_buffer_pcr_pid = pcr_pid;
+  tsreader->pcrbuf->TS_had_EOF = FALSE;
+
   // Read TS packets into our buffer until we find one with a PCR
   err = fill_TS_packet_buffer(tsreader);
   if (err) return err;
