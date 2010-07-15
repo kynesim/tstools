@@ -1530,8 +1530,7 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
   int ii;
 
   // Work out which TS packet we *will* have as our first (zeroth) entry
-  tsreader->pcrbuf->TS_buffer_posn = tsreader->pcrbuf->TS_buffer_posn +
-                                     tsreader->pcrbuf->TS_buffer_len + 1;
+  tsreader->pcrbuf->TS_buffer_posn += tsreader->pcrbuf->TS_buffer_len;
 
   tsreader->pcrbuf->TS_buffer_len = 0;
   tsreader->pcrbuf->TS_buffer_next = 0;
