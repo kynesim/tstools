@@ -1041,6 +1041,7 @@ static int determine_TS_program_info(PES_reader_p   reader)
   // input. If it's not feasible, don't try.
   if (reader->tsreader->file != STDIN_FILENO)
   {
+    err = seek_using_TS_reader(reader->tsreader, 0);
     if (err)
     {
       print_err("### Error rewinding TS stream after finding initial"
