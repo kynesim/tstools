@@ -31,7 +31,7 @@
 
 #include "printing_fns.h"
 
-const char software_version[] = "1.11";
+const char software_version[] = "1.12";
 
 // The following is intended to be output as part of the main help text for
 // each program. ``program_name`` is thus the name of the program.
