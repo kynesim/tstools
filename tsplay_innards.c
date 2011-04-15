@@ -238,7 +238,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       return 1;
     }
 
-    if (pid == 0x0000)
+    if (pid == 0x0000 && !got_PAT)
     {
       if (!quiet) fprint_msg("Packet %d is PAT\n",count);
       if (payload_unit_start_indicator && pat_data)
@@ -264,7 +264,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
         fprint_err("### Error %s PAT\n",
                    (payload_unit_start_indicator?"starting new":"continuing"));
         if (pat_data) free(pat_data);
-        return 1;
+        continue;
       }
 
       // Do we need more data to complete this PAT?
@@ -275,7 +275,7 @@ static int find_PCR_PID(TS_reader_p  tsreader,
       if (err != 0)
       {
         free(pat_data);
-        return err;
+        continue;
       }
       if (!quiet)
         report_pidint_list(prog_list,"Program list","Program",FALSE);

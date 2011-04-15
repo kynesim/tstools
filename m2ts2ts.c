@@ -112,7 +112,7 @@ static int extract_packets(int input, FILE * output,
     {
       packet_buffer = malloc(sizeof(struct _m2ts_packet_buffer));
       /***DEBUG***/
-      fprint_msg("Allocated buffer @ 0x%08x\n", (unsigned int)packet_buffer);
+      fprint_msg("Allocated buffer @ %p\n", packet_buffer);
       if (packet_buffer == NULL)
       {
 	print_err( "### m2ts2ts: out of memory allocating M2TS packet buffer\n");
@@ -157,8 +157,8 @@ static int extract_packets(int input, FILE * output,
     // so start at the tail and work to the front
     p = reorder_buffer_tail;
     if (p != NULL)
-      fprint_msg("tail timestamp = 0x%08x @ 0x%08x\n",
-                 p->timestamp, (unsigned int)p);
+      fprint_msg("tail timestamp = 0x%08x @ %p\n",
+                 p->timestamp, p);
     while (p != NULL && p->timestamp > packet_buffer->timestamp)
     {
       p = p->prev;

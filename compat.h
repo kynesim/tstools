@@ -113,6 +113,7 @@ typedef uint8_t  byte;
 //     do both, here, for safety.
 #include <sys/types.h>
 #include <unistd.h>
+#include <inttypes.h>
 typedef off_t offset_t;
 
 #if defined(__linux__) && !defined(__USE_FILE_OFFSET64)
@@ -124,14 +125,14 @@ typedef off_t offset_t;
 #else
 // On Unices, printf supports %lld for 64 bit integers, and this is suitable
 // for printing out offset_t when it is 64 bit
-#define OFFSET_T_FORMAT    "%lld"
-#define OFFSET_T_FORMAT_08 "%08lld"     // deprecated, because it looks like hex/octal
-#define OFFSET_T_FORMAT_8  "%8lld"
+#define OFFSET_T_FORMAT    "%" PRIi64
+#define OFFSET_T_FORMAT_08 "%08" PRIi64     // deprecated, because it looks like hex/octal
+#define OFFSET_T_FORMAT_8  "%8" PRIi64
 #endif
 
 // Whilst we're at it, define the format for a 64 bit integer as such
-#define LLD_FORMAT  "%lld"
-#define LLU_FORMAT  "%llu"
+#define LLD_FORMAT  "%" PRId64
+#define LLU_FORMAT  "%" PRIu64
 #define LLD_FORMAT_STUMP "lld"
 #define LLU_FORMAT_STUMP "llu"
 

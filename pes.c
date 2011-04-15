@@ -3434,8 +3434,8 @@ extern int find_PTS_DTS_in_PES(byte      data[],
 
   if (data[0] != 0 || data[1] != 0 || data[2] != 1)
   {
-    fprint_err("### find_PTS_in_PES:"
-               " PES packet start code prefix is %02x %02x %02x, not 00 00 01\n",
+    fprint_err("### find_PTS_DTS_in_PES"
+               ": PES packet start code prefix is %02x %02x %02x, not 00 00 01\n",
                data[0],data[1],data[2]);
     return 1;
   }

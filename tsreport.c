@@ -114,6 +114,8 @@ struct stream_data {
   int           err_dts_lt_pcr;
   int           err_cc_error;
   int           err_cc_dup_error;
+  int           err_cc_contents;
+  int           cc_good;
 
   struct diff_from_pcr        pcr_pts_diff;
   struct diff_from_pcr        pcr_dts_diff;
@@ -124,6 +126,8 @@ struct stream_data {
   uint64_t      first_pcr;
   uint64_t      ts_bytes;
   avg_rate_t    rate;
+
+  uint8_t       last_pkt[188];
 };
 
 static int pid_index(struct stream_data *data,
@@ -235,6 +239,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
   uint32_t      pcr_pid;
   uint64_t      first_pcr = 0;
+  offset_t      first_pcr_posn = 0;
   int           pmt_at = 0;     // in case we don't look for a PMT
   int           index;
   int           ii;
@@ -394,8 +399,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                      posn,
                      fmtx_timestamp(adapt_pcr, tfmt_abs | FMTX_TS_N_27MHz));
         if (file)
-          fprintf(file,LLU_FORMAT ",read," LLU_FORMAT ",,,,\n",
-                  posn,(adapt_pcr / (int64_t)300) & report_mask);
+          fprintf(file,OFFSET_T_FORMAT ",read," LLU_FORMAT ",,,,\n",
+                  posn,(adapt_pcr / (uint64_t)300) & report_mask);
 
         if (predict.had_a_pcr)
         {
@@ -425,6 +430,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           if (!quiet)
             fprint_msg("First PCR at " OFFSET_T_FORMAT "\n",posn);
           first_pcr = adapt_pcr;
+          first_pcr_posn = posn;
           predict.had_a_pcr = TRUE;
         }
         predict.prev_pcr = adapt_pcr;
@@ -447,25 +453,76 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     {
       // Do continuity counter checking
       int cc = packet[3] & 15;
+      const int is_discontinuity = (adapt != NULL && (adapt[0] & 0x80) != 0);
 
       // Log if required
       if (continuity_cnt_pid == pid)
         fprintf(file_cnt, "%d%c", cc, cc == 15 ? '\n' : ' ');
 
-      if (stats[index].last_cc > 0)
+      // CC is meant to increment if we have a payload and not if we don't
+      // CC may legitimately 'be wrong' if the discontinuity flag is set
+
+      if (stats[index].last_cc > 0 && !is_discontinuity)
       {
         // We are allowed 1 dup packet
-        // *** Could check that it actually is a dup...
         if (stats[index].last_cc == cc)
         {
-          if (stats[index].cc_dup_count++ != 0)
+          if (payload)
           {
-            if (continuity_cnt_pid == pid)
-              fprintf(file_cnt, "[Duplicate error] ");
-            if (stats[index].err_cc_dup_error++ == 0)
+            if (stats[index].cc_dup_count++ != 0)
             {
-              fprint_msg("### PID(%d): Continuity Counter >1 duplicate %d at " OFFSET_T_FORMAT "\n",
-                         stats[index].pid, cc, posn);
+              if (continuity_cnt_pid == pid)
+                fprintf(file_cnt, "[Duplicate error] ");
+              if (stats[index].err_cc_dup_error++ == 0)
+              {
+                fprint_msg("### PID(%d): Continuity Counter >1 duplicate %d at " OFFSET_T_FORMAT "\n",
+                           stats[index].pid, cc, posn);
+              }
+            }
+  
+            // Whilst everything else must be identical PCR is expected to
+            // change if it is given.  If it exists we know where it is.
+            if (!got_pcr ? (memcmp(stats[index].last_pkt, packet, 188) != 0) :
+                (memcmp(stats[index].last_pkt, packet, 6) != 0 ||
+                 memcmp(stats[index].last_pkt + 12, packet + 12, 188 - 12) != 0))
+            {
+              if (stats[index].err_cc_contents++ == 0)
+                fprint_msg("### PID(%d): Continuity Counter duplicate %d: non identical contents at " OFFSET_T_FORMAT "\n",
+                           stats[index].pid, cc, posn);
+              // Assume that non-identical CC means we had a discontinuity and
+              // therefore let this packet through
+#if 0
+              {
+                const uint8_t * a = stats[index].last_pkt;
+                const uint8_t * b = packet;
+                int i;
+
+                fprint_msg("CC contents:\n");
+
+                for (i = 0; i < 188; i += 16, a += 16, b += 16)
+                {
+                  int j;
+                  const int n = min(16, 188 - i);
+                  for (j = 0; j < n; ++j)
+                  {
+                    fprint_msg("%c%02x", a[j] == b[j] ? ' ' : '*', a[j]);
+                  }
+                  fprint_msg("\n");
+                  for (j = 0; j < n; ++j)
+                  {
+                    fprint_msg("%c%02x", a[j] == b[j] ? ' ' : '*', b[j]);
+                  }
+                  fprint_msg("\n\n");
+                }
+              }
+#endif
+            }
+            else
+            {
+              // Real redundant TS packet!
+              // Log it and discard
+              ++stats[index].cc_good;
+              continue;
             }
           }
         }
@@ -473,19 +530,34 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         {
           // Otherwise CC must go up by 1 mod 16
           stats[index].cc_dup_count = 0;
-          if (((stats[index].last_cc + 1) & 15) != cc)
+          if (payload)
           {
+            if (((stats[index].last_cc + 1) & 15) != cc)
+            {
+              if (continuity_cnt_pid == pid)
+                fprintf(file_cnt, "[Discontinuity] ");
+              if (stats[index].err_cc_error++ == 0)
+              {
+                fprint_msg("### PID(%d): Continuity Counter discontinuity %d->%d at " OFFSET_T_FORMAT "\n",
+                  stats[index].pid, stats[index].last_cc, cc, posn);
+              }
+            }
+          }
+          else
+          {
+            // CC not the same but it should be
             if (continuity_cnt_pid == pid)
               fprintf(file_cnt, "[Discontinuity] ");
             if (stats[index].err_cc_error++ == 0)
             {
-              fprint_msg("### PID(%d): Continuity Counter discontinuity %d->%d at " OFFSET_T_FORMAT "\n",
+              fprint_msg("### PID(%d): Continuity Counter discontinuity %d->%d (but no payload) at " OFFSET_T_FORMAT "\n",
                 stats[index].pid, stats[index].last_cc, cc, posn);
             }
           }
         }
       }
       stats[index].last_cc = cc;
+      memcpy(stats[index].last_pkt, packet, 188);
     }
 
     if (index != -1)
@@ -513,9 +585,9 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                                 &got_pts,&stats[index].pts,&got_dts,&stats[index].dts);
       if (err)
       {
-        fprint_err("### Error looking for PTS/DTS in TS packet at "
-                   OFFSET_T_FORMAT "\n",posn);
-        return 1;
+        fprint_err("### PID(%d): Error looking for PTS/DTS in TS packet at "
+                   OFFSET_T_FORMAT "\n", stats[index].pid, posn);
+        continue;
       }
 
       if (got_dts && !got_pts)
@@ -606,6 +678,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                        escr,posn);
           fprintf(file,LLU_FORMAT,escr & report_mask);
         }
+        fprintf(file, ",%u", (payload[4] << 8) | payload[5]);
         fprintf(file,"\n");
       }
 
@@ -683,6 +756,12 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   fprint_msg("Read %d TS packet%s\n",count,(count==1?"":"s"));
   if (pmt) free_pmt(&pmt);
   if (file) fclose(file);
+  if (predict.had_a_pcr && predict.prev_pcr_posn > first_pcr_posn)
+  {
+    // Multiply by 8 at the end to give us a bit more headroom in file size
+    int rate = (int)((predict.prev_pcr_posn - first_pcr_posn) * 27000000LL / (predict.prev_pcr - first_pcr)) * 8;
+    fprint_msg("Overall stream rate=%d bits/sec\n", rate);
+  }
 
   fprint_msg("Linear PCR prediction errors: min=%s, max=%s\n",
              fmtx_timestamp(predict.min_pcr_error, tfmt_diff),
@@ -750,9 +829,13 @@ static int report_buffering_stats(TS_reader_p  tsreader,
          ((stats[ii].ts_bytes - 188LL) * 8LL * 27000000LL) / (stats[ii].pcr - stats[ii].first_pcr);
       fprint_msg("  Stream: %llu bytes; rate: avg %llu bits/s, max %llu bits/s\n", stats[ii].ts_bytes, avg, stats[ii].rate.max_rate);
     }
+    if (stats[ii].cc_good != 0)
+      fprint_msg("  CC redundant packets * %d\n", stats[ii].cc_good);
 
     if (stats[ii].err_cc_error != 0)
       fprint_msg("  ### CC error * %d\n", stats[ii].err_cc_error);
+    if (stats[ii].err_cc_contents != 0)
+      fprint_msg("  ### CC contents error * %d\n", stats[ii].err_cc_contents);
     if (stats[ii].err_cc_dup_error != 0)
       fprint_msg("  ### CC duplicate error * %d\n", stats[ii].err_cc_dup_error);
     if (stats[ii].err_pts_lt_dts != 0)

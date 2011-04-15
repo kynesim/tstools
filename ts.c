@@ -3388,6 +3388,7 @@ extern int find_pmt(TS_reader_p     tsreader,
   *pmt = NULL;
 
   err = find_pat(tsreader,max,verbose,quiet,&sofar,&prog_list);
+
   if (err == EOF)
   {
     if (!quiet) print_msg("No PAT found\n");
