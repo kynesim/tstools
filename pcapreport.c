@@ -521,7 +521,8 @@ static int digest_times(pcapreport_ctx_t *ctx,
                     }
                     fprintf(st->csv_file, "\"PKT\",\"Time\",\"PCR\",\"Skew\",\"Jitter\"\n");
                   }
-                  fprintf(st->csv_file, "%d,%llu,%llu,%lld,%u\n", ctx->pkt_counter, t_pcr - ctx->time_start, pcr, skew, cur_jitter);
+                  fprintf(st->csv_file, "%d," LLU_FORMAT "," LLU_FORMAT "," LLD_FORMAT ",%u\n", ctx->pkt_counter,
+                    t_pcr - ctx->time_start, pcr, skew, cur_jitter);
                 }
 
                 // Remember where we are for posterity
@@ -821,15 +822,15 @@ stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
 }
 
 static int
-ip_reassemble(pcapreport_reassembly_t * const reas, const ipv4_header_t * const ip, void * const in_data,
-  void ** const out_pdata, uint32_t * const out_plen)
+ip_reassemble(pcapreport_reassembly_t * const reas, const ipv4_header_t * const ip, byte * const in_data,
+  byte ** const out_pdata, uint32_t * const out_plen)
 {
   uint32_t frag_len = ip->length - ip->hdr_length * 4;
   uint32_t frag_offset = ip->frag_offset * 8;  // bytes
   int frag_final = (ip->flags & 1) == 0;
 
   // Discard unless we succeed
-  *out_pdata = NULL;
+  *out_pdata = (void *)NULL;
   *out_plen = 0;
 
   if (frag_final && frag_offset == 0)
@@ -1377,7 +1378,7 @@ int main(int argc, char **argv)
             data = &data[out_st];
             len = out_len;
 
-            if (ip_reassemble(&ctx->reassembly_env, &ipv4_hdr, data, (void**)&data, &len) != 0)
+            if (ip_reassemble(&ctx->reassembly_env, &ipv4_hdr, data, &data, &len) != 0)
             {
               goto dump_out;
             }
