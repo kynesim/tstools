@@ -1384,6 +1384,9 @@ static int read_next_TS_packets(TS_reader_p  tsreader,
   ssize_t length;
 #endif
 
+  // If we exit with an error make sure we don't return anything valid here!
+  *packet = NULL;
+
   if (tsreader->read_ahead_ptr == tsreader->read_ahead_end)
   {
     // Try to allow for partial reads
@@ -1738,6 +1741,9 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
         // so our second best choice is to "play out" using the last
         // known PCR rate-of-change.
         tsreader->pcrbuf->TS_had_EOF = TRUE;              // remember we're playing out
+        // If we read nothing we must die now
+        if (tsreader->pcrbuf->TS_buffer_next == tsreader->pcrbuf->TS_buffer_len)
+          return err;
       }
       else if (err)
         return err;
