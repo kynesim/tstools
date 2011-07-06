@@ -36,6 +36,13 @@
 
 #include "pcap.h"
 
+typedef struct ethernet_vlan_info_s
+{
+  char cfi;
+  char pcp;
+  int vid;
+} ethernet_vlan_info_t;
+
 typedef struct ethernet_packet_s
 {
   // Source address.
@@ -52,11 +59,16 @@ typedef struct ethernet_packet_s
   // Type
   uint16_t typeorlen;
 
+#define ETHERNET_VLANS_MAX 2
+  int vlan_count;
+  ethernet_vlan_info_t vlans[ETHERNET_VLANS_MAX];
+
   // Checksum if present. Note that pcap doesn't include checksums.
   uint32_t checksum;
 } ethernet_packet_t;
 
 #define ETHERNET_ERR_PKT_TOO_SHORT (-1)
+#define ETHERNET_ERR_TOO_MANY_VLANS (-2)
 
 /*
  * \param out_st OUT Index into data at which ethernet payload starts.

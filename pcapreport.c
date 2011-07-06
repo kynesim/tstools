@@ -88,6 +88,13 @@ struct pcapreport_section_struct {
   uint64_t ts_byte_final;
 };
 
+typedef struct pcapreport_vlan_info_s
+{
+  uint16_t vid;
+  uint16_t cfimap;
+  uint16_t pcpmap;
+} pcapreport_vlan_info_t;
+
 struct pcapreport_stream_struct {
   pcapreport_stream_t * hash_next;
 
@@ -130,6 +137,9 @@ struct pcapreport_stream_struct {
 
   pcapreport_section_t * section_first;
   pcapreport_section_t * section_last;
+
+  int vlan_count;
+  pcapreport_vlan_info_t vlans[ETHERNET_VLANS_MAX];
 
   jitter_env_t jitter;
 };
@@ -593,7 +603,7 @@ static int write_out_packet(pcapreport_ctx_t * const ctx,
   return 0;
 }
 
-int
+static int
 stream_ts_check(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
                             const byte *data, 
                             const uint32_t len)
@@ -637,13 +647,57 @@ stream_ts_check(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
   return TRUE;
 }
 
-pcapreport_stream_t *
-stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint32_t dest_port)
+static void
+stream_merge_vlan_info(pcapreport_stream_t * const st, const ethernet_packet_t * const epkt)
 {
+  int i;
+  for (i = 0; i < epkt->vlan_count; ++i)
+  {
+    st->vlans[i].cfimap |= (1 << epkt->vlans[i].cfi);
+    st->vlans[i].pcpmap |= (1 << epkt->vlans[i].pcp);
+  }
+}
+
+static char *
+vlan_name(const char * prefix, const pcapreport_stream_t * const st, char * const buf)
+{
+  if (st->vlan_count == 0)
+  {
+    buf[0] = '\0';
+  }
+  else
+  {
+    int i;
+    size_t n = strlen(prefix);
+    char * p = buf;
+    memcpy(p, prefix, n);
+    p += n;
+    for (i = 0; i < st->vlan_count; ++i)
+    {
+      const pcapreport_vlan_info_t * const vi = st->vlans + i;
+      if (i != 0)
+        *p++ = '.';
+      p += sprintf(p, "%d", vi->vid);
+    }
+  }
+  return buf;
+}
+
+static pcapreport_stream_t *
+stream_create(pcapreport_ctx_t * const ctx,
+  const ethernet_packet_t * const epkt, uint32_t const dest_addr, const uint32_t dest_port)
+{
+  int i;
   pcapreport_stream_t * const st = calloc(1, sizeof(*st));
   st->stream_no = ctx->stream_count++;
   st->output_dest_addr = dest_addr;
   st->output_dest_port = dest_port;
+  st->vlan_count = epkt->vlan_count;
+  for (i = 0; i < epkt->vlan_count; ++i)
+  {
+    st->vlans[i].vid = epkt->vlans[i].vid;
+    // Maps are zero - will be filled in by merge_vlan_info
+  }
 
   st->skew_discontinuity_threshold = ctx->opt_skew_discontinuity_threshold;
 
@@ -654,6 +708,8 @@ stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint
   {
     const char * const base_name = ctx->output_name_base != NULL ? ctx->output_name_base : ctx->base_name;
     size_t len = strlen(base_name);
+    char pbuf[32];
+
     st->output_name = malloc(len + 32);
     memcpy(st->output_name, base_name, len + 1);
 
@@ -661,7 +717,8 @@ stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint
     // that name!
     if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
     {
-      sprintf(st->output_name + len, "_%u.%u.%u.%u_%u.ts",
+      sprintf(st->output_name + len, "%s_%u.%u.%u.%u_%u.ts",
+        vlan_name("_V", st, pbuf),
         dest_addr >> 24, (dest_addr >> 16) & 0xff,
         (dest_addr >> 8) & 0xff, dest_addr & 0xff,
         dest_port);
@@ -689,19 +746,56 @@ stream_create(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint
   return st;
 }
 
-void
+static char *
+map_to_string(unsigned int n, char * const buf)
+{
+  int i = 0;
+  char * p = buf;
+  int first = TRUE;
+
+  while (n != 0)
+  {
+    if ((n & 1) != 0)
+    {
+      if (!first)
+        *p++ = ',';
+      p += sprintf(p, "%d", i);
+      first = FALSE;
+    }
+    n >>= 1;
+    ++i;
+  }
+  return buf;
+}
+
+static void
 stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
 {
   uint32_t dest_addr = st->output_dest_addr;
+  char pbuf[32];
 
   if (ctx->verbose < 1 && st->seen_good == 0)
     return;
 
-  fprint_msg("Stream %d: Dest %u.%u.%u.%u:%u\n",
+  fprint_msg("Stream %d: Dest:%s %u.%u.%u.%u:%u\n",
     st->stream_no,
+    vlan_name(" VLAN:", st, pbuf),
     dest_addr >> 24, (dest_addr >> 16) & 0xff,
     (dest_addr >> 8) & 0xff, dest_addr & 0xff,
     st->output_dest_port);
+  if (st->vlan_count != 0)
+  {
+    int i;
+
+    for (i = 0; i < st->vlan_count; ++i)
+    {
+      const pcapreport_vlan_info_t * const vi = st->vlans + i;
+      char pbuf1[64], pbuf2[64];
+
+      fprint_msg("  VLAN %d: cfi:[%s], pcp[%s]\n", vi->vid,
+        map_to_string(vi->cfimap, pbuf1), map_to_string(vi->pcpmap, pbuf2));
+    }
+  }
   if (st->seen_good == 0)
   {
     // Cut the rest of the stats short if they are meaningless
@@ -759,8 +853,24 @@ stream_hash(uint32_t const dest_addr, const uint32_t dest_port)
   return (x ^ (x >> 8)) & 0xff;
 }
 
+static int
+stream_vlan_match(const pcapreport_stream_t * const st, const ethernet_packet_t * const epkt)
+{
+  int i;
+
+  if (epkt->vlan_count != st->vlan_count)
+    return FALSE;
+
+  for (i = 0; i < epkt->vlan_count; ++i)
+  {
+    if (epkt->vlans[i].vid != st->vlans[i].vid)
+      return FALSE;
+  }
+  return TRUE;
+}
+
 pcapreport_stream_t *
-stream_find(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint32_t dest_port)
+stream_find(pcapreport_ctx_t * const ctx, const ethernet_packet_t * const epkt, uint32_t const dest_addr, const uint32_t dest_port)
 {
   const unsigned int h = stream_hash(dest_addr, dest_port);
   pcapreport_stream_t ** pst = ctx->stream_hash + h;
@@ -768,12 +878,15 @@ stream_find(pcapreport_ctx_t * const ctx, uint32_t const dest_addr, const uint32
 
   while ((st = *pst) != NULL)
   {
-    if (st->output_dest_addr == dest_addr && st->output_dest_port == dest_port)
+    if (st->output_dest_addr == dest_addr && st->output_dest_port == dest_port &&
+        stream_vlan_match(st, epkt))
+    {
       return st;
+    }
     pst = &st->hash_next;
   }
 
-  if ((st = stream_create(ctx, dest_addr, dest_port)) == NULL)
+  if ((st = stream_create(ctx, epkt, dest_addr, dest_port)) == NULL)
     return NULL;
 
   *pst = st;
@@ -1414,7 +1527,9 @@ int main(int argc, char **argv)
               (ctx->filter_dest_addr == 0 || (ipv4_hdr.dest_addr == ctx->filter_dest_addr)) && 
               (ctx->filter_dest_port == 0 || (udp_hdr.dest_port == ctx->filter_dest_port)))
             {
-              pcapreport_stream_t * const st = stream_find(ctx, ipv4_hdr.dest_addr, udp_hdr.dest_port);
+              pcapreport_stream_t * const st = stream_find(ctx, &epkt, ipv4_hdr.dest_addr, udp_hdr.dest_port);
+
+              stream_merge_vlan_info(st, &epkt);
 
               if (stream_ts_check(ctx, st, data, len))
               {
