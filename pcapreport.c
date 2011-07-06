@@ -710,7 +710,7 @@ stream_create(pcapreport_ctx_t * const ctx,
     size_t len = strlen(base_name);
     char pbuf[32];
 
-    st->output_name = malloc(len + 32);
+    st->output_name = malloc(len + 64);
     memcpy(st->output_name, base_name, len + 1);
 
     // If we have been given a unique filter then assume they actually want
@@ -728,12 +728,15 @@ stream_create(pcapreport_ctx_t * const ctx,
   if (ctx->csv_gen)
   {
     const size_t len = strlen(ctx->base_name);
-    char * const name = malloc(len + 32);
+    char * const name = malloc(len + 64);
+    char pbuf[32];
+
     memcpy(name, ctx->base_name, len + 1);
 
     if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
     {
-      sprintf(name + len, "_%u.%u.%u.%u_%u.csv",
+      sprintf(name + len, "%s_%u.%u.%u.%u_%u.csv",
+        vlan_name("_V", st, pbuf),
         dest_addr >> 24, (dest_addr >> 16) & 0xff,
         (dest_addr >> 8) & 0xff, dest_addr & 0xff,
         dest_port);
