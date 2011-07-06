@@ -97,8 +97,10 @@ struct stream_data {
   int           stream_type;
   int           had_a_pts;
   int           had_a_dts;
+  int           first_cc;
   int           last_cc;
   int           cc_dup_count;
+  int           discontinuity_flag_count;
 
   uint64_t       first_pts;
   uint64_t       first_dts;
@@ -259,6 +261,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     stats[ii].pcr_dts_diff.max = LONG_MIN;
     stats[ii].first_pcr = ~(uint64_t)0;
     stats[ii].last_cc = -1;
+    stats[ii].first_cc = -1;
   }
   predict.min_pcr_error = LONG_MAX;
   predict.max_pcr_error = LONG_MIN;
@@ -452,48 +455,54 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     if (index != -1)
     {
       // Do continuity counter checking
-      int cc = packet[3] & 15;
+      const int cc = packet[3] & 15;
       const int is_discontinuity = (adapt != NULL && (adapt[0] & 0x80) != 0);
+      struct stream_data * const ss = stats + index;
 
       // Log if required
       if (continuity_cnt_pid == pid)
         fprintf(file_cnt, "%d%c", cc, cc == 15 ? '\n' : ' ');
 
+      // Count flagged discontinuities & note what the first CC in the file is
+      ss->discontinuity_flag_count += is_discontinuity;
+      if (ss->first_cc < 0)
+        ss->first_cc = cc;
+
       // CC is meant to increment if we have a payload and not if we don't
       // CC may legitimately 'be wrong' if the discontinuity flag is set
 
-      if (stats[index].last_cc > 0 && !is_discontinuity)
+      if (ss->last_cc > 0 && !is_discontinuity)
       {
         // We are allowed 1 dup packet
-        if (stats[index].last_cc == cc)
+        if (ss->last_cc == cc)
         {
           if (payload)
           {
-            if (stats[index].cc_dup_count++ != 0)
+            if (ss->cc_dup_count++ != 0)
             {
               if (continuity_cnt_pid == pid)
                 fprintf(file_cnt, "[Duplicate error] ");
-              if (stats[index].err_cc_dup_error++ == 0)
+              if (ss->err_cc_dup_error++ == 0)
               {
                 fprint_msg("### PID(%d): Continuity Counter >1 duplicate %d at " OFFSET_T_FORMAT "\n",
-                           stats[index].pid, cc, posn);
+                           ss->pid, cc, posn);
               }
             }
   
             // Whilst everything else must be identical PCR is expected to
             // change if it is given.  If it exists we know where it is.
-            if (!got_pcr ? (memcmp(stats[index].last_pkt, packet, 188) != 0) :
-                (memcmp(stats[index].last_pkt, packet, 6) != 0 ||
-                 memcmp(stats[index].last_pkt + 12, packet + 12, 188 - 12) != 0))
+            if (!got_pcr ? (memcmp(ss->last_pkt, packet, 188) != 0) :
+                (memcmp(ss->last_pkt, packet, 6) != 0 ||
+                 memcmp(ss->last_pkt + 12, packet + 12, 188 - 12) != 0))
             {
-              if (stats[index].err_cc_contents++ == 0)
+              if (ss->err_cc_contents++ == 0)
                 fprint_msg("### PID(%d): Continuity Counter duplicate %d: non identical contents at " OFFSET_T_FORMAT "\n",
-                           stats[index].pid, cc, posn);
+                           ss->pid, cc, posn);
               // Assume that non-identical CC means we had a discontinuity and
               // therefore let this packet through
 #if 0
               {
-                const uint8_t * a = stats[index].last_pkt;
+                const uint8_t * a = ss->last_pkt;
                 const uint8_t * b = packet;
                 int i;
 
@@ -521,7 +530,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
             {
               // Real redundant TS packet!
               // Log it and discard
-              ++stats[index].cc_good;
+              ++ss->cc_good;
               continue;
             }
           }
@@ -529,17 +538,17 @@ static int report_buffering_stats(TS_reader_p  tsreader,
         else
         {
           // Otherwise CC must go up by 1 mod 16
-          stats[index].cc_dup_count = 0;
+          ss->cc_dup_count = 0;
           if (payload)
           {
-            if (((stats[index].last_cc + 1) & 15) != cc)
+            if (((ss->last_cc + 1) & 15) != cc)
             {
               if (continuity_cnt_pid == pid)
                 fprintf(file_cnt, "[Discontinuity] ");
-              if (stats[index].err_cc_error++ == 0)
+              if (ss->err_cc_error++ == 0)
               {
                 fprint_msg("### PID(%d): Continuity Counter discontinuity %d->%d at " OFFSET_T_FORMAT "\n",
-                  stats[index].pid, stats[index].last_cc, cc, posn);
+                  ss->pid, ss->last_cc, cc, posn);
               }
             }
           }
@@ -548,16 +557,16 @@ static int report_buffering_stats(TS_reader_p  tsreader,
             // CC not the same but it should be
             if (continuity_cnt_pid == pid)
               fprintf(file_cnt, "[Discontinuity] ");
-            if (stats[index].err_cc_error++ == 0)
+            if (ss->err_cc_error++ == 0)
             {
               fprint_msg("### PID(%d): Continuity Counter discontinuity %d->%d (but no payload) at " OFFSET_T_FORMAT "\n",
-                stats[index].pid, stats[index].last_cc, cc, posn);
+                ss->pid, ss->last_cc, cc, posn);
             }
           }
         }
       }
-      stats[index].last_cc = cc;
-      memcpy(stats[index].last_pkt, packet, 188);
+      ss->last_cc = cc;
+      memcpy(ss->last_pkt, packet, 188);
     }
 
     if (index != -1)
@@ -767,83 +776,81 @@ static int report_buffering_stats(TS_reader_p  tsreader,
              fmtx_timestamp(predict.min_pcr_error, tfmt_diff),
              fmtx_timestamp(predict.max_pcr_error, tfmt_diff));
 
-  if (!stats[0].had_a_pts && !stats[1].had_a_pts &&
-      !stats[0].had_a_dts && !stats[1].had_a_dts)
-    print_msg("\n"
-              "No PTS or DTS values found\n");
-
   for (ii = 0; ii < num_streams; ii++)
   {
-    fprint_msg("\nStream %d: PID %04x (%d), %s\n",ii,stats[ii].pid,stats[ii].pid,
-               h222_stream_type_str(stats[ii].stream_type));
-    if (stats[ii].pcr_pts_diff.num > 0)
+    struct stream_data * const ss = stats + ii;
+
+    fprint_msg("\nStream %d: PID %04x (%d), %s\n",ii,ss->pid,ss->pid,
+               h222_stream_type_str(ss->stream_type));
+    if (ss->pcr_pts_diff.num > 0)
     {
       fprint_msg("  PCR/%s:\n    Minimum difference was %6s at DTS %8s, TS packet at " OFFSET_T_FORMAT_8 "\n",
-                 stats[ii].pts_ne_dts ? "PTS" : "PTS,DTS",
-                 fmtx_timestamp(stats[ii].pcr_pts_diff.min, tfmt_diff),
-                 fmtx_timestamp(stats[ii].pcr_pts_diff.min_at, tfmt_abs),
-                 stats[ii].pcr_pts_diff.min_posn);
+                 ss->pts_ne_dts ? "PTS" : "PTS,DTS",
+                 fmtx_timestamp(ss->pcr_pts_diff.min, tfmt_diff),
+                 fmtx_timestamp(ss->pcr_pts_diff.min_at, tfmt_abs),
+                 ss->pcr_pts_diff.min_posn);
       fprint_msg("    Maximum difference was %6s at DTS %8s, TS packet at " OFFSET_T_FORMAT_8 "\n",
-                 fmtx_timestamp(stats[ii].pcr_pts_diff.max, tfmt_diff),
-                 fmtx_timestamp(stats[ii].pcr_pts_diff.max_at, tfmt_abs),
-                 stats[ii].pcr_pts_diff.max_posn);
+                 fmtx_timestamp(ss->pcr_pts_diff.max, tfmt_diff),
+                 fmtx_timestamp(ss->pcr_pts_diff.max_at, tfmt_abs),
+                 ss->pcr_pts_diff.max_posn);
       fprint_msg("    i.e., a span of %s\n",
-                 fmtx_timestamp(stats[ii].pcr_pts_diff.max - stats[ii].pcr_pts_diff.min, tfmt_diff));
+                 fmtx_timestamp(ss->pcr_pts_diff.max - ss->pcr_pts_diff.min, tfmt_diff));
       fprint_msg("    Mean difference (of %u) is %s\n",
-                 stats[ii].pcr_pts_diff.num,
-                 fmtx_timestamp((int64_t)(stats[ii].pcr_pts_diff.sum/(double)stats[ii].pcr_pts_diff.num), tfmt_diff));
+                 ss->pcr_pts_diff.num,
+                 fmtx_timestamp((int64_t)(ss->pcr_pts_diff.sum/(double)ss->pcr_pts_diff.num), tfmt_diff));
     }
 
-    if (stats[ii].pcr_dts_diff.num > 0 && stats[ii].pts_ne_dts)
+    if (ss->pcr_dts_diff.num > 0 && ss->pts_ne_dts)
     {
       fprint_msg("  PCR/DTS:\n    Minimum difference was %6s at DTS %8s, TS packet at " OFFSET_T_FORMAT_8 "\n",
-                 fmtx_timestamp(stats[ii].pcr_dts_diff.min, tfmt_diff),
-                 fmtx_timestamp(stats[ii].pcr_dts_diff.min_at, tfmt_abs),
-                 stats[ii].pcr_dts_diff.min_posn);
+                 fmtx_timestamp(ss->pcr_dts_diff.min, tfmt_diff),
+                 fmtx_timestamp(ss->pcr_dts_diff.min_at, tfmt_abs),
+                 ss->pcr_dts_diff.min_posn);
       fprint_msg("    Maximum difference was %6s at DTS %8s, TS packet at " OFFSET_T_FORMAT_8 "\n",
-                 fmtx_timestamp(stats[ii].pcr_dts_diff.max, tfmt_diff),
-                 fmtx_timestamp(stats[ii].pcr_dts_diff.max_at, tfmt_abs),
-                 stats[ii].pcr_dts_diff.max_posn);
+                 fmtx_timestamp(ss->pcr_dts_diff.max, tfmt_diff),
+                 fmtx_timestamp(ss->pcr_dts_diff.max_at, tfmt_abs),
+                 ss->pcr_dts_diff.max_posn);
       fprint_msg("    i.e., a span of %s\n",
-                 fmtx_timestamp(stats[ii].pcr_dts_diff.max - stats[ii].pcr_dts_diff.min, tfmt_diff));
+                 fmtx_timestamp(ss->pcr_dts_diff.max - ss->pcr_dts_diff.min, tfmt_diff));
       fprint_msg("    Mean difference (of %u) is %s\n",
-                 stats[ii].pcr_dts_diff.num,
-                 fmtx_timestamp((int64_t)(stats[ii].pcr_dts_diff.sum/(double)stats[ii].pcr_dts_diff.num), tfmt_diff));
+                 ss->pcr_dts_diff.num,
+                 fmtx_timestamp((int64_t)(ss->pcr_dts_diff.sum/(double)ss->pcr_dts_diff.num), tfmt_diff));
     }
 
     fprint_msg("  First PCR %8s, last %8s\n",
                fmtx_timestamp(first_pcr, tfmt_abs | FMTX_TS_N_27MHz),
                fmtx_timestamp(predict.prev_pcr, tfmt_abs | FMTX_TS_N_27MHz));
-    if (stats[ii].pcr_pts_diff.num > 0)
+    if (ss->pcr_pts_diff.num > 0)
       fprint_msg("  First PTS %8s, last %8s\n",
-                 fmtx_timestamp(stats[ii].first_pts, tfmt_abs),
-                 fmtx_timestamp(stats[ii].pts, tfmt_abs));
-    if (stats[ii].pcr_dts_diff.num > 0)
+                 fmtx_timestamp(ss->first_pts, tfmt_abs),
+                 fmtx_timestamp(ss->pts, tfmt_abs));
+    if (ss->pcr_dts_diff.num > 0)
       fprint_msg("  First DTS %8s, last %8s\n",
-                 fmtx_timestamp(stats[ii].first_dts, tfmt_abs),
-                 fmtx_timestamp(stats[ii].dts, tfmt_abs));
+                 fmtx_timestamp(ss->first_dts, tfmt_abs),
+                 fmtx_timestamp(ss->dts, tfmt_abs));
 
     {
       // Calculate rate over the range of PCRs seen in this stream
-      uint64_t avg = stats[ii].pcr == stats[ii].first_pcr ? 0LL :
-         ((stats[ii].ts_bytes - 188LL) * 8LL * 27000000LL) / (stats[ii].pcr - stats[ii].first_pcr);
-      fprint_msg("  Stream: %llu bytes; rate: avg %llu bits/s, max %llu bits/s\n", stats[ii].ts_bytes, avg, stats[ii].rate.max_rate);
+      uint64_t avg = ss->pcr == ss->first_pcr ? 0LL :
+         ((ss->ts_bytes - 188LL) * 8LL * 27000000LL) / (ss->pcr - ss->first_pcr);
+      fprint_msg("  Stream: %llu bytes; rate: avg %llu bits/s, max %llu bits/s\n", ss->ts_bytes, avg, ss->rate.max_rate);
     }
-    if (stats[ii].cc_good != 0)
-      fprint_msg("  CC redundant packets * %d\n", stats[ii].cc_good);
+    if (ss->discontinuity_flag_count != 0)
+      fprint_msg("  Discontinuity flags: *%d", ss->discontinuity_flag_count);
+    fprint_msg("  CC: first: %d, last: %d; duplicate packets: %d\n", ss->first_cc, ss->last_cc, ss->cc_good);
 
-    if (stats[ii].err_cc_error != 0)
-      fprint_msg("  ### CC error * %d\n", stats[ii].err_cc_error);
-    if (stats[ii].err_cc_contents != 0)
-      fprint_msg("  ### CC contents error * %d\n", stats[ii].err_cc_contents);
-    if (stats[ii].err_cc_dup_error != 0)
-      fprint_msg("  ### CC duplicate error * %d\n", stats[ii].err_cc_dup_error);
-    if (stats[ii].err_pts_lt_dts != 0)
-      fprint_msg("  ### PTS < DTS * %d\n", stats[ii].err_pts_lt_dts);
-    if (stats[ii].err_dts_lt_prev_dts != 0)
-      fprint_msg("  ### DTS < prev DTS * %d\n", stats[ii].err_dts_lt_prev_dts);
-    if (stats[ii].err_dts_lt_pcr != 0)
-      fprint_msg("  ### DTS < PCR * %d\n", stats[ii].err_dts_lt_pcr);
+    if (ss->err_cc_error != 0)
+      fprint_msg("  ### CC error * %d\n", ss->err_cc_error);
+    if (ss->err_cc_contents != 0)
+      fprint_msg("  ### CC contents error * %d\n", ss->err_cc_contents);
+    if (ss->err_cc_dup_error != 0)
+      fprint_msg("  ### CC duplicate error * %d\n", ss->err_cc_dup_error);
+    if (ss->err_pts_lt_dts != 0)
+      fprint_msg("  ### PTS < DTS * %d\n", ss->err_pts_lt_dts);
+    if (ss->err_dts_lt_prev_dts != 0)
+      fprint_msg("  ### DTS < prev DTS * %d\n", ss->err_dts_lt_prev_dts);
+    if (ss->err_dts_lt_pcr != 0)
+      fprint_msg("  ### DTS < PCR * %d\n", ss->err_dts_lt_pcr);
   }
   return 0;
 }
