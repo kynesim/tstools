@@ -86,6 +86,8 @@ struct pcapreport_section_struct {
   uint64_t pcr_last;
   uint64_t ts_byte_start;
   uint64_t ts_byte_final;
+  int32_t rtp_skew_min;
+  int32_t rtp_skew_max;
 };
 
 typedef struct pcapreport_vlan_info_s
@@ -94,6 +96,28 @@ typedef struct pcapreport_vlan_info_s
   uint16_t cfimap;
   uint16_t pcpmap;
 } pcapreport_vlan_info_t;
+
+typedef struct pcapreport_rtp_info_s
+{
+  uint32_t n;
+  uint32_t ssrc;
+  int multiple_ssrc;
+} pcapreport_rtp_info_t;
+
+// RTP info (if any) in a packet
+typedef struct rtp_header_s
+{
+  int is_rtp;
+  int marker;
+  uint8_t payload_type;
+  uint16_t sequence_number;
+  uint32_t timestamp;
+  uint32_t ssrc;
+  uint32_t header_len;
+  uint32_t pad_len;
+  // CSRC ignored
+  // Extension ignored
+} rtp_header_t;
 
 struct pcapreport_stream_struct {
   pcapreport_stream_t * hash_next;
@@ -140,6 +164,7 @@ struct pcapreport_stream_struct {
 
   int vlan_count;
   pcapreport_vlan_info_t vlans[ETHERNET_VLANS_MAX];
+  pcapreport_rtp_info_t rtp_info;
 
   jitter_env_t jitter;
 };
@@ -303,6 +328,10 @@ section_create(pcapreport_stream_t * const st)
   }
   st->section_last = tsect;
 
+  // Init "obvious" non-zero stuff
+  tsect->rtp_skew_max = -0x7fffffff;
+  tsect->rtp_skew_min = 0x7fffffff;
+
   return tsect;
 }
 
@@ -339,17 +368,35 @@ pkt_time(const pcaprec_hdr_t * const pcap_pkt_hdr)
 }
 
 
-static int digest_times(pcapreport_ctx_t *ctx, 
+static int digest_times(pcapreport_ctx_t * const ctx, 
                         pcapreport_stream_t * const st,
-                        const pcaprec_hdr_t *pcap_pkt_hdr,
-                        const ethernet_packet_t *epkt,
-                        const ipv4_header_t *ipv4_header, 
-                        const ipv4_udp_header_t *udp_header,
-                        const byte *data,
+                        const pcaprec_hdr_t * const pcap_pkt_hdr,
+                        const ethernet_packet_t * const epkt,
+                        const ipv4_header_t * const ipv4_header, 
+                        const ipv4_udp_header_t * const udp_header,
+                        const rtp_header_t * const rtp_header,
+                        const byte * const data,
                         const uint32_t len)
 {
   int rv;
   const uint64_t ts_byte_start = st->ts_bytes;
+
+  // Deal with RTP contents - currently held with stream but could be moved to section
+  // especially is we do more timestamp analysis
+  if (rtp_header->is_rtp)
+  {
+    pcapreport_rtp_info_t * const ri = &st->rtp_info;
+
+    if (ri->ssrc != rtp_header->ssrc && ri->n != 0 && !ri->multiple_ssrc)
+    {
+      fprint_msg("!%d! Multiple SSRCs detected: SSRCs: %u,%u,...\n", st->stream_no,
+                 ri->ssrc, rtp_header->ssrc);
+      ri->multiple_ssrc = TRUE;
+    }
+    ++ri->n;
+    ri->ssrc = rtp_header->ssrc;
+  }
+
 
   if (st->ts_r == NULL)
   {
@@ -503,6 +550,16 @@ static int digest_times(pcapreport_ctx_t *ctx,
                 if (tsect->jitter_max < cur_jitter)
                   tsect->jitter_max = cur_jitter;
 
+                if (rtp_header->is_rtp)
+                {
+                  // We have both PCR & RTP times - look for min & max
+                  int32_t rtp_skew = (int32_t)(rtp_header->timestamp - (uint32_t)(t_pcr & 0xffffffffU));
+                  if (tsect->rtp_skew_max < rtp_skew)
+                    tsect->rtp_skew_max = rtp_skew;
+                  if (tsect->rtp_skew_min > rtp_skew)
+                    tsect->rtp_skew_min = rtp_skew;
+                }
+
                 if (ctx->time_report)
                 {
                   int64_t rel_tim = t_pcr - tsect->time_start; // 90kHz
@@ -546,6 +603,7 @@ static int digest_times(pcapreport_ctx_t *ctx,
         }
       }
 
+      // Actions at end of TS packet
       {
         pcapreport_section_t * const tsect = st->section_last;
         if (tsect != NULL)
@@ -604,7 +662,7 @@ static int write_out_packet(pcapreport_ctx_t * const ctx,
 }
 
 static int
-stream_ts_check(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
+stream_ts_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
                             const byte *data, 
                             const uint32_t len)
 {
@@ -644,6 +702,73 @@ stream_ts_check(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
   if (bad != 0)
     ++st->seen_dodgy;
   ++st->seen_good;
+  return TRUE;
+}
+
+// RTP - RFC 3550
+// RTP payload types - RFC 3551
+// M2TS - RFC 2250
+
+static int
+stream_rtp_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
+                const byte * const data, 
+                const uint32_t len,
+                rtp_header_t * const rh)
+{
+  uint32_t offset;
+  uint32_t padlen = 0;
+
+  // Flatten output
+  memset(rh, 0, sizeof(*rh));
+
+  // Must contain at least the header!
+  if (len < 12)
+    return FALSE;
+
+  // Check version - must be 2
+  // Incidentally this will reject 0x47 which is good :-)
+  if ((data[0] & 0xc0) != 0x80)
+    return FALSE;
+  // We only deal with TS in RTP so check for that alone
+  if ((data[1] & 0x7f) != 33)  // PT bits
+    return FALSE;
+
+  // ??Check sequence??
+
+  // offset = start of extension or payload
+  offset = 12 + (data[0] & 0xf) * 4;
+
+  // Check for padding
+  if ((data[0] & 0x20) != 0)  // P bit
+  {
+    padlen = data[len - 1];
+    // Padlen of zero makes no sense as padding len includes this byte
+    if (padlen == 0)
+      return FALSE;
+  }
+
+  // Check for extension
+  if ((data[0] & 0x10) != 0)  // X bit
+  {
+    if (offset + 4 + padlen > len)
+      return FALSE;
+    // Skip extension header
+    offset += 4 + uint_16_be(data + offset + 2);
+  }
+
+  // trivial check for TS in payload
+  if (offset + 188 + padlen > len || data[offset] != 0x47)
+    return FALSE;
+
+  rh->is_rtp = TRUE;
+  rh->marker = ((data[1] & 0x80) != 0);
+  rh->payload_type = data[0] & 0x7f;
+  rh->sequence_number = uint_16_be(data + 2);
+  rh->timestamp = uint_32_be(data + 4);
+  rh->ssrc = uint_32_be(data + 8);
+  rh->header_len = offset;
+  rh->pad_len = padlen;
+
   return TRUE;
 }
 
@@ -772,7 +897,7 @@ map_to_string(unsigned int n, char * const buf)
 }
 
 static void
-stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
+stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * const st)
 {
   uint32_t dest_addr = st->output_dest_addr;
   char pbuf[32];
@@ -799,6 +924,7 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
         map_to_string(vi->cfimap, pbuf1), map_to_string(vi->pcpmap, pbuf2));
     }
   }
+
   if (st->seen_good == 0)
   {
     // Cut the rest of the stats short if they are meaningless
@@ -810,6 +936,13 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
 
     fprint_msg("  Pkts: Good=%d, Dodgy=%d, Bad=%d, Overlength=%u\n",
       st->seen_good - st->seen_dodgy, st->seen_dodgy, st->seen_bad, st->pkts_overlength);
+
+    if (st->rtp_info.n != 0)
+    {
+      const pcapreport_rtp_info_t * const ri = &st->rtp_info;
+      fprint_msg("  RTP TS packets: %d, SSRC: %u%s\n", ri->n, ri->ssrc, ri->multiple_ssrc ? "..." : "");
+    }
+
     fprint_msg("  PCR PID: %d (%#x)%s\n", st->pcr_pid, st->pcr_pid,
       !st->multiple_pcr_pids ? "" : " ### Other PCR PIDs in stream - not tracked");
 
@@ -841,6 +974,13 @@ stream_analysis(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
         fmtx_timestamp(time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len, ctx->tfmt),
         drift == 0 ? 0LL : time_len / drift);
       fprint_msg("    Max jitter: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt));
+      if (st->rtp_info.n != 0)
+      {
+        fprint_msg("    PCR/RTP skew: %s->%s (%s)\n",
+          fmtx_timestamp(tsect->rtp_skew_min, ctx->tfmt),
+          fmtx_timestamp(tsect->rtp_skew_max, ctx->tfmt),
+          fmtx_timestamp(tsect->rtp_skew_max - tsect->rtp_skew_min, ctx->tfmt));
+      }
     }
   }
 
@@ -1531,8 +1671,15 @@ int main(int argc, char **argv)
               (ctx->filter_dest_port == 0 || (udp_hdr.dest_port == ctx->filter_dest_port)))
             {
               pcapreport_stream_t * const st = stream_find(ctx, &epkt, ipv4_hdr.dest_addr, udp_hdr.dest_port);
+              rtp_header_t rtp_hdr;
 
               stream_merge_vlan_info(st, &epkt);
+
+              if (stream_rtp_check(ctx, st, data, len, &rtp_hdr))
+              {
+                data += rtp_hdr.header_len;
+                len -= rtp_hdr.header_len + rtp_hdr.pad_len;
+              }
 
               if (stream_ts_check(ctx, st, data, len))
               {
@@ -1540,12 +1687,13 @@ int main(int argc, char **argv)
   
                 if (ctx->time_report || ctx->analyse || ctx->csv_gen)
                 {
-                  rv =digest_times(ctx, 
+                  rv = digest_times(ctx, 
                                    st,
                                    &rec_hdr,
                                    &epkt,
                                    &ipv4_hdr,
-                                   &udp_hdr, 
+                                   &udp_hdr,
+                                   &rtp_hdr,
                                    data, len);
                   if (rv) { return rv; }
                 }
