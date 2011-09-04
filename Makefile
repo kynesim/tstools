@@ -134,7 +134,8 @@ PROG_OBJS = \
   $(OBJDIR)/tsserve.o \
   $(OBJDIR)/ts_packet_insert.o \
   $(OBJDIR)/m2ts2ts.o \
-  $(OBJDIR)/pcapreport.o 
+  $(OBJDIR)/pcapreport.o  \
+  $(OBJDIR)/tsfilter.o
 #\
 #  $(OBJDIR)/test_ps.o
 
@@ -175,7 +176,8 @@ PROGS = \
   $(BINDIR)/tsserve \
   $(BINDIR)/ts_packet_insert \
   $(BINDIR)/m2ts2ts \
-  $(BINDIR)/pcapreport 
+  $(BINDIR)/pcapreport \
+  $(BINDIR)/tsfilter
 #\
 #  $(BINDIR)/test_ps
 
@@ -269,6 +271,9 @@ $(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(STATIC_LIB)
 $(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/pcapreport $(LDFLAGS) $(LIBOPTS)
 
+$(BINDIR)/tsfilter:	$(OBJDIR)/tsfilter.o $(STATIC_LIB)
+		$(CC) $< -o $(BINDIR)/tsfilter $(LDFLAGS) $(LIBOPTS)
+
 
 
 
@@ -352,6 +357,9 @@ $(OBJDIR)/tswrite.o:      tswrite.c misc_fns.h version.h
 $(OBJDIR)/m2ts2ts.o:	  m2ts2ts.c $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/pcapreport.o:      pcapreport.c pcap.h version.h misc_fns.h
+	$(CC) -c $< -o $@ $(CFLAGS)
+
+$(OBJDIR)/tsfilter.o:      tsfilter.c version.h misc_fns.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 $(OBJDIR)/test_pes.o: test_pes.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) version.h
