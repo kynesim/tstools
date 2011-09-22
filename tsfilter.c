@@ -63,6 +63,8 @@ int main(int argn, char *args[])
 {
     int ii = 1;
     int verbose = FALSE;
+    int invert = 0;
+    unsigned int max_pkts = (unsigned int)-1;
     const char *input_file = NULL, *output_file = NULL;
 
     
@@ -87,6 +89,20 @@ int main(int argn, char *args[])
             else if (!strcmp("-verbose", args[ii]) || !strcmp("-v", args[ii]))
             {
                 verbose = TRUE;
+            }
+            else if (!strcmp("-m", args[ii]) || !strcmp("-max", args[ii]))
+            {
+                if (argn <= ii)
+                {
+                    fprint_err("### tsfilter: -max requires an argument\n");
+                    return 1;
+                }
+                max_pkts = atoi(args[ii+1]);
+                ++ii;
+            }
+            else if (!strcmp("-!", args[ii]) || !strcmp("-invert", args[ii]))
+            {
+                invert = 1;
             }
             else if (!strcmp("-i", args[ii]) || !strcmp("-input", args[ii]))
             {
@@ -149,11 +165,12 @@ int main(int argn, char *args[])
         TS_writer_p tswriter;
         byte *pkt = NULL;
         
-        unsigned int pid;
+        unsigned int pid, pkt_num;
         int pusi, adapt_len, payload_len;
         byte *adapt, *payload;
         
         
+        pkt_num = 0;
         err = open_file_for_TS_read((char *)input_file, &tsreader);
         if (err)
         {
@@ -202,6 +219,21 @@ int main(int argn, char *args[])
                         break;
                     }
                 }
+
+                if (max_pkts != (unsigned int)-1 &&
+                    pkt_num > max_pkts)
+                {
+                    // We're done processing. If invert is on,
+                    // copy the rest of the output, otherwise quit.
+                    if (!invert) { break; } else { found = 0; }
+                }
+
+                // Invert the result, whatever it was.
+                if (invert)
+                {
+                    found = !found;
+                }
+
                 if (found)
                 {
                     // Write it out.
@@ -216,6 +248,7 @@ int main(int argn, char *args[])
                         return 2;
                     }
                 }
+                ++pkt_num;
             }
         }
 
@@ -237,9 +270,16 @@ static void print_usage(void)
         " Filter the given pids out of stdin and write the result on stdout.\n"
         "\n"
         "Switches:\n"
-        "  -i <infile>     Take input from this file and not stdin.\n"
-        "  -o <outfile>    Send output to this file and not stdout.\n"
-        "  -verbose, -v    Be verbose.\n"
+        "  -i <infile>      Take input from this file and not stdin.\n"
+        "  -o <outfile>     Send output to this file and not stdout.\n"
+        "  -verbose, -v     Be verbose.\n"
+        "  -max <n>, -m <n> All packets after the nth are regarded as\n"
+        "                    not matching any pids.\n"
+        "  -!, -invert      Invert whatever your decision was before \n"
+        "                    applying it - the output contains only  \n"
+        "                    pids not in the list up to max packets  \n"
+        "                    and all packets in the input from then  \n"
+        "                    on.\n"
         );
 }
 
