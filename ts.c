@@ -1400,6 +1400,7 @@ static int read_next_TS_packets(TS_reader_p  tsreader,
         length = read(tsreader->file,
                       &(tsreader->read_ahead[total]),
                       TS_READ_AHEAD_BYTES - total);
+
       if (length == 0)  // EOF - no more data to read
         break;
       else if (length == -1)
