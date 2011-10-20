@@ -81,6 +81,7 @@ PROGS = \
     $(EXEDIR)\stream_type.exe \
     $(EXEDIR)\ts2es.exe       \
     $(EXEDIR)\ts_packet_insert.exe      \
+    $(EXEDIR)\tsdvbsub.exe    \
     $(EXEDIR)\tsinfo.exe      \
     $(EXEDIR)\tsplay.exe      \
     $(EXEDIR)\tsreport.exe    \
@@ -130,6 +131,7 @@ PROG_OBJS = \
   $(OBJDIR)/stream_type.obj \
   $(OBJDIR)/ts2es.obj \
   $(OBJDIR)/ts_packet_insert.obj      \
+  $(OBJDIR)\tsdvbsub.obj \
   $(OBJDIR)/tsinfo.obj \
   $(OBJDIR)/tsplay.obj \
   $(OBJDIR)/tsreport.obj \
@@ -187,6 +189,9 @@ $(EXEDIR)\psdots.exe:   $(OBJDIR)\psdots.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\ts_packet_insert.exe:   $(OBJDIR)\ts_packet_insert.obj $(LIBFILE)
+	link /out:$@ $(LOPT) $** wsock32.lib
+
+$(EXEDIR)\tsdvbsub.exe:   $(OBJDIR)\tsdvbsub.obj $(LIBFILE)
 	link /out:$@ $(LOPT) $** wsock32.lib
 
 $(EXEDIR)\tsinfo.exe:   $(OBJDIR)\tsinfo.obj $(LIBFILE)

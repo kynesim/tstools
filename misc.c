@@ -134,8 +134,8 @@ extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len)
  * if not all bytes were shown).
  */
 extern void print_data(int   is_msg,
-                       char *name,
-                       byte  data[],
+                       const char *name,
+                       const byte  data[],
                        int   length,
                        int   max)
 {

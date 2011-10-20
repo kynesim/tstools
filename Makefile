@@ -175,7 +175,8 @@ PROGS = \
   $(BINDIR)/tsserve \
   $(BINDIR)/ts_packet_insert \
   $(BINDIR)/m2ts2ts \
-  $(BINDIR)/pcapreport 
+  $(BINDIR)/pcapreport \
+  $(BINDIR)/tsdvbsub
 #\
 #  $(BINDIR)/test_ps
 
@@ -268,6 +269,8 @@ $(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/m2ts2ts $(LDFLAGS) $(LIBOPTS)
 $(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/pcapreport $(LDFLAGS) $(LIBOPTS)
+$(BINDIR)/tsdvbsub:	$(OBJDIR)/tsdvbsub.o $(STATIC_LIB)
+		$(CC) $< -o $(BINDIR)/tsdvbsub $(LDFLAGS) $(LIBOPTS)
 
 
 
@@ -336,6 +339,8 @@ $(OBJDIR)/stream_type.o:  stream_type.c $(ES_H) $(TS_H) $(NALUNIT_H) version.h
 $(OBJDIR)/ts2es.o:        ts2es.c $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/ts2ps.o:        ts2ps.c $(TS_H) $(PS_H) misc_fns.h version.h
+	$(CC) -c $< -o $@ $(CFLAGS)
+$(OBJDIR)/tsdvbsub.o:     tsdvbsub.c $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/tsinfo.o:       tsinfo.c $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)

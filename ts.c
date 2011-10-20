@@ -2203,6 +2203,48 @@ extern int extract_prog_list_from_pat(int            verbose,
   return 0;
 }
 
+
+static const char * dvb_component_type3_str(int component_type)
+{
+  switch (component_type)
+  {
+  case 0x01:
+    return "EBU Teletext subtitles";
+  case 0x02:
+    return "associated EBU Teletext";
+  case 0x03:
+    return "VBI data";
+  case 0x10:
+    return "DVB subtitles (normal) with no monitor aspect ratio criticality";
+  case 0x11:
+    return "DVB subtitles (normal) for display on 4:3 aspect ratio monitor";
+  case 0x12:
+    return "DVB subtitles (normal) for display on 16:9 aspect ratio monitor";
+  case 0x13:
+    return "DVB subtitles (normal) for display on 2.21:1 aspect ratio monitor";
+  case 0x14:
+    return "DVB subtitles (normal) for display on a high definition monitor";
+  case 0x20:
+    return "DVB subtitles (for the hard of hearing) with no monitor aspect ratio criticality";
+  case 0x21:
+    return "DVB subtitles (for the hard of hearing) for display on 4:3 aspect ratio monitor";
+  case 0x22:
+    return "DVB subtitles (for the hard of hearing) for display on 16:9 aspect ratio monitor";
+  case 0x23:
+    return "DVB subtitles (for the hard of hearing) for display on 2.21:1 aspect ratio monitor";
+  case 0x24:
+    return "DVB subtitles (for the hard of hearing) for display on a high definition monitor";
+
+  default:
+    if (component_type >= 0xb0 && component_type <= 0xfe)
+    {
+      return "user defined";
+    }
+    break;
+  }
+  return "reserved";
+}
+
 /*
  * Print out information about program descriptors
  * (either from the PMT program info, or the PMT/stream ES info)
@@ -2362,7 +2404,7 @@ extern int print_descriptors(int    is_msg,
 
       case 0x59:
       {
-        fprint_msg_or_err(is_msg, "subtitling_descriptor:\n");
+        fprint_msg_or_err(is_msg, "subtitling_descriptor(s):\n");
 
         for (ii = 0; ii + 8 <= this_length; ii += 8)
         {
@@ -2380,8 +2422,11 @@ extern int print_descriptors(int    is_msg,
             lang, subtitling_type);
           if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
           if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
+          fprint_msg_or_err(is_msg, "    (%s)\n", dvb_component_type3_str(subtitling_type));
+          if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
+          if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
           fprint_msg_or_err(is_msg, 
-            "    composition_page_id=%u, ancillary_page_id=%u\n",
+            "  composition_page_id=%u, ancillary_page_id=%u\n",
             composition_page_id, ancillary_page_id);
         }
         if (ii < this_length)
