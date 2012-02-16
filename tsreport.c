@@ -122,6 +122,10 @@ struct stream_data {
   struct diff_from_pcr        pcr_pts_diff;
   struct diff_from_pcr        pcr_dts_diff;
 
+  // Inter DTS max/min values
+  long          dts_dts_min;
+  long          dts_dts_max;
+
   int           pts_ne_dts;
 
   int           pcr_seen;
@@ -259,6 +263,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     stats[ii].pcr_dts_diff.min = LONG_MAX;
     stats[ii].pcr_pts_diff.max = LONG_MIN;
     stats[ii].pcr_dts_diff.max = LONG_MIN;
+    stats[ii].dts_dts_min = LONG_MAX;
+    stats[ii].dts_dts_max = LONG_MIN;
     stats[ii].first_pcr = ~(uint64_t)0;
     stats[ii].last_cc = -1;
     stats[ii].first_cc = -1;
@@ -621,13 +627,22 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                      fmtx_timestamp(stats[index].pts, tfmt_abs),
                      fmtx_timestamp(stats[index].dts, tfmt_abs));
       }
-      if (stats[index].had_a_dts && stats[index].dts < last_dts)
+      if (stats[index].had_a_dts)
       {
-        if (stats[index].err_dts_lt_prev_dts++ == 0)
-          fprint_msg("### PID(%d): DTS (%s) < previous DTS (%s)\n",
-                     stats[index].pid,
-                     fmtx_timestamp(stats[index].dts, tfmt_abs),
-                     fmtx_timestamp(last_dts, tfmt_abs));
+        int64_t dts_dts_diff = stats[index].dts - last_dts;
+        if (dts_dts_diff < stats[index].dts_dts_min)
+          stats[index].dts_dts_min = (long)dts_dts_diff;
+        if (dts_dts_diff > stats[index].dts_dts_max)
+          stats[index].dts_dts_max = (long)dts_dts_diff;
+
+        if (dts_dts_diff < 0)
+        {
+          if (stats[index].err_dts_lt_prev_dts++ == 0)
+            fprint_msg("### PID(%d): DTS (%s) < previous DTS (%s)\n",
+                       stats[index].pid,
+                       fmtx_timestamp(stats[index].dts, tfmt_abs),
+                       fmtx_timestamp(last_dts, tfmt_abs));
+        }
       }
       if (stats[index].dts < pcr_time_now_div300)
       {
@@ -815,6 +830,12 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       fprint_msg("    Mean difference (of %u) is %s\n",
                  ss->pcr_dts_diff.num,
                  fmtx_timestamp((int64_t)(ss->pcr_dts_diff.sum/(double)ss->pcr_dts_diff.num), tfmt_diff));
+    }
+    if (ss->had_a_dts)
+    {
+      fprint_msg("  DTS-last DTS: min=%s, max=%s\n",
+        fmtx_timestamp(ss->dts_dts_min, tfmt_diff),
+        fmtx_timestamp(ss->dts_dts_max, tfmt_diff));
     }
 
     fprint_msg("  First PCR %8s, last %8s\n",

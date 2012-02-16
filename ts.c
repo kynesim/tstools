@@ -2246,6 +2246,60 @@ static const char * dvb_component_type3_str(int component_type)
   return "reserved";
 }
 
+static const char * const descriptor_names[] =
+{
+    "Reserved",  // 0
+    "Forbidden",  // 1
+    "Video stream",  // 2
+    "Audio stream",  // 3
+    "Hierarchy",  // 4
+    "Registration",  // 5
+    "Data stream alignment",  // 6
+    "Target background grid",  // 7
+    "Video window",  // 8
+    "CA",  // 9
+    "ISO 639 language",  // 10
+    "System clock",  // 11
+    "Multiplex buffer utilization",  // 12
+    "Copyright",  // 13
+    "Maximum bitrate",  // 14
+    "Private data indicator",  // 15
+    "Smoothing buffer",  // 16
+    "STD",  // 17
+    "IBP",  // 18
+    "Defined in ISO/IEC 13818-6",  // 19
+    "Defined in ISO/IEC 13818-6",  // 20
+    "Defined in ISO/IEC 13818-6",  // 21
+    "Defined in ISO/IEC 13818-6",  // 22
+    "Defined in ISO/IEC 13818-6",  // 23
+    "Defined in ISO/IEC 13818-6",  // 24
+    "Defined in ISO/IEC 13818-6",  // 25
+    "Defined in ISO/IEC 13818-6",  // 26
+    "MPEG-4 video",  // 27
+    "MPEG-4 audio",  // 28
+    "IOD",  // 29
+    "SL",  // 30
+    "FMC",  // 31
+    "External ES ID",  // 32
+    "MuxCode",  // 33
+    "FmxBufferSize",  // 34
+    "MultiplexBuffer",  // 35
+    "Content labeling",  // 36
+    "Metadata pointer",  // 37
+    "Metadata",  // 38
+    "Metadata STD",  // 39
+    "AVC video descriptor",  // 40
+    "IPMP (defined in ISO/IEC 13818-11, MPEG-2 IPMP)",  // 41
+    "AVC timing and HRD descriptor",  // 42
+    "MPEG-2 AAC audio",  // 43
+    "FlexMuxTiming",  // 44
+    "MPEG-4 text",  // 45
+    "MPEG-4 audio extension",  // 46
+    "auxiliary video stream",  // 47
+    "SVC extension",  // 48
+    "MVC extension",  // 49
+};
+
 /*
  * Print out information about program descriptors
  * (either from the PMT program info, or the PMT/stream ES info)
@@ -2266,12 +2320,10 @@ extern int print_descriptors(int    is_msg,
                              byte  *desc_data,
                              int    desc_data_len)
 {
-  int    ii;
   byte   data_len = desc_data_len;
   byte  *data = desc_data;
   while (data_len >= 2)
   {
-    char *name = NULL;
     byte  tag = data[0];
     byte  this_length = data[1];
 
@@ -2286,35 +2338,15 @@ extern int print_descriptors(int    is_msg,
       return 1;  // Hmm - well, maybe
     }
 
-    // We'll just name the standard tags, unless we care to deal with them in
-    // more detail below...
-    name = (tag==0?"Reserved":
-            tag==1?"Reserved":
-            tag==2?"video stream":
-            tag==3?"audio stream":
-            tag==4?"hierarchy":
-            tag==6?"data stream alignment":
-            tag==7?"target background grid":
-            tag==8?"video window":
-            tag==11?"system clock":
-            tag==12?"multiplex buffer utilization":
-            tag==13?"copyright":
-            tag==14?"maximum bitrate":
-            tag==15?"private data indicator":
-            tag==16?"smoothing buffer":
-            tag==17?"STD":
-            tag==18?"IBP":
-            tag>19 && tag<64?"Reserved":NULL);
-
     if (leader1 != NULL) fprint_msg_or_err(is_msg,"%s",leader1);
     if (leader2 != NULL) fprint_msg_or_err(is_msg,"%s",leader2);
-    if (name != NULL)
-      print_data(is_msg,name,data,this_length,100);
-    else
+
     {
+      int    ii;
+      uint32_t temp_u;
+
       switch (tag)
       {
-        uint32_t temp_u;
       case 5:
         fprint_msg_or_err(is_msg,"Registration ");
         if (this_length >= 4)
@@ -2364,6 +2396,58 @@ extern int print_descriptors(int    is_msg,
         }
         fprint_msg_or_err(is_msg,"\n");
         break;
+
+      case 42:
+        {
+          const uint8_t * p = data;
+          fprint_msg_or_err(is_msg,"AVC timing and HRD descriptor: ");
+          fprint_msg_or_err(is_msg,"hrd_management_valid_flag: %d, ", (*p & 0x80) != 0);
+          if ((*p & 0x7e) != 0x7e)
+          {
+            fprint_msg_or_err(is_msg,"reserved: %#x, ", (*p & 0x7e) >> 1);
+          }
+          if ((*p++ & 1) != 0)  // picture_and_timing_info_present
+          {
+            int flag90 = *p >> 7;
+            uint32_t n = 1, k = 300;
+            uint32_t ntick;
+
+            if (flag90)
+            {
+              fprint_msg_or_err(is_msg,"90kHz_flag, ", *p & 0x7f);
+            }
+            if ((*p & 0x7f) != 0x7f)
+            {
+              fprint_msg_or_err(is_msg,"reserved: %#x, ", *p & 0x7f);
+            }
+            ++p;
+            if (!flag90)
+            {
+              n = uint_32_be(p);
+              p += 4;
+              k = uint_32_be(p);
+              p += 4;
+              fprint_msg_or_err(is_msg,"N/K: %u/%u, ", n, k);
+            }
+            ntick = uint_32_be(p);
+            p += 4;
+            fprint_msg_or_err(is_msg,"num_units_in_tick: %u, ", ntick);
+            if (k == 0 || ntick == 0)
+              fprint_msg_or_err(is_msg,"(frame rate: \?\?\?), ");
+            else
+              fprint_msg_or_err(is_msg,"(frame rate: %.6g), ", ((double)n * 27000000.0) / ((double)k * (double)ntick) / 2.0);
+          }
+          fprint_msg_or_err(is_msg,"fixed_frame_rate_flag: %u, ", *p >> 7);
+          fprint_msg_or_err(is_msg,"temporal_poc_flag: %u, ", (*p >> 6) & 1);
+          fprint_msg_or_err(is_msg,"picture_to_display_conversion_flag: %u", (*p >> 5) & 1);
+          if ((*p & 0x1f) != 0x1f)
+          {
+            fprint_msg_or_err(is_msg,", reserved: %#x", *p & 0x1f);
+          }
+          fprint_msg_or_err(is_msg,"\n");
+        }
+        break;
+
       case 0x56:  // teletext
         for (ii = 0; ii < this_length; ii += 5)
         {
@@ -2440,12 +2524,15 @@ extern int print_descriptors(int    is_msg,
         break;
       case 0x81:
         print_data(is_msg,"ATSC AC-3",data,this_length,100);
+
       default:
-        // Report the tag number as decimal since that is how H.222
-        // describes it in table 2-39
         {
           char    temp_c[50]; // twice as much as I need...
-          sprintf(temp_c,"Descriptor tag %02x (%3d)",tag,tag);
+          sprintf(temp_c, "%s (%d)",
+            tag < sizeof(descriptor_names)/sizeof(descriptor_names[0]) ?
+                descriptor_names[tag] :
+              tag < 64 ? "Reserved" : "User Private",
+            tag);
           print_data(is_msg,temp_c,data,this_length,100);
         }
         break;
