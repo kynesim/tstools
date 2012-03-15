@@ -2784,7 +2784,7 @@ extern int extract_pmt(int            verbose,
   program_number = (data[3] << 8) | data[4];
   if (verbose)
     fprint_msg("  program number: %04x\n",program_number);
-  reserved = (data[5] & 0xC0) >> 14;
+  reserved = (data[5] & 0xC0) >> 6;
   if (reserved != 3 && report_bad_reserved_bits)
     fprint_err("!!! PMT: reserved (after program_number)"
                " is %d, not 3\n",reserved);
@@ -3016,7 +3016,7 @@ extern int extract_stream_list_from_pmt(int            verbose,
   *program_number = (data[3] << 8) | data[4];
   if (verbose)
     fprint_msg("  program number: %04x\n",*program_number);
-  reserved = (data[5] & 0xC0) >> 14;
+  reserved = (data[5] & 0xC0) >> 6;
   if (reserved != 3 && report_bad_reserved_bits)
     fprint_err("!!! PMT: reserved (after program_number)"
                " is %d, not 3\n",reserved);
