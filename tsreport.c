@@ -788,8 +788,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   }
 
   fprint_msg("Linear PCR prediction errors: min=%s, max=%s\n",
-             fmtx_timestamp(predict.min_pcr_error, tfmt_diff),
-             fmtx_timestamp(predict.max_pcr_error, tfmt_diff));
+             fmtx_timestamp(predict.min_pcr_error, tfmt_diff | FMTX_TS_N_27MHz),
+             fmtx_timestamp(predict.max_pcr_error, tfmt_diff | FMTX_TS_N_27MHz));
 
   for (ii = 0; ii < num_streams; ii++)
   {
