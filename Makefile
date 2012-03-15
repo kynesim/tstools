@@ -80,7 +80,7 @@ else
 endif
 
 CFLAGS = $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS) $(ARCH_FLAGS)
-LDFLAGS = -g -lm $(PROFILE_FLAGS) $(ARCH_FLAGS)
+LDFLAGS = -g $(PROFILE_FLAGS) $(ARCH_FLAGS) -lm
 
 # Target directories
 OBJDIR = obj
@@ -215,82 +215,82 @@ endif
 # be copied around, shared, etc., without having to think about it
 
 $(BINDIR)/esfilter:	$(OBJDIR)/esfilter.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esfilter $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/esfilter $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/ts2es:		$(OBJDIR)/ts2es.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ts2es $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/ts2es $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/es2ts:		$(OBJDIR)/es2ts.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/es2ts $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/es2ts $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/esdots:		$(OBJDIR)/esdots.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esdots $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/esdots $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/esmerge:	$(OBJDIR)/esmerge.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esmerge $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/esmerge $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/esreport:	$(OBJDIR)/esreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esreport $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/esreport $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/esreverse:	$(OBJDIR)/esreverse.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esreverse $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/esreverse $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/stream_type:	$(OBJDIR)/stream_type.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/stream_type $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/stream_type $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/psreport:	$(OBJDIR)/psreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/psreport $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/psreport $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/psdots:	$(OBJDIR)/psdots.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/psdots $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/psdots $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/ps2ts:		$(OBJDIR)/ps2ts.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ps2ts $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/ps2ts $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/tsinfo:		$(OBJDIR)/tsinfo.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsinfo $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/tsinfo $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/tsreport:	$(OBJDIR)/tsreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsreport $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/tsreport $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/tsserve:	$(OBJDIR)/tsserve.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsserve $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/tsserve $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/tsplay:	$(OBJDIR)/tsplay.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsplay $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/tsplay $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/test_ps:	$(OBJDIR)/test_ps.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/test_ps $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/test_ps $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ts2ps $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/ts2ps $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/m2ts2ts $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/m2ts2ts $(LIBOPTS) $(LDFLAGS)
 $(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/pcapreport $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/pcapreport $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/tsfilter:	$(OBJDIR)/tsfilter.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsfilter $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/tsfilter $(LIBOPTS) $(LDFLAGS)
 $(BINDIR)/tsdvbsub:	$(OBJDIR)/tsdvbsub.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsdvbsub $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/tsdvbsub $(LIBOPTS) $(LDFLAGS)
 
 
 
 
 $(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/test_pes $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/test_pes $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/test_printing:	$(OBJDIR)/test_printing.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/test_printing $(LDFLAGS) $(LIBOPTS)
+		$(CC) $< -o $(BINDIR)/test_printing $(LIBOPTS) $(LDFLAGS)
 
 $(BINDIR)/test_nal_unit_list: 	$(OBJDIR)/test_nal_unit_list.o $(STATIC_LIB)
-			$(CC) $< -o $(BINDIR)/test_nal_unit_list $(LDFLAGS) $(LIBOPTS)
+			$(CC) $< -o $(BINDIR)/test_nal_unit_list $(LIBOPTS) $(LDFLAGS)
 $(BINDIR)/test_es_unit_list:  	$(OBJDIR)/test_es_unit_list.o $(STATIC_LIB)
-			$(CC) $< -o $(BINDIR)/test_es_unit_list $(LDFLAGS) $(LIBOPTS)
+			$(CC) $< -o $(BINDIR)/test_es_unit_list $(LIBOPTS) $(LDFLAGS)
 
 # Some header files depend upon others, so including one requires
 # the others as well
