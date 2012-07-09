@@ -73,7 +73,11 @@ LFS_FLAGS = -D_FILE_OFFSET_BITS=64
 # sort of thing (presumably Linux or BSD)
 ifeq ($(shell uname -s), Darwin)
 	SYSTEM = "macosx"
-	ARCH_FLAGS = -arch ppc -arch i386
+	ARCH_FLAGS =
+	# If you're still building on a version of Mac OS X that supports powerpc,
+	# then you may want to uncomment the next line. Obviously, this no longer
+	# works in Lion, which doesn't support powerpc machines any more.
+	#ARCH_FLAGS = -arch ppc -arch i386
 else
 	SYSTEM = "other"
 	ARCH_FLAGS =
