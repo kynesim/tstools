@@ -780,6 +780,7 @@ extern int find_next_pmt(TS_reader_p     tsreader,
  * programs, 1 if something else went wrong.
  */
 extern int find_pmt(TS_reader_p     tsreader,
+                    const int req_prog_no,
                     int             max,
                     int             verbose,
                     int             quiet,

@@ -3513,6 +3513,7 @@ extern int find_next_pmt(TS_reader_p     tsreader,
  * programs, 1 if something else went wrong.
  */
 extern int find_pmt(TS_reader_p     tsreader,
+        const int       req_prog_no,
 		    int             max,
 		    int             verbose,
 		    int             quiet,
@@ -3523,6 +3524,7 @@ extern int find_pmt(TS_reader_p     tsreader,
   pidint_list_p  prog_list = NULL;
   int            sofar;
   int            prog_index = 0;
+  int            prog_no = 0;
 
   *pmt = NULL;
 
@@ -3552,16 +3554,30 @@ extern int find_pmt(TS_reader_p     tsreader,
     return -2;
   }
   else if (prog_list->length > 1 && !quiet)
-    print_msg("Multiple programs in PAT - using the first non-zero\n\n");
-
-  while (prog_list->number[prog_index] == 0)
   {
-    if (++prog_index >= prog_list->length)
-    {
-      if (!quiet)
-        fprint_msg("No non-zero program_numbers in PAT (packet %d)\n",sofar);
-      return -2;
-    }
+    if (req_prog_no == 1)
+      print_msg("Multiple programs in PAT - using the first non-zero\n\n");
+    else
+      fprint_msg("Multiple programs in PAT - program %d\n\n", req_prog_no);
+  }
+
+  for (prog_index = 0; prog_index < prog_list->length; ++prog_index)
+  {
+    if (prog_list->number[prog_index] == 0)
+      continue;
+    if (++prog_no == req_prog_no)
+      break;
+  }
+
+  if (prog_no == 0)
+  {
+    fprint_msg("No non-zero program_numbers in PAT (packet %d)\n",sofar);
+    return -2;
+  }
+  if (prog_no != req_prog_no)
+  {
+    fprint_msg("Unable to find program %d in PAT, only found %d (packet %d)\n", req_prog_no, prog_no, sofar);
+    return -2;
   }
 
   // Amend max to take account of the packets we've already read

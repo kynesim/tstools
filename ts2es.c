@@ -322,7 +322,7 @@ static int extract_av(int   input,
     if (max > 0 && max_to_read <= 0)
       break;
 
-    err = find_pmt(tsreader,max_to_read,verbose,quiet,&num_read,&pmt);
+    err = find_pmt(tsreader, 1, max_to_read,verbose,quiet,&num_read,&pmt);
     if (err == EOF)
     {
       if (!quiet)
