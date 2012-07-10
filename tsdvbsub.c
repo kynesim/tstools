@@ -525,6 +525,7 @@ static int extract_pid_packets(TS_reader_p  tsreader,
  * Returns 0 if all went well, 1 if something went wrong.
  */
 static int extract_av(int   input,
+                      const int prog_no,
                       int   max,
                       int   verbose,
                       int   quiet)
@@ -549,7 +550,7 @@ static int extract_av(int   input,
     if (max > 0 && max_to_read <= 0)
       break;
 
-    err = find_pmt(tsreader,max_to_read,verbose,quiet,&num_read,&pmt);
+    err = find_pmt(tsreader,prog_no,max_to_read,verbose,quiet,&num_read,&pmt);
     if (err == EOF)
     {
       if (!quiet)
@@ -653,6 +654,7 @@ static void print_usage()
     "  -pid <pid>         Output data for the stream with the given\n"
     "                     <pid>. Use -pid 0x<pid> to specify a hex value\n"
     "  [default]          The stream will be located from the PMT info\n"
+    "  -prog <n>          Program number [default=1]\n"
     "\n"
     "General switches:\n"
     "  -err stdout        Write error messages to standard output (the default)\n"
@@ -676,6 +678,7 @@ int main(int argc, char **argv)
   uint32_t  pid     = 0;     // The PID of the (single) stream to extract
   int       quiet   = FALSE; // True => be as quiet as possible
   int       verbose = FALSE; // True => output diagnostic/progress messages
+  int       prog_no = 1;
 
   int    err = 0;
   int    ii = 1;
@@ -720,6 +723,13 @@ int main(int argc, char **argv)
         if (err) return 1;
         ii++;
         extract = EXTRACT_PID;
+      }
+      else if (!strcmp("-prog",argv[ii]))
+      {
+        CHECKARG(PROGNAME,ii);
+        err = int_value(PROGNAME, argv[ii],argv[ii+1],TRUE,10,&prog_no);
+        if (err) return 1;
+        ii++;
       }
       else if (!strcmp("-stdin",argv[ii]))
       {
@@ -809,7 +819,7 @@ int main(int argc, char **argv)
   if (extract == EXTRACT_PID)
     err = extract_pid(input,pid,maxts,verbose,quiet);
   else
-    err = extract_av(input,maxts,verbose,quiet);
+    err = extract_av(input,prog_no,maxts,verbose,quiet);
   if (err)
   {
     print_err("### " PROGNAME ": Error extracting data\n");
