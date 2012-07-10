@@ -27,6 +27,8 @@
  * ***** END LICENSE BLOCK *****
  */
 
+#include "h222_fns.h"
+
 extern const char *h222_stream_type_str(unsigned s)
 {
   if ((0x1C < s) && (s < 0x7E))

@@ -36,7 +36,7 @@
 // *they* refer to reverse_data, we need to break the circular referencing
 // at some point
 typedef struct access_unit_context *access_unit_context_p;
-#include "reverse_defns.h"
+struct reverse_data;
 
 // ------------------------------------------------------------
 // A single access unit
@@ -103,7 +103,7 @@ struct access_unit_context
 
   // If we are collecting reversing information, then we keep a reference
   // to the reverse data here
-  reverse_data_p reverse_data;
+  struct reverse_data * reverse_data;
   
   // -------------------------------------------------------------
   // Private information - used internally by the software, not to

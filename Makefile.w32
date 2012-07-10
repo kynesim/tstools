@@ -142,9 +142,101 @@ PROG_OBJS = \
 
 all: $(OBJDIR) $(EXEDIR) $(LIBDIR) $(PROGS)
 
-$(OBJDIR)\fmtx.obj: fmtx.h
+ac3_fns.h: audio_fns.h
+accessunit_defns.h: nalunit_defns.h es_defns.h
+accessunit_fns.h: accessunit_defns.h
+adts_defns.h: audio_defns.h
+adts_fns.h: adts_defns.h audio_fns.h
+audio_defns.h: h222_defns.h
+audio_fns.h: audio_defns.h
+avs_defns.h: compat.h es_defns.h ts_defns.h reverse_defns.h
+avs_fns.h: avs_defns.h
+bitdata_defns.h: compat.h
+bitdata_fns.h: bitdata_defns.h
+es_defns.h: compat.h pes_defns.h
+es_fns.h: es_defns.h
+ethernet.h: compat.h pcap.h
+filter_defns.h: compat.h es_defns.h h262_defns.h accessunit_defns.h reverse_defns.h
+filter_fns.h: filter_defns.h
+h222_defns.h: h222_fns.h
+h262_defns.h: compat.h es_defns.h ts_defns.h
+h262_fns.h: h262_defns.h
+ipv4.h: compat.h
+l2audio_fns.h: audio_defns.h
+misc_defns.h: tswrite_defns.h video_defns.h
+misc_fns.h: misc_defns.h es_defns.h compat.h
+nalunit_defns.h: compat.h es_defns.h bitdata_defns.h
+nalunit_fns.h: nalunit_defns.h
+pcap.h: compat.h
+pes_defns.h: compat.h pidint_defns.h ps_defns.h ts_defns.h tswrite_defns.h
+pes_fns.h: pes_defns.h es_defns.h
+pidint_defns.h: compat.h
+pidint_fns.h: pidint_defns.h
+printing_fns.h: printing_defns.h
+ps_defns.h: compat.h h222_defns.h tswrite_defns.h
+ps_fns.h: compat.h h222_defns.h tswrite_defns.h ps_defns.h
+reverse_defns.h: compat.h es_defns.h h262_defns.h accessunit_defns.h
+reverse_fns.h: accessunit_defns.h reverse_defns.h h262_defns.h
+ts_defns.h: compat.h
+ts_fns.h: compat.h h222_defns.h tswrite_defns.h pidint_defns.h ts_defns.h
+tsplay_fns.h: tswrite_defns.h tsplay_defns.h
+tswrite_defns.h: compat.h ts_defns.h h222_defns.h
+tswrite_fns.h: tswrite_defns.h
+version.h: printing_fns.h
+video_defns.h: h222_defns.h
 
-$(OBJDIR)\tsreport.obj: fmtx.h
+
+$(OBJDIR)\ac3.obj: compat.h printing_fns.h misc_fns.h ac3_fns.h
+$(OBJDIR)\accessunit.obj: compat.h printing_fns.h es_fns.h ts_fns.h nalunit_fns.h accessunit_fns.h reverse_fns.h
+$(OBJDIR)\adts.obj: compat.h printing_fns.h misc_fns.h adts_fns.h
+$(OBJDIR)\audio.obj: compat.h printing_fns.h audio_fns.h adts_fns.h l2audio_fns.h ac3_fns.h
+$(OBJDIR)\avs.obj: compat.h printing_fns.h avs_fns.h es_fns.h ts_fns.h reverse_fns.h misc_fns.h
+$(OBJDIR)\bitdata.obj: compat.h bitdata_fns.h printing_fns.h
+$(OBJDIR)\es.obj: compat.h printing_fns.h misc_fns.h pes_fns.h tswrite_fns.h es_fns.h printing_fns.h
+$(OBJDIR)\es2ts.obj: compat.h es_fns.h ts_fns.h tswrite_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\esdots.obj: compat.h es_fns.h pes_fns.h accessunit_fns.h h262_fns.h avs_fns.h printing_fns.h misc_fns.h version.h
+$(OBJDIR)\esfilter.obj: compat.h es_fns.h pes_fns.h nalunit_fns.h ts_fns.h accessunit_fns.h h262_fns.h misc_fns.h printing_fns.h tswrite_fns.h filter_fns.h version.h
+$(OBJDIR)\esmerge.obj: compat.h es_fns.h accessunit_fns.h avs_fns.h audio_fns.h ts_fns.h tswrite_fns.h misc_fns.h printing_fns.h version.h pes_fns.h
+$(OBJDIR)\esreport.obj: compat.h es_fns.h nalunit_fns.h ts_fns.h pes_fns.h accessunit_fns.h h262_fns.h avs_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\esreverse.obj: compat.h es_fns.h nalunit_fns.h accessunit_fns.h h262_fns.h ts_fns.h tswrite_fns.h pes_fns.h reverse_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\ethernet.obj: ethernet.h misc_fns.h
+$(OBJDIR)\filter.obj: compat.h es_fns.h ts_fns.h accessunit_fns.h h262_fns.h misc_fns.h printing_fns.h filter_fns.h
+$(OBJDIR)\fmtx.obj: compat.h fmtx.h
+$(OBJDIR)\h222.obj: h222_fns.h
+$(OBJDIR)\h262.obj: compat.h printing_fns.h h262_fns.h es_fns.h ts_fns.h reverse_fns.h misc_fns.h
+$(OBJDIR)\ipv4.obj: ipv4.h misc_fns.h
+$(OBJDIR)\l2audio.obj: compat.h misc_fns.h printing_fns.h l2audio_fns.h
+$(OBJDIR)\m2ts2ts.obj: compat.h ts_defns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\misc.obj: compat.h misc_fns.h es_fns.h pes_fns.h printing_fns.h
+$(OBJDIR)\nalunit.obj: compat.h printing_fns.h es_fns.h ts_fns.h bitdata_fns.h nalunit_fns.h misc_fns.h printing_fns.h
+$(OBJDIR)\pcap.obj: pcap.h misc_fns.h
+$(OBJDIR)\pcapreport.obj: compat.h pcap.h ethernet.h ipv4.h version.h misc_fns.h ts_fns.h fmtx.h
+$(OBJDIR)\pes.obj: compat.h ts_fns.h ps_fns.h es_fns.h pes_fns.h pidint_fns.h h262_fns.h tswrite_fns.h printing_fns.h misc_fns.h
+$(OBJDIR)\pidint.obj: compat.h pidint_fns.h misc_fns.h printing_fns.h ts_fns.h h222_defns.h
+$(OBJDIR)\printing.obj: compat.h printing_fns.h
+$(OBJDIR)\ps.obj: compat.h ps_fns.h ts_fns.h pes_fns.h pidint_fns.h misc_fns.h printing_fns.h
+$(OBJDIR)\ps2ts.obj: compat.h pes_fns.h ps_fns.h ts_fns.h tswrite_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\psdots.obj: compat.h ps_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\psreport.obj: compat.h ps_fns.h pes_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\reverse.obj: compat.h misc_defns.h printing_fns.h es_fns.h h262_fns.h nalunit_fns.h accessunit_fns.h ts_fns.h tswrite_fns.h reverse_fns.h
+$(OBJDIR)\stream_type.obj: compat.h es_fns.h ts_fns.h nalunit_fns.h h262_fns.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\test_es_unit_list.obj: compat.h es_fns.h
+$(OBJDIR)\test_nal_unit_list.obj: compat.h nalunit_fns.h
+$(OBJDIR)\test_pes.obj: compat.h pes_fns.h pidint_fns.h misc_fns.h ps_fns.h ts_fns.h es_fns.h h262_fns.h tswrite_fns.h version.h
+$(OBJDIR)\test_printing.obj: printing_fns.h version.h
+$(OBJDIR)\ts.obj: compat.h ts_fns.h tswrite_fns.h misc_fns.h printing_fns.h pidint_fns.h pes_fns.h
+$(OBJDIR)\ts2es.obj: compat.h ts_fns.h misc_fns.h printing_fns.h pidint_fns.h es_fns.h pes_fns.h version.h
+$(OBJDIR)\ts2ps.obj: compat.h ps_fns.h ts_fns.h misc_fns.h printing_fns.h pidint_fns.h pes_fns.h version.h
+$(OBJDIR)\ts_packet_insert.obj: compat.h misc_fns.h printing_fns.h version.h
+$(OBJDIR)\tsdvbsub.obj: compat.h ts_fns.h misc_fns.h printing_fns.h pidint_fns.h es_fns.h pes_fns.h version.h fmtx.h
+$(OBJDIR)\tsfilter.obj: compat.h ts_fns.h misc_fns.h printing_fns.h pidint_fns.h version.h tswrite_defns.h tswrite_fns.h
+$(OBJDIR)\tsinfo.obj: compat.h ts_fns.h misc_fns.h printing_fns.h pidint_fns.h version.h
+$(OBJDIR)\tsplay.obj: compat.h printing_fns.h tsplay_fns.h tswrite_fns.h printing_fns.h misc_fns.h version.h ps_fns.h pes_fns.h pidint_fns.h
+$(OBJDIR)\tsplay_innards.obj: compat.h printing_fns.h ts_fns.h ps_fns.h pes_fns.h misc_fns.h printing_fns.h tsplay_fns.h tswrite_fns.h pidint_fns.h
+$(OBJDIR)\tsreport.obj: compat.h ts_fns.h pes_fns.h misc_fns.h printing_fns.h pidint_fns.h fmtx.h version.h
+$(OBJDIR)\tsserve.obj: compat.h ts_fns.h ps_fns.h pes_fns.h accessunit_fns.h nalunit_fns.h misc_fns.h printing_fns.h tswrite_fns.h es_fns.h h262_fns.h filter_fns.h reverse_fns.h version.h
+$(OBJDIR)\tswrite.obj: compat.h misc_fns.h printing_fns.h tswrite_fns.h
+
 
 $(LIBFILE): $(LIBDIR) $(LIB_OBJS)
 	lib /nologo /out:$@ $(LIB_OBJS)

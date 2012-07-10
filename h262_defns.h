@@ -38,7 +38,7 @@
 // *they* refer to reverse_data, we need to break the circular referencing
 // at some point
 typedef struct h262_context *h262_context_p;
-#include "reverse_defns.h"
+struct reverse_data;
 
 // ------------------------------------------------------------
 // An MPEG "item", the set of bytes that starts with a start code prefix.
@@ -238,7 +238,7 @@ struct h262_context
   
   // If we are collecting reversing information, then we keep a reference
   // to the reverse data here
-  reverse_data_p reverse_data;
+  struct reverse_data * reverse_data;
   // In the same context, we need to remember how long it is since the
   // last sequence header
   byte           count_since_seq_hdr;
