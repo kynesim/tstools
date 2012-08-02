@@ -402,6 +402,151 @@ extern int close_file(int  filedes)
 // ============================================================
 // More complex file I/O utilities
 // ============================================================
+static int open_input_as_ES_using_PES(char   *name,
+                                      int     quiet,
+                                      int     force_stream_type,
+                                      int     want_data,
+                                      int    *is_data,
+                                      ES_p   *es)
+{
+  int  err;
+  PES_reader_p  reader = NULL;
+
+  if (name == NULL)
+  {
+    print_err("### Cannot use standard input to read PES\n");
+    return 1;
+  }
+
+  err = open_PES_reader(name,!quiet,!quiet,&reader);
+  if (err)
+  {
+    fprint_err("### Error trying to build PES reader for input file %s\n",name);
+    return 1;
+  }
+  err = build_elementary_stream_PES(reader,es);
+  if (err)
+  {
+    fprint_err("### Error trying to build ES reader from PES reader\n"
+               "    for input file %s\n",name);
+    (void) close_PES_reader(&reader);
+    return 1;
+  }
+
+  if (!quiet)
+    fprint_msg("Reading from %s\n",name);
+
+  if (force_stream_type)
+  {
+    if (force_stream_type)
+      *is_data = want_data;
+    else
+      *is_data = VIDEO_H262;
+    if (!quiet)
+      fprint_msg("Reading input as %s\n",
+                 (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
+                  *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
+                  *is_data==VIDEO_AVS ?"AVS":
+                  "???"));
+  }
+  else
+  {
+    *is_data = reader->video_type;
+  }
+  return 0;
+}
+
+static int open_input_as_ES_direct(char   *name,
+                                   int     quiet,
+                                   int     force_stream_type,
+                                   int     want_data,
+                                   int    *is_data,
+                                   ES_p   *es)
+{
+  int  err;
+  int  use_stdin = (name == NULL);
+  int  input = -1;
+
+  if (use_stdin)
+  {
+    input = STDIN_FILENO;
+  }
+  else
+  {
+    input = open_binary_file(name,FALSE);
+    if (input == -1) return 1;
+  }
+
+  err = build_elementary_stream_file(input,es);
+  if (err)
+  {
+    fprint_err("### Error building elementary stream for %s\n",
+               use_stdin?"<stdin>":name);
+    if (!use_stdin)
+      (void) close_file(input);
+    return 1;
+  }
+
+  if (!quiet)
+    fprint_msg("Reading from %s\n",(use_stdin?"<stdin>":name));
+
+  if (force_stream_type || use_stdin)
+  {
+    if (force_stream_type)
+      *is_data = want_data;
+    else
+      *is_data = VIDEO_H262;
+    if (!quiet)
+      fprint_msg("Reading input as %s\n",
+                 (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
+                  *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
+                  *is_data==VIDEO_AVS ?"AVS":
+                  "???"));
+  }
+  else
+  {
+    int video_type;
+    err = decide_ES_video_type(*es,FALSE,FALSE,&video_type);
+    if (err)
+    {
+      fprint_err("### Error deciding on stream type for file %s\n",name);
+      close_elementary_stream(es);
+      return 1;
+    }
+
+    // We want to rewind, to "unread" the bytes we read to decide our filetype.
+    // The easiest way to do that and return to our initial conditions is to
+    // recreate our ES context
+    free_elementary_stream(es);
+
+    err = seek_file(input,0);
+    if (err)
+    {
+      print_err("### Error returning to start position in file after"
+                " working out video type\n");
+      (void) close_file(input);
+      return 1;
+    }
+
+    err = build_elementary_stream_file(input,es);
+    if (err)
+    {
+      fprint_err("### Error (re)building elementary stream for %s\n",name);
+      return 1;
+    }
+
+    *is_data = video_type;
+    if (!quiet)
+      fprint_msg("Input appears to be %s\n",
+                 (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
+                  *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
+                  *is_data==VIDEO_AVS?"AVS":
+                  *is_data==VIDEO_UNKNOWN?"Unknown":
+                  "???"));
+  }
+  return 0;
+}
+
 /*
  * Open an input file appropriately for reading as ES.
  *
@@ -445,84 +590,12 @@ extern int open_input_as_ES(char   *name,
                             int    *is_data,
                             ES_p   *es)
 {
-  int  err;
-  int  use_stdin = (name == NULL);
-  PES_reader_p  reader = NULL;
-  
   if (use_pes)
-  {
-    if (use_stdin)
-    {
-      print_err("### Cannot use standard input to read PES\n");
-      return 1;
-    }
-
-    err = open_PES_reader(name,!quiet,!quiet,&reader);
-    if (err)
-    {
-      fprint_err("### Error trying to build PES reader for input"
-                 " file %s\n",name);
-      return 1;
-    }
-    err = build_elementary_stream_PES(reader,es);
-    if (err)
-    {
-      fprint_err("### Error trying to build ES reader from PES reader\n"
-                 "    for input file %s\n",name);
-      (void) close_PES_reader(&reader);
-      return 1;
-    }
-  }
+    return open_input_as_ES_using_PES(name, quiet, force_stream_type,
+                                      want_data, is_data, es);
   else
-  {
-    err = open_elementary_stream(name,es);
-    if (err) return 1;
-  }
-  
-  if (!quiet)
-    fprint_msg("Reading from %s\n",(use_stdin?"<stdin>":name));
-
-  if (force_stream_type || use_stdin)
-  {
-    if (force_stream_type)
-      *is_data = want_data;
-    else
-      *is_data = VIDEO_H262;
-    if (!quiet)
-      fprint_msg("Reading input as %s\n",
-                 (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
-                  *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
-                  *is_data==VIDEO_AVS ?"AVS":
-                  "???"));
-  }
-  else
-  {
-    if (use_pes)
-    {
-      *is_data = reader->video_type;
-    }
-    else
-    {
-      int video_type;
-      err = decide_ES_video_type(*es,FALSE,FALSE,&video_type);
-      if (err)
-      {
-        fprint_err("### Error deciding on stream type for file %s\n",name);
-        close_elementary_stream(es);
-        return 1;
-      }
-
-      *is_data = video_type;
-      if (!quiet)
-        fprint_msg("Input appears to be %s\n",
-               (*is_data==VIDEO_H262?"MPEG-2 (H.262)":
-                *is_data==VIDEO_H264?"MPEG-4/AVC (H.264)":
-                *is_data==VIDEO_AVS?"AVS":
-                *is_data==VIDEO_UNKNOWN?"Unknown":
-                "???"));
-    }
-  }
-  return 0;
+    return open_input_as_ES_direct(name, quiet, force_stream_type,
+                                   want_data, is_data, es);
 }
 
 /*
