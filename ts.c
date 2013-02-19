@@ -2298,6 +2298,9 @@ static const char * const descriptor_names[] =
     "auxiliary video stream",  // 47
     "SVC extension",  // 48
     "MVC extension",  // 49
+    "J2K video descriptor",  // 50
+    "MVC operation point descriptor",  // 51
+    "MPEG2 stereoscopic video format",  // 52
 };
 
 /*
@@ -2397,6 +2400,47 @@ extern int print_descriptors(int    is_msg,
         fprint_msg_or_err(is_msg,"\n");
         break;
 
+      case 40:
+      {
+        const uint8_t * p = data;
+        unsigned int t;
+
+        fprint_msg_or_err(is_msg,"AVC video descriptor: ");
+
+        if (this_length != 4)
+        {
+          if (this_length < 4)
+          {
+            // Give up if too short
+            fprint_msg_or_err(is_msg,"### descriptor too short %d ###\n", this_length);
+            break;
+          }
+          else
+          {
+            // Complain but carry on if too long
+            fprint_msg_or_err(is_msg,"### descriptor too long %d ###: \n", this_length);
+          }
+        }
+
+        fprint_msg_or_err(is_msg,"profile idc: %d, ", *p++);
+        fprint_msg_or_err(is_msg,"constraint_set[");
+        t = *p;
+        for (ii = 0; ii != 6; ++ii)
+        {
+          fprint_msg_or_err(is_msg,"%c", (t & 0x80) != 0 ? '0' + ii : '-');
+          t <<= 1;
+        }
+        fprint_msg_or_err(is_msg,"], AVC_compatible_flags: %d, ", *p++ & 3);
+        fprint_msg_or_err(is_msg,"level_idc: %d, ", *p++);
+        fprint_msg_or_err(is_msg,"AVC_still_present: %d, ", (*p >> 7) & 1);
+        fprint_msg_or_err(is_msg,"AVC_24_hour_picture_flag: %d, ", (*p >> 6) & 1);
+        fprint_msg_or_err(is_msg,"Frame_Packing_SEI_not_present_flag: %d, ", (*p >> 5) & 1);
+        fprint_msg_or_err(is_msg,"reserved: %#x", *p & 0x1f);
+
+        fprint_msg_or_err(is_msg,"\n");
+        break;
+      }
+
       case 42:
         {
           const uint8_t * p = data;
@@ -2446,6 +2490,50 @@ extern int print_descriptors(int    is_msg,
           }
           fprint_msg_or_err(is_msg,"\n");
         }
+        break;
+
+      case 52:
+        fprint_msg_or_err(is_msg,"MPEG2 stereoscopic video format: ");
+
+        if (this_length != 1)
+        {
+          if (this_length < 1)
+          {
+            // Give up if too short
+            fprint_msg_or_err(is_msg,"### descriptor too short %d ###\n", this_length);
+            break;
+          }
+          else
+          {
+            // Complain but carry on if too long
+            fprint_msg_or_err(is_msg,"### descriptor too long %d ###: \n", this_length);
+          }
+        }
+
+        if ((data[0] & 0x80) != 0)
+        {
+          fprint_msg_or_err(is_msg,"arrangement not present: reserved: %#x", data[0] & 0x7f);
+        }
+        else
+        {
+          fprint_msg_or_err(is_msg,"arrangement: ");
+          switch (data[0])
+          {
+          case 3:
+            fprint_msg_or_err(is_msg,"S3D side by side");
+            break;
+          case 4:
+            fprint_msg_or_err(is_msg,"S3D top and bottom");
+            break;
+          case 8:
+            fprint_msg_or_err(is_msg,"2D video");
+            break;
+          default:
+            fprint_msg_or_err(is_msg,"reserved: %#x", data[0] & 0x7f);
+            break;
+          }
+        }
+        fprint_msg_or_err(is_msg,"\n");
         break;
 
       case 0x56:  // teletext
