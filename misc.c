@@ -1476,7 +1476,7 @@ const char *ipv4_addr_to_string(const uint32_t addr)
 {
   static char buf[64];
 
-  sprintf(buf, "%d.%d.%d.%d", 
+  snprintf(buf, sizeof(buf), "%d.%d.%d.%d",
 	  (addr >> 24)&0xff,
 	  (addr >> 16)&0xff,
 	  (addr >> 8)&0xff,

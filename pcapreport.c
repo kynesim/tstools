@@ -784,7 +784,7 @@ stream_merge_vlan_info(pcapreport_stream_t * const st, const ethernet_packet_t *
 }
 
 static char *
-vlan_name(const char * prefix, const pcapreport_stream_t * const st, char * const buf)
+vlan_name(const char * prefix, const pcapreport_stream_t * const st, const size_t blen, char * const buf)
 {
   if (st->vlan_count == 0)
   {
@@ -795,14 +795,17 @@ vlan_name(const char * prefix, const pcapreport_stream_t * const st, char * cons
     int i;
     size_t n = strlen(prefix);
     char * p = buf;
+    char * const eob = buf + blen;
+
     memcpy(p, prefix, n);
     p += n;
-    for (i = 0; i < st->vlan_count; ++i)
+
+    for (i = 0; i < st->vlan_count && eob - p > 2; ++i)
     {
       const pcapreport_vlan_info_t * const vi = st->vlans + i;
       if (i != 0)
         *p++ = '.';
-      p += sprintf(p, "%d", vi->vid);
+      p += snprintf(p, eob - p, "%d", vi->vid);
     }
   }
   return buf;
@@ -842,8 +845,8 @@ stream_create(pcapreport_ctx_t * const ctx,
     // that name!
     if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
     {
-      sprintf(st->output_name + len, "%s_%u.%u.%u.%u_%u.ts",
-        vlan_name("_V", st, pbuf),
+      snprintf(st->output_name + len, 64, "%s_%u.%u.%u.%u_%u.ts",
+        vlan_name("_V", st, sizeof(pbuf), pbuf),
         dest_addr >> 24, (dest_addr >> 16) & 0xff,
         (dest_addr >> 8) & 0xff, dest_addr & 0xff,
         dest_port);
@@ -860,8 +863,8 @@ stream_create(pcapreport_ctx_t * const ctx,
 
     if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
     {
-      sprintf(name + len, "%s_%u.%u.%u.%u_%u.csv",
-        vlan_name("_V", st, pbuf),
+      snprintf(name + len, 64, "%s_%u.%u.%u.%u_%u.csv",
+        vlan_name("_V", st, sizeof(pbuf), pbuf),
         dest_addr >> 24, (dest_addr >> 16) & 0xff,
         (dest_addr >> 8) & 0xff, dest_addr & 0xff,
         dest_port);
@@ -875,19 +878,20 @@ stream_create(pcapreport_ctx_t * const ctx,
 }
 
 static char *
-map_to_string(unsigned int n, char * const buf)
+map_to_string(unsigned int n, const size_t blen, char * const buf)
 {
   int i = 0;
   char * p = buf;
+  char * const eob = buf + blen;
   int first = TRUE;
 
-  while (n != 0)
+  while (n != 0 && eob - p > 2)
   {
     if ((n & 1) != 0)
     {
       if (!first)
         *p++ = ',';
-      p += sprintf(p, "%d", i);
+      p += snprintf(p, eob - p, "%d", i);
       first = FALSE;
     }
     n >>= 1;
@@ -907,7 +911,7 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
 
   fprint_msg("Stream %d: Dest:%s %u.%u.%u.%u:%u\n",
     st->stream_no,
-    vlan_name(" VLAN:", st, pbuf),
+    vlan_name(" VLAN:", st, sizeof(pbuf), pbuf),
     dest_addr >> 24, (dest_addr >> 16) & 0xff,
     (dest_addr >> 8) & 0xff, dest_addr & 0xff,
     st->output_dest_port);
@@ -921,7 +925,7 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
       char pbuf1[64], pbuf2[64];
 
       fprint_msg("  VLAN %d: cfi:[%s], pcp[%s]\n", vi->vid,
-        map_to_string(vi->cfimap, pbuf1), map_to_string(vi->pcpmap, pbuf2));
+        map_to_string(vi->cfimap, sizeof(pbuf1), pbuf1), map_to_string(vi->pcpmap, sizeof(pbuf2), pbuf2));
     }
   }
 

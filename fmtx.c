@@ -60,11 +60,11 @@ const TCHAR *fmtx_timestamp(int64_t n, unsigned int flags)
   {
   default:
   case FMTX_TS_DISPLAY_90kHz_RAW:
-    _stprintf(buf, _T("%") I64FMT _T("dt"), n27 / 300LL);
+    _sntprintf(buf, FMTX_BUFFER_SIZE, _T("%") I64FMT _T("dt"), n27 / 300LL);
     break;
 
   case FMTX_TS_DISPLAY_27MHz_RAW:
-    _stprintf(buf, _T("%") I64FMT _T("d:%03dt"), n27 / 300LL, frac_27MHz(n27));
+    _sntprintf(buf, FMTX_BUFFER_SIZE, _T("%") I64FMT _T("d:%03dt"), n27 / 300LL, frac_27MHz(n27));
     break;
 
   case FMTX_TS_DISPLAY_90kHz_32BIT:
@@ -73,13 +73,13 @@ const TCHAR *fmtx_timestamp(int64_t n, unsigned int flags)
       TCHAR * p = buf;
       if (n90 < 0)
         *p++ = _T('-');
-      _stprintf(p, _T("%ut"), (unsigned int)(n90 < 0 ? -n90 : n90));
+      _sntprintf(p, FMTX_BUFFER_SIZE, _T("%ut"), (unsigned int)(n90 < 0 ? -n90 : n90));
       break;
     }
 
   case FMTX_TS_DISPLAY_ms:
     // No timestamp when converted into ms should exceed 32bits
-    _stprintf(buf, _T("%dms"), (int)(n27 / 27000LL));
+    _sntprintf(buf, FMTX_BUFFER_SIZE, _T("%dms"), (int)(n27 / 27000LL));
     break;
 
   case FMTX_TS_DISPLAY_HMS:
@@ -93,7 +93,7 @@ const TCHAR *fmtx_timestamp(int64_t n, unsigned int flags)
       a27 /= I64K(60);
       m = (unsigned int)(a27 % I64K(60));
       h = (unsigned int)(a27 / I64K(60));
-      _stprintf(buf, _T("%s%u:%02u:%02u.%04u"), n27 < 0 ? _T("-") : _T(""), h, m, s, f/1000);
+      _sntprintf(buf, FMTX_BUFFER_SIZE, _T("%s%u:%02u:%02u.%04u"), n27 < 0 ? _T("-") : _T(""), h, m, s, f/1000);
       break;
     }
 

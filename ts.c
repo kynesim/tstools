@@ -2616,7 +2616,7 @@ extern int print_descriptors(int    is_msg,
       default:
         {
           char    temp_c[50]; // twice as much as I need...
-          sprintf(temp_c, "%s (%d)",
+          snprintf(temp_c, sizeof(temp_c), "%s (%d)",
             tag < sizeof(descriptor_names)/sizeof(descriptor_names[0]) ?
                 descriptor_names[tag] :
               tag < 64 ? "Reserved" : "User Private",
