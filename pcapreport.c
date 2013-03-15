@@ -367,6 +367,13 @@ pkt_time(const pcaprec_hdr_t * const pcap_pkt_hdr)
     ((int64_t)pcap_pkt_hdr->ts_sec * 90000);
 }
 
+// 33 bit comparison
+static int64_t
+pts_diff(const uint64_t a, const uint64_t b)
+{
+  return ((a - b) << 31) >> 31;
+}
+
 
 static int digest_times(pcapreport_ctx_t * const ctx, 
                         pcapreport_stream_t * const st,
@@ -504,10 +511,10 @@ static int digest_times(pcapreport_ctx_t * const ctx,
               // fprint_msg("pcr = %lld t_pcr = %lld diff = %lld\n", 
               //            pcr, t_pcr, t_pcr - pcr);
 
-              pcr_time_offset = ((int64_t)t_pcr - (int64_t)pcr);
+              pcr_time_offset = pts_diff(t_pcr, pcr);
 
               skew = st->section_last == NULL ? 0LL :
-                pcr_time_offset - (st->section_last->time_start - st->section_last->pcr_start);
+                pcr_time_offset - pts_diff(st->section_last->time_start, st->section_last->pcr_start);
 
               if (st->section_last == NULL ||
                   skew > st->skew_discontinuity_threshold || 
@@ -955,7 +962,7 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
       uint64_t time_offset = ctx->time_start;
       int64_t time_len = tsect->time_last - tsect->time_start;
       int64_t time_len2 = tsect->time_final - tsect->time_start;
-      int64_t pcr_len = tsect->pcr_last - tsect->pcr_start;
+      int64_t pcr_len = pts_diff(tsect->pcr_last, tsect->pcr_start);
       int64_t drift = time_len - pcr_len;
       fprint_msg("  Section %d:\n", tsect->section_no);
       fprint_msg("    Pkts: %u->%u\n", tsect->pkt_start, tsect->pkt_final);
