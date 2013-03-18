@@ -76,10 +76,12 @@ typedef struct pcapreport_section_struct pcapreport_section_t;
 struct pcapreport_section_struct {
   pcapreport_section_t * next;
   unsigned int section_no;
+  int pcr_seen;
   unsigned int jitter_max;
   uint32_t pkt_start;
   uint32_t pkt_final;
   uint64_t time_start;  // 90kHz
+  uint64_t time_first;  // time @ first PCR
   uint64_t time_last;   // time @ last PCR
   uint64_t time_final;
   uint64_t pcr_start;   // 90kHz
@@ -304,8 +306,15 @@ jitter_clear(jitter_env_t * const je)
   je->min_val = 0;
 }
 
+static uint64_t
+pkt_time(const pcaprec_hdr_t * const pcap_pkt_hdr)
+{
+  return (((int64_t)pcap_pkt_hdr->ts_usec*9)/100) +
+    ((int64_t)pcap_pkt_hdr->ts_sec * 90000);
+}
+
 static pcapreport_section_t *
-section_create(pcapreport_stream_t * const st)
+section_create(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st, const pcaprec_hdr_t * const pcap_pkt_hdr)
 {
   pcapreport_section_t * const tsect = calloc(1, sizeof(*tsect));
   pcapreport_section_t * const last = st->section_last;
@@ -331,6 +340,13 @@ section_create(pcapreport_stream_t * const st)
   // Init "obvious" non-zero stuff
   tsect->rtp_skew_max = -0x7fffffff;
   tsect->rtp_skew_min = 0x7fffffff;
+
+  tsect->time_final =
+  tsect->time_start = pkt_time(pcap_pkt_hdr);
+  tsect->pkt_final =
+  tsect->pkt_start = ctx->pkt_counter;
+  tsect->ts_byte_start =
+  tsect->ts_byte_final = st->ts_bytes;
 
   return tsect;
 }
@@ -358,13 +374,6 @@ static int digest_times_seek(void *handle, offset_t val)
 {
   // Cannot seek in a ts stream.
   return 1;
-}
-
-static uint64_t
-pkt_time(const pcaprec_hdr_t * const pcap_pkt_hdr)
-{
-  return (((int64_t)pcap_pkt_hdr->ts_usec*9)/100) + 
-    ((int64_t)pcap_pkt_hdr->ts_sec * 90000);
 }
 
 // 33 bit comparison
@@ -513,14 +522,16 @@ static int digest_times(pcapreport_ctx_t * const ctx,
 
               pcr_time_offset = pts_diff(t_pcr, pcr);
 
-              skew = st->section_last == NULL ? 0LL :
-                pcr_time_offset - pts_diff(st->section_last->time_start, st->section_last->pcr_start);
+              skew = !st->section_last->pcr_seen ? 0LL :
+                pcr_time_offset - pts_diff(st->section_last->time_first, st->section_last->pcr_start);
 
-              if (st->section_last == NULL ||
+              if (!st->section_last->pcr_seen ||
                   skew > st->skew_discontinuity_threshold || 
                   skew < -st->skew_discontinuity_threshold)
               {
-                pcapreport_section_t * const tsect = section_create(st);
+                pcapreport_section_t * const tsect = !st->section_last->pcr_seen ?
+                  st->section_last :
+                  section_create(ctx, st, pcap_pkt_hdr);
 
                 if (tsect->section_no != 0)
                 {
@@ -533,14 +544,13 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                              pcap_pkt_hdr->ts_usec);
                 }
 
-                tsect->pkt_final =
-                tsect->pkt_start = ctx->pkt_counter;
+                tsect->pkt_final = ctx->pkt_counter;
                 tsect->pcr_last =
                 tsect->pcr_start = pcr;
                 tsect->time_last =
-                tsect->time_start = t_pcr;
-                tsect->ts_byte_start =
+                tsect->time_first = t_pcr;
                 tsect->ts_byte_final = ts_byte_start;
+                tsect->pcr_seen = TRUE;
 
                 jitter_clear(&st->jitter);
                 st->last_time_offset = 0;
@@ -569,7 +579,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
 
                 if (ctx->time_report)
                 {
-                  int64_t rel_tim = t_pcr - tsect->time_start; // 90kHz
+                  int64_t rel_tim = t_pcr - tsect->time_first; // 90kHz
                   double skew_rate = (double)skew / ((double)((double)rel_tim / (60*90000)));
   
                   fprint_msg(">%d> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min) - jitter=%u\n",
@@ -818,12 +828,53 @@ vlan_name(const char * prefix, const pcapreport_stream_t * const st, const size_
   return buf;
 }
 
+void
+stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
+{
+  pcapreport_stream_t * const st = *pst;
+  *pst = NULL;
+
+  {
+    // Free off all our section data
+    pcapreport_section_t * p = st->section_first;
+    while (p != NULL)
+    {
+      pcapreport_section_t * np = p->next;
+      free(p);
+      p = np;
+    }
+  }
+  if (st->output_file != NULL)
+  {
+    if (st->seen_dodgy != 0)
+    {
+      fprint_msg(">%d> WARNING: %d dodgy packet%s written to: %s\n",
+                 st->stream_no,
+                 st->seen_dodgy, st->seen_dodgy == 1 ? "" : "s", st->output_name);
+    }
+    if (st->seen_bad != 0)
+    {
+      fprint_msg(">%d> WARNING: %d bad packet%s excluded from: %s\n",
+                 st->stream_no,
+                 st->seen_bad, st->seen_bad == 1 ? "" : "s", st->output_name);
+    }
+    fclose(st->output_file);
+  }
+  if (st->csv_file != NULL)
+    fclose(st->csv_file);
+  if (st->csv_name != NULL)
+    free((void *)st->csv_name);
+  if (st->output_name != NULL)
+    free(st->output_name);
+  free(st);
+}
+
 static pcapreport_stream_t *
-stream_create(pcapreport_ctx_t * const ctx,
+stream_create(pcapreport_ctx_t * const ctx, const pcaprec_hdr_t * const pcap_pkt_hdr,
   const ethernet_packet_t * const epkt, uint32_t const dest_addr, const uint32_t dest_port)
 {
   int i;
-  pcapreport_stream_t * const st = calloc(1, sizeof(*st));
+  pcapreport_stream_t * st = calloc(1, sizeof(*st));
   st->stream_no = ctx->stream_count++;
   st->output_dest_addr = dest_addr;
   st->output_dest_port = dest_port;
@@ -879,6 +930,13 @@ stream_create(pcapreport_ctx_t * const ctx,
     else
       strcpy(name + len, ".csv");
     st->csv_name = name;
+  }
+
+  // Even if we don't need sections it won't hurt to have one
+  if (section_create(ctx, st, pcap_pkt_hdr) == NULL)
+  {
+    stream_close(ctx, &st);
+    return NULL;
   }
 
   return st;
@@ -960,8 +1018,8 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
     for (tsect = st->section_first; tsect != NULL; tsect = tsect->next)
     {
       uint64_t time_offset = ctx->time_start;
-      int64_t time_len = tsect->time_last - tsect->time_start;
-      int64_t time_len2 = tsect->time_final - tsect->time_start;
+      int64_t time_len = tsect->time_last - tsect->time_first;  // PCR duration
+      int64_t time_len2 = tsect->time_final - tsect->time_start;  // Stream duration
       int64_t pcr_len = pts_diff(tsect->pcr_last, tsect->pcr_start);
       int64_t drift = time_len - pcr_len;
       fprint_msg("  Section %d:\n", tsect->section_no);
@@ -972,19 +1030,26 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
         fmtx_timestamp(tsect->time_start - time_offset, ctx->tfmt),
         fmtx_timestamp(tsect->time_final - time_offset, ctx->tfmt),
         fmtx_timestamp(time_len2, ctx->tfmt));
-      fprint_msg("    Time (PCRs): %s->%s (%s)\n",
-        fmtx_timestamp(tsect->time_start - time_offset, ctx->tfmt),
-        fmtx_timestamp(tsect->time_last - time_offset, ctx->tfmt),
-        fmtx_timestamp(time_len, ctx->tfmt));
-      fprint_msg("    PCR: %s->%s (%s)\n",
-        fmtx_timestamp(tsect->pcr_start, ctx->tfmt),
-        fmtx_timestamp(tsect->pcr_last, ctx->tfmt),
-        fmtx_timestamp(pcr_len, ctx->tfmt));
-      fprint_msg("    Drift: diff=%s; rate=%s/min; 1s per %llds\n",
-        fmtx_timestamp(time_len - pcr_len, ctx->tfmt),
-        fmtx_timestamp(time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len, ctx->tfmt),
-        drift == 0 ? 0LL : time_len / drift);
-      fprint_msg("    Max jitter: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt));
+      if (!tsect->pcr_seen)
+      {
+        fprint_msg("    No PCRs seen\n");
+      }
+      else
+      {
+        fprint_msg("    Time (PCRs): %s->%s (%s)\n",
+          fmtx_timestamp(tsect->time_first - time_offset, ctx->tfmt),
+          fmtx_timestamp(tsect->time_last - time_offset, ctx->tfmt),
+          fmtx_timestamp(time_len, ctx->tfmt));
+        fprint_msg("    PCR: %s->%s (%s)\n",
+          fmtx_timestamp(tsect->pcr_start, ctx->tfmt),
+          fmtx_timestamp(tsect->pcr_last, ctx->tfmt),
+          fmtx_timestamp(pcr_len, ctx->tfmt));
+        fprint_msg("    Drift: diff=%s; rate=%s/min; 1s per %llds\n",
+          fmtx_timestamp(time_len - pcr_len, ctx->tfmt),
+          fmtx_timestamp(time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len, ctx->tfmt),
+          drift == 0 ? 0LL : time_len / drift);
+        fprint_msg("    Max jitter: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt));
+      }
       if (st->rtp_info.n != 0)
       {
         fprint_msg("    PCR/RTP skew: %s->%s (%s)\n",
@@ -1024,7 +1089,9 @@ stream_vlan_match(const pcapreport_stream_t * const st, const ethernet_packet_t 
 }
 
 pcapreport_stream_t *
-stream_find(pcapreport_ctx_t * const ctx, const ethernet_packet_t * const epkt, uint32_t const dest_addr, const uint32_t dest_port)
+stream_find(pcapreport_ctx_t * const ctx,
+    const pcaprec_hdr_t * const pcap_pkt_hdr, const ethernet_packet_t * const epkt,
+    uint32_t const dest_addr, const uint32_t dest_port)
 {
   const unsigned int h = stream_hash(dest_addr, dest_port);
   pcapreport_stream_t ** pst = ctx->stream_hash + h;
@@ -1040,52 +1107,11 @@ stream_find(pcapreport_ctx_t * const ctx, const ethernet_packet_t * const epkt, 
     pst = &st->hash_next;
   }
 
-  if ((st = stream_create(ctx, epkt, dest_addr, dest_port)) == NULL)
+  if ((st = stream_create(ctx, pcap_pkt_hdr, epkt, dest_addr, dest_port)) == NULL)
     return NULL;
 
   *pst = st;
   return st;
-}
-
-void
-stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
-{
-  pcapreport_stream_t * const st = *pst;
-  *pst = NULL;
-
-  {
-    // Free off all our section data
-    pcapreport_section_t * p = st->section_first;
-    while (p != NULL)
-    {
-      pcapreport_section_t * np = p->next;
-      free(p);
-      p = np;
-    }
-  }
-  if (st->output_file != NULL)
-  {
-    if (st->seen_dodgy != 0)
-    {
-      fprint_msg(">%d> WARNING: %d dodgy packet%s written to: %s\n",
-                 st->stream_no,
-                 st->seen_dodgy, st->seen_dodgy == 1 ? "" : "s", st->output_name);
-    }
-    if (st->seen_bad != 0)
-    {
-      fprint_msg(">%d> WARNING: %d bad packet%s excluded from: %s\n",
-                 st->stream_no,
-                 st->seen_bad, st->seen_bad == 1 ? "" : "s", st->output_name);
-    }
-    fclose(st->output_file);
-  }
-  if (st->csv_file != NULL)
-    fclose(st->csv_file);
-  if (st->csv_name != NULL)
-    free((void *)st->csv_name);
-  if (st->output_name != NULL)
-    free(st->output_name);
-  free(st);
 }
 
 static int
@@ -1681,7 +1707,8 @@ int main(int argc, char **argv)
               (ctx->filter_dest_addr == 0 || (ipv4_hdr.dest_addr == ctx->filter_dest_addr)) && 
               (ctx->filter_dest_port == 0 || (udp_hdr.dest_port == ctx->filter_dest_port)))
             {
-              pcapreport_stream_t * const st = stream_find(ctx, &epkt, ipv4_hdr.dest_addr, udp_hdr.dest_port);
+              pcapreport_stream_t * const st = stream_find(ctx, &rec_hdr, &epkt,
+                  ipv4_hdr.dest_addr, udp_hdr.dest_port);
               rtp_header_t rtp_hdr;
 
               stream_merge_vlan_info(st, &epkt);
