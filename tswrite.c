@@ -527,6 +527,7 @@ static int free_buffered_TS_output(buffered_TS_output_p  *writer)
 
 // Get a useful unsigned diff between two PCRs allowing for wrap through zero
 #define PCR_WRAP (0x200000000LL * 300LL)
+#define PCR_MS(n) ((int64_t)(n) * 90LL * 300LL)  // 27MHz units
 
 static inline uint64_t pcr_delta_u(const uint64_t a, const uint64_t b)
 {
@@ -636,7 +637,7 @@ static int set_buffer_item_time_pcr(buffered_TS_output_p writer)
   {
     uint64_t delta_pcr = pcr_delta_u(writer->packet[ii].pcr, last_pcr);
 
-    if (delta_pcr > 2 * 90000LL)
+    if (delta_pcr > PCR_MS(2000))
     {
       // We've suffered a discontinuity (quite likely because we've looped
       // back to the start of the file). We plainly don't want to continue
