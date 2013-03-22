@@ -380,7 +380,7 @@ static int digest_times_seek(void *handle, offset_t val)
 static int64_t
 pts_diff(const uint64_t a, const uint64_t b)
 {
-  return ((a - b) << 31) >> 31;
+  return ((int64_t)(a - b) << 31) >> 31;
 }
 
 
@@ -506,7 +506,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
               // *** If this happens often then fix to track each Pid
               if (!st->multiple_pcr_pids)
               {
-                fprint_msg("!%d! Multiple pids detected: pids: %d,%d,...\n",
+                fprint_msg("!%d! Multiple PCR pids detected: pids: %d,%d,...\n",
                   st->stream_no, st->pcr_pid, pid);
               }
               st->multiple_pcr_pids = TRUE;
