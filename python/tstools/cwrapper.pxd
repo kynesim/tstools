@@ -166,13 +166,13 @@ cdef extern from "ts_fns.h":
                           byte *desc_data, int desc_data_len)
 
 cdef extern from 'nalunit_defns.h':
-    struct nal_unit_context
+    struct nal_unit_context:
         pass
     ctypedef nal_unit_context *nal_unit_context_p
-    struct nal_unit
+    struct nal_unit:
         pass
     ctypedef nal_unit *nal_unit_p
-    struct nal_unit_list
+    struct nal_unit_list:
         nal_unit_p  *array
         int          length
         int          size
@@ -212,18 +212,18 @@ cdef extern from 'accessunit_fns.h':
     int build_access_unit_context(ES_p es, access_unit_context_p *context)
     void free_access_unit_context(access_unit_context_p *context)
     int rewind_access_unit_context(access_unit_context_p context)
-    void free_access_unit(access_unit_p *acc_unit)
-    int get_access_unit_bounds(access_unit_p access_unit, ES_offset *start,
+    void free_access_unit(access_unit_context_p *acc_unit)
+    int get_access_unit_bounds(access_unit_context_p access_unit, ES_offset *start,
                                uint32_t *length)
-    int all_slices_I(access_unit_p access_unit)
-    int all_slices_P(access_unit_p access_unit)
-    int all_slices_I_or_P(access_unit_p access_unit)
-    int all_slices_B(access_unit_p access_unit)
+    int all_slices_I(access_unit_context_p access_unit)
+    int all_slices_P(access_unit_context_p access_unit)
+    int all_slices_I_or_P(access_unit_context_p access_unit)
+    int all_slices_B(access_unit_context_p access_unit)
     int get_next_access_unit(access_unit_context_p context, int quiet,
-                             int show_details, access_unit_p *ret_access_unit)
+                             int show_details, access_unit_context_p *ret_access_unit)
     int get_next_h264_frame(access_unit_context_p context, int quiet,
-                            int show_details, access_unit_p *frame)
-    int access_unit_has_PTS(access_unit_p access_unit)
+                            int show_details, access_unit_context_p *frame)
+    int access_unit_has_PTS(access_unit_context_p access_unit)
 
 cdef extern from 'printing_fns.h':
     void print_msg(const_char_ptr text)
@@ -233,7 +233,8 @@ cdef extern from 'printing_fns.h':
     int redirect_output( void (*new_print_message_fn) (const_char_ptr message),
                          void (*new_print_error_fn) (const_char_ptr message),
                          void (*new_fprint_message_fn) (const_char_ptr format, va_list arg_ptr),
-                         void (*new_fprint_error_fn) (const_char_ptr format, va_list arg_ptr)
+                         void (*new_fprint_error_fn) (const_char_ptr format, va_list arg_ptr),
+                         void (*new_flush_msg_fn) ()
                         )
 
 # This one isn't properly declared - it's not in the header files

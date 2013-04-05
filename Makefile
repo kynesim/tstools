@@ -80,7 +80,7 @@ ifeq ($(shell uname -s), Darwin)
 	#ARCH_FLAGS = -arch ppc -arch i386
 else
 	SYSTEM = "other"
-	ARCH_FLAGS =
+	ARCH_FLAGS = -fPIC
 endif
 
 CFLAGS = $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS) $(ARCH_FLAGS)
@@ -198,7 +198,7 @@ TEST_PRINTING_PROG = $(BINDIR)/test_printing
 TEST_PROGS = test_nal_unit_list test_es_unit_list
 
 # ------------------------------------------------------------
-all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS)
+all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS) $(SHARED_LIB)
 
 # ts2ps is not yet an offical program, so for the moment build
 # it separately
@@ -213,6 +213,8 @@ $(SHARED_LIB): $(OBJS)
 	libtool -dynamic $(OBJS) -o $(SHARED_LIB)
 else
 $(STATIC_LIB): $(STATIC_LIB)($(OBJS))
+$(SHARED_LIB): $(SHARED_LIB)($(OBJS))
+	$(LD) -shared -o $(SHARED_LIB) $(OBJS) -lc
 endif
 
 # Build all of the utilities with the static library, so that they can

@@ -118,10 +118,13 @@ cdef void our_format_msg(const_char_ptr format, va_list arg_ptr):
     PyOS_vsnprintf(buffer, 1000, format, arg_ptr)
     PySys_WriteStdout('%s',buffer)
 
+cdef void our_flush():
+    pass
+
 def setup_printing():
     cdef int err
     err = cwrapper.redirect_output(our_print_msg, our_print_msg,
-                          our_format_msg, our_format_msg)
+                          our_format_msg, our_format_msg, our_flush)
     if err:
         raise TSToolsException, 'Setting output redirection FAILED'
 
@@ -137,7 +140,7 @@ cdef void our_doctest_format_msg(const_char_ptr format, va_list arg_ptr):
 def setup_printing_for_doctest():
     cdef int err
     err = cwrapper.redirect_output(our_doctest_print_msg, our_doctest_print_msg,
-                          our_doctest_format_msg, our_doctest_format_msg)
+                          our_doctest_format_msg, our_doctest_format_msg, our_flush)
     if err:
         raise TSToolsException, 'Setting doctest output redirection FAILED'
     else:
@@ -146,8 +149,8 @@ def setup_printing_for_doctest():
 def test_printing():
     cwrapper.print_msg('Message\n')
     cwrapper.print_err('Error\n')
-    cwrapper.fprint_msg('Message "%s"\n','Fred')
-    cwrapper.fprint_err('Error "%s"\n','Fred')
+    #cwrapper.fprint_msg('Message "%s"\n','Fred')
+    #cwrapper.fprint_err('Error "%s"\n','Fred')
 
 def test_c_printing():
     cwrapper.test_C_printing()
@@ -473,7 +476,7 @@ cdef class ESFile:
             retval = fclose(self.file_stream)
             if retval != 0:
                 raise TSToolsException,"Error closing file '%s':"\
-                        " %s"%(filename,strerror(errno))
+                        " %s"%(self.name,strerror(errno))
         if self.stream != NULL:
             cwrapper.free_elementary_stream(&self.stream)
         # And obviously we're not available any more

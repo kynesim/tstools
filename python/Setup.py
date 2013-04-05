@@ -26,19 +26,17 @@
 # ***** END LICENSE BLOCK *****
 
 from distutils.core import setup
-from Pyrex.Distutils.extension import Extension
-from Pyrex.Distutils import build_ext
+from distutils.extension import Extension
+from Cython.Distutils import build_ext
 
-tstools = Extension("tstools/tstools",
-		    ['tstools/tstools.pyx'],
-		    include_dirs=['..'],
-		    library_dirs=['../lib'],
-		    libraries=['tstools'],
-		    )
-
-
+tstools = Extension("tstools.tstools",
+                    ['tstools/tstools.pyx'],
+                    include_dirs=['..'],
+                    library_dirs=['../lib'],
+                    libraries=['tstools'],
+                    )
 setup(
   name = 'tstools',
-  ext_modules=[tstools],
-  cmdclass = {'build_ext': build_ext}
+  cmdclass = {'build_ext': build_ext},
+  ext_modules=[tstools]
 )
