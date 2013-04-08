@@ -93,31 +93,31 @@ BINDIR = bin
 
 # All of our non-program object modules
 OBJS = \
- accessunit.o \
- avs.o \
- ac3.o \
- adts.o \
- bitdata.o \
- es.o \
- filter.o \
- fmtx.o \
- h222.o \
- h262.o \
- audio.o \
- l2audio.o \
- misc.o \
- nalunit.o \
- ps.o \
- pes.o \
- pidint.o \
- printing.o \
- reverse.o \
- ts.o \
- tsplay_innards.o \
- tswrite.o \
- pcap.o \
- ethernet.o \
- ipv4.o
+ $(OBJDIR)/accessunit.o \
+ $(OBJDIR)/avs.o \
+ $(OBJDIR)/ac3.o \
+ $(OBJDIR)/adts.o \
+ $(OBJDIR)/bitdata.o \
+ $(OBJDIR)/es.o \
+ $(OBJDIR)/filter.o \
+ $(OBJDIR)/fmtx.o \
+ $(OBJDIR)/h222.o \
+ $(OBJDIR)/h262.o \
+ $(OBJDIR)/audio.o \
+ $(OBJDIR)/l2audio.o \
+ $(OBJDIR)/misc.o \
+ $(OBJDIR)/nalunit.o \
+ $(OBJDIR)/ps.o \
+ $(OBJDIR)/pes.o \
+ $(OBJDIR)/pidint.o \
+ $(OBJDIR)/printing.o \
+ $(OBJDIR)/reverse.o \
+ $(OBJDIR)/ts.o \
+ $(OBJDIR)/tsplay_innards.o \
+ $(OBJDIR)/tswrite.o \
+ $(OBJDIR)/pcap.o \
+ $(OBJDIR)/ethernet.o \
+ $(OBJDIR)/ipv4.o
 
 # Our program object modules
 PROG_OBJS = \
@@ -212,8 +212,11 @@ $(STATIC_LIB): $(OBJS)
 $(SHARED_LIB): $(OBJS)
 	libtool -dynamic $(OBJS) -o $(SHARED_LIB)
 else
-$(STATIC_LIB): $(STATIC_LIB)($(OBJS))
-$(SHARED_LIB): $(SHARED_LIB)($(OBJS))
+$(STATIC_LIB): $(OBJS)
+	rm -f $(STATIC_LIB)
+	ar rc $(STATIC_LIB) $(OBJS)
+
+$(SHARED_LIB): $(OBJS)
 	$(LD) -shared -o $(SHARED_LIB) $(OBJS) -lc
 endif
 
@@ -317,14 +320,17 @@ AUDIO_H = adts_fns.h l2audio_fns.h ac3_fns.h audio_fns.h audio_defns.h adts_defn
 
 # Everyone depends upon the basic configuration file, and I assert they all
 # want (or may want) printing...
-$(STATIC_LIB)($(OBJS)) $(SHARED_LIB)($(OBJS)) $(TEST_OBJS) $(PROG_OBJS): compat.h printing_fns.h
+$(OBJS) $(TEST_OBJS) $(PROG_OBJS): compat.h printing_fns.h
 
 # Which library modules depend on which header files is complex, so
 # lets just be simple
-$(STATIC_LIB)($(OBJS)) $(SHARED_LIB)($(OBJS)): \
+$(OBJS): \
                  $(ACCESSUNIT_H) $(NALUNIT_H) $(TS_H) $(ES_H) $(PES_H) \
                  misc_fns.h printing_fns.h $(PS_H) $(H262_H) \
                  $(TSWRITE_H) $(AVS_H) $(REVERSE_H) $(FILTER_H) $(AUDIO_H)
+
+$(OBJDIR)/%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 $(OBJDIR)/es2ts.o:        es2ts.c $(ES_H) $(TS_H) misc_fns.h version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
@@ -416,6 +422,7 @@ objclean:
 clean: objclean
 	-rm -f $(PROGS)
 	-rm -f $(STATIC_LIB)
+	-rm -f $(SHARED_LIB)
 	-rm -f $(PROG_OBJS)
 
 .PHONY: distclean
