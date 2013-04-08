@@ -76,7 +76,7 @@ typedef struct pcapreport_section_struct pcapreport_section_t;
 struct pcapreport_section_struct {
   pcapreport_section_t * next;
   unsigned int section_no;
-  int pcr_seen;
+  unsigned int pcr_count;
   unsigned int jitter_max;
   uint32_t pkt_start;
   uint32_t pkt_final;
@@ -242,12 +242,11 @@ jitter_add(jitter_env_t * const je, const int delta, const uint32_t time, const 
   jitter_el_t * const next_el = (je->in_n == JITTER_BUF_SIZE - 1) ? je->buf : in_el + 1;
   int needs_scan = FALSE;
 
-
   // 1st expire anything we no longer want - in any case expire one if
   // we are about to overflow.
-  while (in_el != out_el && (time - in_el->t < range || out_el == next_el))
+  while (in_el != out_el && (time - out_el->t > range || out_el == next_el))
   {
-    if (in_el->delta == je->min_val || in_el->delta == je->max_val)
+    if (out_el->delta == je->min_val || out_el->delta == je->max_val)
       needs_scan = TRUE;
 
     // Inc with wrap
@@ -257,7 +256,9 @@ jitter_add(jitter_env_t * const je, const int delta, const uint32_t time, const 
 
   if (needs_scan || in_el == out_el)
   {
-    // Only recalc max & min if we have expired a previous one
+    // Only recalc max & min for the buffer if we have expired a previous one
+    // also if empty then must force both to delta which this code will do
+
     const jitter_el_t * el = out_el;
     int min_val = delta;
     int max_val = delta;
@@ -278,8 +279,8 @@ jitter_add(jitter_env_t * const je, const int delta, const uint32_t time, const 
   }
   else
   {
-    // If we haven't expired a previous min or max just check to see if this
-    // is a new one
+    // Otherwise check to see if this is a new max/min based on old values
+
     if (delta > je->max_val)
       je->max_val = delta;
     if (delta < je->min_val)
@@ -513,6 +514,9 @@ static int digest_times(pcapreport_ctx_t * const ctx,
             }
             else
             {
+              pcapreport_section_t * tsect = st->section_last;
+              unsigned int cur_jitter;
+
               // PCR pops out in 27MHz units. Let's do all our comparisons
               // in 90kHz.
               pcr /= 300;
@@ -522,17 +526,19 @@ static int digest_times(pcapreport_ctx_t * const ctx,
 
               pcr_time_offset = pts_diff(t_pcr, pcr);
 
-              skew = !st->section_last->pcr_seen ? 0LL :
-                pcr_time_offset - pts_diff(st->section_last->time_first, st->section_last->pcr_start);
+              skew = tsect->pcr_count == 0 ? 0LL :
+                pcr_time_offset - pts_diff(tsect->time_first, tsect->pcr_start);
 
-              if (!st->section_last->pcr_seen ||
-                  skew > st->skew_discontinuity_threshold || 
+              // Change section if skew too big
+              if (skew > st->skew_discontinuity_threshold ||
                   skew < -st->skew_discontinuity_threshold)
               {
-                pcapreport_section_t * const tsect = !st->section_last->pcr_seen ?
-                  st->section_last :
-                  section_create(ctx, st, pcap_pkt_hdr);
+                section_create(ctx, st, pcap_pkt_hdr);
+                tsect = st->section_last;
+              }
 
+              if (tsect->pcr_count == 0)
+              {
                 if (tsect->section_no != 0)
                 {
                   fprint_msg(">%d> Skew discontinuity! Skew = %lld (> %lld) at"
@@ -550,71 +556,69 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                 tsect->time_last =
                 tsect->time_first = t_pcr;
                 tsect->ts_byte_final = ts_byte_start;
-                tsect->pcr_seen = TRUE;
 
                 jitter_clear(&st->jitter);
+                skew = 0;
                 st->last_time_offset = 0;
               }
-              else
+
+              // Extract jitter over up to the last 10s.  skew will be within
+              // an int by now
+              cur_jitter = jitter_add(&st->jitter, (int)skew,
+                (uint32_t)(t_pcr & 0xffffffffU), 90000 * 10);
+
+              if (tsect->jitter_max < cur_jitter)
+                tsect->jitter_max = cur_jitter;
+
+              if (rtp_header->is_rtp)
               {
-                pcapreport_section_t * const tsect = st->section_last;
-
-                // Extract jitter over up to the last 10s.  skew will be within
-                // an int by now
-                unsigned int cur_jitter = jitter_add(&st->jitter, (int)skew,
-                  (uint32_t)(t_pcr & 0xffffffffU), 90000 * 10);
-
-                if (tsect->jitter_max < cur_jitter)
-                  tsect->jitter_max = cur_jitter;
-
-                if (rtp_header->is_rtp)
-                {
-                  // We have both PCR & RTP times - look for min & max
-                  int32_t rtp_skew = (int32_t)(rtp_header->timestamp - (uint32_t)(t_pcr & 0xffffffffU));
-                  if (tsect->rtp_skew_max < rtp_skew)
-                    tsect->rtp_skew_max = rtp_skew;
-                  if (tsect->rtp_skew_min > rtp_skew)
-                    tsect->rtp_skew_min = rtp_skew;
-                }
-
-                if (ctx->time_report)
-                {
-                  int64_t rel_tim = t_pcr - tsect->time_first; // 90kHz
-                  double skew_rate = (double)skew / ((double)((double)rel_tim / (60*90000)));
-  
-                  fprint_msg(">%d> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min) - jitter=%u\n",
-                             st->stream_no,
-                             st->ts_counter, ctx->pkt_counter,
-                             pcr, 
-                             pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec,
-                             (int)(rel_tim / (int64_t)1000000), 
-                             (int)rel_tim%1000000,
-                             skew, pcr_time_offset - st->last_time_offset, 
-                             skew_rate, cur_jitter);
-                }
-
-                if (st->csv_name != NULL)  // We should be outputting to file
-                {
-                  if (st->csv_file == NULL)
-                  {
-                    if ((st->csv_file = fopen(st->csv_name, "wt")) == NULL)
-                    {
-                      fprint_err("### pcapreport: Cannot open %s .\n", 
-                                 st->csv_name);
-                      exit(1);
-                    }
-                    fprintf(st->csv_file, "\"PKT\",\"Time\",\"PCR\",\"Skew\",\"Jitter\"\n");
-                  }
-                  fprintf(st->csv_file, "%d," LLU_FORMAT "," LLU_FORMAT "," LLD_FORMAT ",%u\n", ctx->pkt_counter,
-                    t_pcr - ctx->time_start, pcr, skew, cur_jitter);
-                }
-
-                // Remember where we are for posterity
-                tsect->pcr_last = pcr;
-                tsect->time_last = t_pcr;
-
-                st->last_time_offset = pcr_time_offset;
+                // We have both PCR & RTP times - look for min & max
+                int32_t rtp_skew = (int32_t)(rtp_header->timestamp - (uint32_t)(t_pcr & 0xffffffffU));
+                if (tsect->rtp_skew_max < rtp_skew)
+                  tsect->rtp_skew_max = rtp_skew;
+                if (tsect->rtp_skew_min > rtp_skew)
+                  tsect->rtp_skew_min = rtp_skew;
               }
+
+              if (ctx->time_report)
+              {
+                int64_t rel_tim = t_pcr - tsect->time_first; // 90kHz
+                double skew_rate = (rel_tim == 0) ? 0.0 :
+                  (double)skew / ((double)((double)rel_tim / (60*90000)));
+
+                fprint_msg(">%d> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min) - jitter=%u\n",
+                           st->stream_no,
+                           st->ts_counter, ctx->pkt_counter,
+                           pcr,
+                           pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec,
+                           (int)(rel_tim / (int64_t)1000000),
+                           (int)rel_tim%1000000,
+                           skew, pcr_time_offset - st->last_time_offset,
+                           skew_rate, cur_jitter);
+              }
+
+              if (st->csv_name != NULL)  // We should be outputting to file
+              {
+                if (st->csv_file == NULL)
+                {
+                  if ((st->csv_file = fopen(st->csv_name, "wt")) == NULL)
+                  {
+                    fprint_err("### pcapreport: Cannot open %s .\n",
+                               st->csv_name);
+                    exit(1);
+                  }
+                  fprintf(st->csv_file, "\"PKT\",\"Time\",\"PCR\",\"Skew\",\"Jitter\"\n");
+                }
+                fprintf(st->csv_file, "%d," LLU_FORMAT "," LLU_FORMAT "," LLD_FORMAT ",%u\n", ctx->pkt_counter,
+                  t_pcr - ctx->time_start, pcr, skew, cur_jitter);
+              }
+
+              // Remember where we are for posterity
+              tsect->pcr_last = pcr;
+              tsect->time_last = t_pcr;
+
+              st->last_time_offset = pcr_time_offset;
+              ++tsect->pcr_count;
             }
           }
         }
@@ -1030,7 +1034,7 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
         fmtx_timestamp(tsect->time_start - time_offset, ctx->tfmt),
         fmtx_timestamp(tsect->time_final - time_offset, ctx->tfmt),
         fmtx_timestamp(time_len2, ctx->tfmt));
-      if (!tsect->pcr_seen)
+      if (tsect->pcr_count == 0)
       {
         fprint_msg("    No PCRs seen\n");
       }
@@ -1040,7 +1044,8 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
           fmtx_timestamp(tsect->time_first - time_offset, ctx->tfmt),
           fmtx_timestamp(tsect->time_last - time_offset, ctx->tfmt),
           fmtx_timestamp(time_len, ctx->tfmt));
-        fprint_msg("    PCR: %s->%s (%s)\n",
+        fprint_msg("    PCR[count=%u]: %s->%s (%s)\n",
+          tsect->pcr_count,
           fmtx_timestamp(tsect->pcr_start, ctx->tfmt),
           fmtx_timestamp(tsect->pcr_last, ctx->tfmt),
           fmtx_timestamp(pcr_len, ctx->tfmt));
