@@ -155,7 +155,7 @@ TEST_OBJS = \
 
 # Our library
 STATIC_LIB = $(LIBDIR)/libtstools.a
-LIBOPTS = -L$(LIBDIR) -ltstools $(ARCH_FLAGS)
+LIBOPTS = $(ARCH_FLAGS) $(STATIC_LIB)
 
 ifeq ($(shell uname -s), Darwin)
 SHARED_LIB = $(LIBDIR)/libtstools.xxx
