@@ -396,10 +396,9 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                         const uint32_t len)
 {
   int rv;
-  const uint64_t ts_byte_start = st->ts_bytes;
 
   // Deal with RTP contents - currently held with stream but could be moved to section
-  // especially is we do more timestamp analysis
+  // especially if we do more timestamp analysis
   if (rtp_header->is_rtp)
   {
     pcapreport_rtp_info_t * const ri = &st->rtp_info;
@@ -430,8 +429,8 @@ static int digest_times(pcapreport_ctx_t * const ctx,
 
   // Add all our data to the pool.
   {
-    unsigned int pkts = len / 188;
-    unsigned int pktlen = pkts * 188;
+    unsigned int pkts = len / TS_PACKET_SIZE;
+    unsigned int pktlen = pkts * TS_PACKET_SIZE;
 
     if (pktlen != len)
       ++st->pkts_overlength;
@@ -439,7 +438,6 @@ static int digest_times(pcapreport_ctx_t * const ctx,
     st->tmp_buf = (byte *)realloc(st->tmp_buf, st->tmp_len + pktlen);
     memcpy(&st->tmp_buf[st->tmp_len], data, pktlen);
     st->tmp_len += pktlen;
-    st->ts_bytes += pktlen;
   }
 
   // Now read out all the ts packets we can.
@@ -555,7 +553,6 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                 tsect->pcr_start = pcr;
                 tsect->time_last =
                 tsect->time_first = t_pcr;
-                tsect->ts_byte_final = ts_byte_start;
 
                 jitter_clear(&st->jitter);
                 skew = 0;
@@ -625,6 +622,9 @@ static int digest_times(pcapreport_ctx_t * const ctx,
       }
 
       // Actions at end of TS packet
+      ++st->ts_counter;
+      st->ts_bytes += TS_PACKET_SIZE;
+
       {
         pcapreport_section_t * const tsect = st->section_last;
         if (tsect != NULL)
@@ -635,7 +635,6 @@ static int digest_times(pcapreport_ctx_t * const ctx,
         }
       }
 
-      ++st->ts_counter;
     }
   }
 }
@@ -1028,7 +1027,7 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
       int64_t drift = time_len - pcr_len;
       fprint_msg("  Section %d:\n", tsect->section_no);
       fprint_msg("    Pkts: %u->%u\n", tsect->pkt_start, tsect->pkt_final);
-      fprint_msg("    Bytes: %llu (%llu bits/sec)\n", tsect->ts_byte_final - tsect->ts_byte_start, 
+      fprint_msg("    TS Bytes: %llu (%llu bits/sec)\n", tsect->ts_byte_final - tsect->ts_byte_start,
         time_len2 == 0LL ? 0LL : (tsect->ts_byte_final - tsect->ts_byte_start) * 8ULL * 90000ULL / time_len2);
       fprint_msg("    Time (Total): %s->%s (%s)\n",
         fmtx_timestamp(tsect->time_start - time_offset, ctx->tfmt),
