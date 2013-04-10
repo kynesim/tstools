@@ -214,6 +214,9 @@ static void print_help_ts()
     "earlier versions of tsplay:\n"
     "\n"
     "  -oldpace          Switch off scanning ahead for the next PCR.\n"
+    "  -pace-pcr1        v1 of the PCR scan code\n"
+    "  -pace-pcr2-ts     v2 of the PCR scan code - use 1st PCR PID found [default]\n"
+    "  -pace-pcr2-pmt    v2 of the PCR scan code - get PCR PID from PMT\n"
     "\n"
     "which attempts to predict an approximate PCR for each TS packet, based on an\n"
     "initial speed (see '-bitrate'/'-byterate' in '-help tuning') and the PCRs found\n"
@@ -351,7 +354,8 @@ int main(int argc, char **argv)
   int    use_network = FALSE;
   char *multicast_if = NULL;                   // IP address of multicast i/f
 
-  int       scan_for_PCRs = TRUE;
+  tsplay_output_pace_mode pace_mode = TSPLAY_OUTPUT_PACE_PCR2_TS;
+
   uint32_t  pid_to_ignore = 0;
   uint32_t  override_pcr_pid = 0;  // 0 means "use the PCR found in the PMT"
 
@@ -524,7 +528,19 @@ int main(int argc, char **argv)
       }
       else if (!strcmp("-oldpace",argv[ii]))
       {
-        scan_for_PCRs = FALSE;
+        pace_mode = TSPLAY_OUTPUT_PACE_FIXED;
+      }
+      else if (!strcmp("-pace-pcr1",argv[ii]))
+      {
+        pace_mode = TSPLAY_OUTPUT_PACE_PCR1;
+      }
+      else if (!strcmp("-pace-pcr2-ts",argv[ii]))
+      {
+        pace_mode = TSPLAY_OUTPUT_PACE_PCR2_TS;
+      }
+      else if (!strcmp("-pace-pcr2-pmt",argv[ii]))
+      {
+        pace_mode = TSPLAY_OUTPUT_PACE_PCR2_PMT;
       }
       else if (!strcmp("-forcepcr",argv[ii]))
       {
@@ -728,8 +744,10 @@ int main(int argc, char **argv)
 
   // If tswrite found '-nopcrs' in the switches, make sure that we've
   // switched PCR lookahead off.
-  if (!context.use_pcrs)
-    scan_for_PCRs = FALSE;
+  if (context.pcr_mode == TSWRITE_PCR_MODE_NONE)
+    pace_mode = TSPLAY_OUTPUT_PACE_FIXED;
+  else if (pace_mode == TSPLAY_OUTPUT_PACE_PCR1)
+    context.pcr_mode = TSWRITE_PCR_MODE_PCR1;
 
   if (input_name)
   {
@@ -771,7 +789,7 @@ int main(int argc, char **argv)
     if (is_TS)
     {
       print_msg("Input appears to be Transport Stream\n");
-      if (scan_for_PCRs)
+      if (pace_mode != TSPLAY_OUTPUT_PACE_FIXED)
         print_msg("Using 'exact' TS packet timing (by looking-ahead to the next PCR)\n");
       else
         print_msg("Approximating/predicting intermediate PCRs\n");
@@ -821,7 +839,7 @@ int main(int argc, char **argv)
 
   if (is_TS)
   {
-    err = play_TS_stream(input,tswriter,pid_to_ignore,scan_for_PCRs,
+    err = play_TS_stream(input,tswriter,pace_mode,pid_to_ignore,
                          override_pcr_pid,max,loop,quiet,verbose);
   }
   else

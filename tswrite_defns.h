@@ -45,143 +45,9 @@ typedef int SOCKET;    // for compatibility with Windows
 #endif
 
 
-// ============================================================
-// CIRCULAR BUFFER
-// ============================================================
-
-// We default to using a "packet" of 7 transport stream packets because 7*188 =
-// 1316, but 8*188 = 1504, and we would like to output as much data as we can
-// that is guaranteed to fit into a single ethernet packet, size 1500.
-#define DEFAULT_TS_PACKETS_IN_ITEM      7
-
-// For simplicity, we'll have a maximum on that (it allows us to have static
-// array sizes in some places). This should be a big enough size to more than
-// fill a jumbo packet on a gigabit network.
-#define MAX_TS_PACKETS_IN_ITEM          100
-
-// ------------------------------------------------------------
-// A circular buffer, usable as a queue
-//
-// We "waste" one buffer item so that we don't have to maintain a count
-// of items in the buffer
-//
-// To get an understanding of how it works, choose a small BUFFER_SIZE
-// (e.g., 11), enable DISPLAY_BUFFER, and select --visual - this will show the
-// reading/writing of the circular buffer in action, including the
-// "unused item".
-//
-// The data for the circular buffer
-// Each circular buffer item "contains" (up to) N TS packets (where N defaults
-// to 7, and is specified as `item_size` in the circular buffer header), and a
-// time (in microseconds) when we would like it to be output (relative to the
-// time for the first packet "sent").
-//
-// Said data is stored at the address indicated by the circular buffer
-// "header", as `item_data`.
-//
-struct circular_buffer_item
-{
-  uint32_t time;              // when we would like this data output
-  int      discontinuity;     // TRUE if our timeline has "broken"
-  int      length;            // number of bytes of data in the array
-};
-typedef struct circular_buffer_item *circular_buffer_item_p;
-
-#define SIZEOF_CIRCULAR_BUFFER_ITEM sizeof(struct circular_buffer_item)
-
-// ------------------------------------------------------------
-// The header for the circular buffer
-//
-// Note that `start` is only ever written to by the child process, and this is
-// the only thing that the child process ever changes in the circular buffer.
-//
-// `maxnowait` is the maximum number of packets to send to the target host
-// without forcing an intermediate wait - required to stop us "swamping" the
-// target with too much data, and overrunning its buffers.
-struct circular_buffer
-{
-  int      start;      // start of data "pointer"
-  int      end;        // end of data "pointer" (you guessed)
-  int      size;       // the actual length of the `item` array
-
-  int      TS_in_item; // max number of TS packets in a circular buffer item
-  int      item_size;  // and thus the size of said item's data array
-
-  int      maxnowait;  // max number consecutive packets to send with no wait
-  int      waitfor;    // the number of microseconds to wait thereafter
-
-  // The location of the packet data for the circular buffer items
-  byte     *item_data;
-
-  // The "header" data for each circular buffer item
-  struct circular_buffer_item item[];
-};
-typedef struct circular_buffer *circular_buffer_p;
-
-// Note that size doesn't include the final `item`
-#define SIZEOF_CIRCULAR_BUFFER sizeof(struct circular_buffer)
-
-#define DEFAULT_CIRCULAR_BUFFER_SIZE  1024              // used to be 100
-
-
-// ============================================================
-// BUFFERED OUTPUT
-// ============================================================
-
-// Information about each TS packet in our circular buffer item
-struct TS_packet_info
-{
-  int                index;
-  uint32_t           pid;       // do we need the PIDs?
-  int                got_pcr;
-  uint64_t           pcr;
-};
-typedef struct TS_packet_info *TS_packet_info_p;
-#define SIZEOF_TS_PACKET_INFO sizeof(struct TS_packet_info);
-
-// If we're going to support output via our circular buffer in a manner
-// similar to that for output to a file or socket, then we need a structure
-// to maintain the relevant information. It seems a bit wasteful to burden
-// the circular buffer itself with this, particularly as only the writer
-// cares about this data, so it needn't be shared.
-struct buffered_TS_output
-{
-  circular_buffer_p  buffer;
-  int                which;   // Which buffer index we're writing to
-  int                started; // TRUE if we've started writing therein
-
-  // For each TS packet in the circular buffer, remember its `count`
-  // within the input stream, whether it had a PCR, and if so what that
-  // PCR was. To make it simpler to access these arrays, also keep a fill
-  // index into them (the alternative would be to always re-zero the
-  // `got_pcr` values whenever we start a new circular buffer entry,
-  // which would be a pain...)
-  int                    num_packets;  // how many TS packets we've got
-  struct TS_packet_info  packet[MAX_TS_PACKETS_IN_ITEM];
-
-  // `rate` is the rate (in bytes per second) we would like to output data at
-  uint32_t           rate;
-
-  // `pcr_scale` is a multiplier for PCRs - each PCR found gets its value
-  // multiplied by this
-  double             pcr_scale;
-
-  // `use_pcrs` indicates if we should use PCRs in the data to drive our
-  // timing, rather than use the specified byte rate directly. The `priming`
-  // values are only relevant if `use_pcrs` is true.
-  int                use_pcrs;
-
-  // 'prime_size' is the amount of space/time to 'prime' the circular buffer
-  // output timing mechanism with. This is effectively multiples of the
-  // size of a circular buffer item.
-  int                prime_size;
-
-  // Percentage "too fast" speedup for our priming rate
-  int                prime_speedup;
-};
+struct buffered_TS_output;
 typedef struct buffered_TS_output *buffered_TS_output_p;
 #define SIZEOF_BUFFERED_TS_OUTPUT sizeof(struct buffered_TS_output)
-
 
 // ============================================================
 // EXTERNAL DATASTRUCTURES - these are *intended* for external use
@@ -305,6 +171,13 @@ typedef struct TS_writer *TS_writer_p;
 // And a "return code" that means "the command character has changed"
 #define COMMAND_RETURN_CODE  -999
 
+
+typedef enum tswrite_pcr_mode_e {
+  TSWRITE_PCR_MODE_NONE,
+  TSWRITE_PCR_MODE_PCR1,
+  TSWRITE_PCR_MODE_PCR2
+} tswrite_pcr_mode;
+
 // ------------------------------------------------------------
 // Context for use in decoding command line - see `tswrite_process_args()`
 struct TS_context
@@ -316,7 +189,7 @@ struct TS_context
   int waitfor;       // the number of microseconds to wait thereafter
   int bitrate;       // suggested bit rate  (byterate*8) - both are given
   int byterate;      // suggested byte rate (bitrate/8)  - for convenience
-  int use_pcrs;      // use PCRs for timing information?
+  tswrite_pcr_mode pcr_mode;      // use PCRs for timing information?
   int prime_size;    // initial priming size for buffered output
   int prime_speedup; // percentage of normal speed to prime with
   double pcr_scale;       // multiplier for PCRs -- see buffered_TS_output

@@ -60,8 +60,8 @@
  */
 extern int play_TS_stream(int         input,
                           TS_writer_p tswriter,
+                          const tsplay_output_pace_mode pace_mode,
                           uint32_t    pid_to_ignore,
-                          int         scan_for_PCRs,
                           uint32_t    override_pcr_pid,
                           int         max,
                           int         loop,

@@ -116,8 +116,7 @@ static int read_TS_packet(TS_reader_p  tsreader,
   }
 
   // Read the next packet
-  err = read_next_TS_packet(tsreader,data);
-  if (err)
+  while ((err = read_next_TS_packet(tsreader,data)) != 0)
   {
     if (err == EOF)
     {
@@ -505,8 +504,9 @@ static int play_buffered_TS_packets(TS_reader_p  tsreader,
  *
  * Returns 0 if all went well, 1 if something went wrong.
  */
-extern int play_TS_packets(TS_reader_p  tsreader,
+static int play_TS_packets(TS_reader_p  tsreader,
                            TS_writer_p  tswriter,
+                           const tsplay_output_pace_mode pace_mode,
                            uint32_t     pid_to_ignore,
                            int          max,
                            int          loop,
@@ -518,26 +518,29 @@ extern int play_TS_packets(TS_reader_p  tsreader,
   uint32_t count = 0;
   int  pcrs_used = 0;
   int  pcrs_ignored = 0;
-  uint32_t pcr_pid;
+  uint32_t pcr_pid = ~0U;
   uint32_t   start_count = 0;  // which TS packet to loop from
   offset_t   start_posn = 0;
 
-  // Before we can use PCRs for timing, we need to read a PMT which tells us
-  // what our video stream is (so we can get our PCRs therefrom).
-  err = find_PCR_PID(tsreader,tswriter,&pcr_pid,&start_count,max,quiet);
-  if (err)
+  if (pace_mode == TSPLAY_OUTPUT_PACE_PCR2_PMT)
   {
-    fprint_err("### Unable to find PCR PID for timing information\n"
-               "    Looked in first %d TS packets\n",max);
-    return 1;
+    // Before we can use PCRs for timing, we need to read a PMT which tells us
+    // what our video stream is (so we can get our PCRs therefrom).
+    err = find_PCR_PID(tsreader,tswriter,&pcr_pid,&start_count,max,quiet);
+    if (err)
+    {
+      fprint_err("### Unable to find PCR PID for timing information\n"
+                 "    Looked in first %d TS packets\n",max);
+      return 1;
+    }
+
+    // Once we've found that, we're ready to play our data
+
+    // If we're looping, remember the location of the first packet of (probable)
+    // data - there's not much point rewinding before that point
+    if (loop)
+      start_posn = start_count * TS_PACKET_SIZE;
   }
-
-  // Once we've found that, we're ready to play our data
-
-  // If we're looping, remember the location of the first packet of (probable)
-  // data - there's not much point rewinding before that point
-  if (loop)
-    start_posn = start_count * TS_PACKET_SIZE;
 
   count = start_count;
   for (;;)
@@ -545,10 +548,11 @@ extern int play_TS_packets(TS_reader_p  tsreader,
     byte    *data;
     uint32_t pid;
     int      got_pcr;
-    uint64_t pcr;
+    uint64_t pcr = 0;
 
     err = read_TS_packet(tsreader,&count,&data,&pid,&got_pcr,&pcr,
                          max,loop,start_posn,start_count,quiet);
+
     if (err == EOF)  // shouldn't occur if `loop`
       break;
     else if (err)
@@ -561,15 +565,29 @@ extern int play_TS_packets(TS_reader_p  tsreader,
       return 1;
     }
 
+    if (count == start_count + 1)
+      tswrite_discontinuity(tswriter);
+
     total ++;
 
     // We are only interested in timing information from our PCR PID stream
     if (got_pcr)
     {
+      // If 1st PCR we see then remember its pid
+      if (pcr_pid == ~0U)
+      {
+        fprint_msg("PCR PID set to 1st seen: %#x (%d)\n", pid, pid);
+        pcr_pid = pid;
+      }
+
       if (pid == pcr_pid)
         pcrs_used ++;
       else
       {
+        if (pcrs_ignored == 0)
+        {
+          fprint_msg("Other PCR PIDs seen: %#x (%d)...\n", pid, pid);
+        }
         pcrs_ignored ++;
         got_pcr = FALSE;
       }
@@ -639,8 +657,8 @@ extern int play_TS_packets(TS_reader_p  tsreader,
  */
 extern int play_TS_stream(int         input,
                           TS_writer_p tswriter,
+                          const tsplay_output_pace_mode pace_mode,
                           uint32_t    pid_to_ignore,
-                          int         scan_for_PCRs,
                           uint32_t    override_pcr_pid,
                           int         max,
                           int         loop,
@@ -653,11 +671,13 @@ extern int play_TS_stream(int         input,
   err = build_TS_reader(input,&tsreader);
   if (err) return 1;
 
-  if (scan_for_PCRs)
+  fprint_msg("pace_mode=%d\n", pace_mode);
+
+  if (pace_mode == TSPLAY_OUTPUT_PACE_PCR1)
     err = play_buffered_TS_packets(tsreader,tswriter,pid_to_ignore,
                                    override_pcr_pid,max,loop,quiet,verbose);
   else
-    err = play_TS_packets(tsreader,tswriter,pid_to_ignore,
+    err = play_TS_packets(tsreader, tswriter, pace_mode, pid_to_ignore,
                           max,loop,quiet,verbose);
   if (err)
   {

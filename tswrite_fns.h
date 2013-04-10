@@ -167,13 +167,14 @@ extern int tswrite_wait_for_client(int           server_socket,
  *
  * Returns 0 if all went well, 1 if something went wrong.
  */
+
 extern int tswrite_start_buffering(TS_writer_p  tswriter,
                                    int          circ_buf_size,
                                    int          TS_in_packet,
                                    int          maxnowait,
                                    int          waitfor,
                                    int          byterate,
-                                   int          use_pcrs,
+                                   tswrite_pcr_mode pcr_mode,
                                    int          prime_size,
                                    int          prime_speedup,
                                    double       pcr_scale);
@@ -287,6 +288,8 @@ extern int tswrite_write(TS_writer_p  tswriter,
                          uint32_t     pid,
                          int          got_pcr,
                          uint64_t     pcr);
+
+extern int tswrite_discontinuity(const TS_writer_p  tswriter);
 
 /*
  * Write a usage string (to standard output) describing the tuning
