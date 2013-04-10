@@ -1022,7 +1022,7 @@ retry:
 
     if (!ppe->pcr1_set)
     {
-      ppe->next_offset = -ppe->next_bytes;
+      ppe->next_offset = 0 - ppe->next_bytes;
       ppe->next_bytes += item->length;
       ppe->pcr_base -= pcr2;
       // next_index set by discontinuity spotter
@@ -1035,7 +1035,7 @@ retry:
       if (pcr_gap > PCR_MS(2000))
       {
         // Discontinuity
-        fprint_msg("%s: Discontinuity[%d]: gap=%lld\n", __func__, writer->which, pcr_gap);
+        fprint_msg("PCR2: Discontinuity[%d]: gap=%lld\n", writer->which, pcr_gap);
 
         idx = finalize_pcr_time(writer, ppe);
         goto retry;
@@ -2107,7 +2107,7 @@ static int write_from_circular(SOCKET             output,
   // has told us that the timeline has changed radically
   if (reset || circular->item[circular->start].discontinuity)
   {
-    fprint_msg("%s: Discontinuity[%d]: reset=%d, pkt_time=%u\n", __func__, circular->start, reset, this_packet_time);
+//    fprint_msg("%s: Discontinuity[%d]: reset=%d, pkt_time=%u\n", __func__, circular->start, reset, this_packet_time);
 
     // We believe out timeline has gone askew - start a new one
     // Set up "now" as our base time, and output our packet right away
