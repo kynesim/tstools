@@ -251,6 +251,10 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   int           index;
   int           ii;
 
+  unsigned int  pcr_count = 0;
+  uint64_t      max_pcr_gap = 0;
+  unsigned int  bad_pcr_gap_count = 0;
+
   int           first = TRUE;
   offset_t      posn = 0;
   offset_t      start_posn = 0;
@@ -391,6 +395,8 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       get_PCR_from_adaptation_field(adapt,adapt_len,&got_pcr,&adapt_pcr);
       if (got_pcr)
       {
+        ++pcr_count;
+
         if (predict.know_pcr_rate)
         {
           // OK, so what we have predicted this PCR would be,
@@ -428,6 +434,18 @@ static int report_buffering_stats(TS_reader_p  tsreader,
             int delta_bytes = (int)(posn - predict.prev_pcr_posn);
             predict.pcr_rate = ((double)delta_bytes * 27.0 / (double)delta_pcr) * 1000000.0;
             predict.know_pcr_rate = TRUE;
+
+            if (delta_pcr > max_pcr_gap)
+              max_pcr_gap = delta_pcr;
+
+            if (delta_pcr > 27000000 / 10)
+            {
+              if (bad_pcr_gap_count++ == 0)
+                fprint_err("!!! PCR gap of %s @ PCR %s > 0.1sec...\n",
+                    fmtx_timestamp(delta_pcr, tfmt_diff | FMTX_TS_N_27MHz),
+                    fmtx_timestamp(adapt_pcr, tfmt_abs | FMTX_TS_N_27MHz));
+            }
+
 #if 0   // XXX
             fprint_msg("PCR RATE = %f, DELTA_BYTES = %d, DELTA_PCR " LLU_FORMAT
                        ", PCR = " LLU_FORMAT "\n",
@@ -788,6 +806,9 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     fprint_msg("Overall stream rate=%d bits/sec\n", rate);
   }
 
+  fprint_msg("PCRs found: %u, Bad (>.1s) gaps: %u, Max gap: %s\n",
+      pcr_count, bad_pcr_gap_count,
+      fmtx_timestamp(max_pcr_gap, tfmt_diff | FMTX_TS_N_27MHz));
   fprint_msg("Linear PCR prediction errors: min=%s, max=%s\n",
              fmtx_timestamp(predict.min_pcr_error, tfmt_diff | FMTX_TS_N_27MHz),
              fmtx_timestamp(predict.max_pcr_error, tfmt_diff | FMTX_TS_N_27MHz));
