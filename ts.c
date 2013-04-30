@@ -1742,6 +1742,8 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
         // so our second best choice is to "play out" using the last
         // known PCR rate-of-change.
         tsreader->pcrbuf->TS_had_EOF = TRUE;              // remember we're playing out
+        // Must move PCR start
+        tsreader->pcrbuf->TS_buffer_prev_pcr = tsreader->pcrbuf->TS_buffer_end_pcr;
         // If we read nothing we must die now
         if (tsreader->pcrbuf->TS_buffer_next == tsreader->pcrbuf->TS_buffer_len)
           return err;
