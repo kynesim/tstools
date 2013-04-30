@@ -1048,15 +1048,16 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
           fmtx_timestamp(tsect->pcr_start, ctx->tfmt),
           fmtx_timestamp(tsect->pcr_last, ctx->tfmt),
           fmtx_timestamp(pcr_len, ctx->tfmt));
-        fprint_msg("    Drift: diff=%s; rate=%s/min; 1s per %llds\n",
+        fprint_msg("    Drift: diff=%s; rate=%s/min; 1s per %llds%s\n",
           fmtx_timestamp(time_len - pcr_len, ctx->tfmt),
           fmtx_timestamp(time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len, ctx->tfmt),
-          drift == 0 ? 0LL : time_len / drift);
+          drift == 0 ? 0LL : time_len / drift,
+          drift == 0 ? "" : drift < 0 ? " (fast)" : " (slow)");
         fprint_msg("    Max jitter: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt));
       }
       if (st->rtp_info.n != 0)
       {
-        fprint_msg("    PCR/RTP skew: %s->%s (%s)\n",
+        fprint_msg("    PCR/RTP skew: min=%s max=%s (diff=%s)\n",
           fmtx_timestamp(tsect->rtp_skew_min, ctx->tfmt),
           fmtx_timestamp(tsect->rtp_skew_max, ctx->tfmt),
           fmtx_timestamp(tsect->rtp_skew_max - tsect->rtp_skew_min, ctx->tfmt));
