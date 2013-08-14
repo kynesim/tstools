@@ -2305,6 +2305,154 @@ static const char * const descriptor_names[] =
     "MPEG2 stereoscopic video format",  // 52
 };
 
+
+// From ATSC A/52B section A3.4
+static void print_ac3_audio_descriptor(const int is_msg, const byte * const buf, const int len)
+{
+  const byte * p = buf;
+  const byte * const eop = p + len;
+  static const char * const sample_rate_txt[8] = {
+    "48k", "44k1", "32k", "Reserved(3)", "48k or 44.1k", "48k or 32k", "44.1k or 32k", "48k or 44.1k or 32k"
+  };
+  static const int bit_rate_n[32] = {
+    32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 576, 640,
+  };
+  static const char * const dsurmod_txt[4] = {
+    "Unknown", "Not Dolby suuround encoded", "Dolby surround encoded", "Reserved"
+  };
+  static const char * const num_channels_txt[16] = {
+    "1 + 1", "1/0", "2/0", "3/0", "2/1", "3/1", "2/2", "3/2",
+    "1", "<=2", "<=3", "<=4", "<=5", "<=6", "Reserved(14)", "Reserved(15)"
+  };
+  static const char * const priority_txt[4] = {
+    "Reserved(0)", "Primary Audio", "Other Audio", "Not specified"
+  };
+  unsigned int nc;
+  unsigned int bsmod;
+
+  if (p >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, "sample_rate: %s, bsid: %d", sample_rate_txt[*p >> 5], *p & 0x1f);
+  ++p;
+  fprint_msg_or_err(is_msg, ", bit_rate: %s %dk, dsurmod: %s",  *p >> 7 ? "Upper" : "Exact",
+      bit_rate_n[(*p >> 2) & 31],
+      dsurmod_txt[*p & 3]);
+  if (++p >= eop)
+  {
+    goto too_short;
+  }
+  nc = (*p >> 1) & 0x0f;
+  bsmod = *p >> 5;
+  fprint_msg_or_err(is_msg, ", bsmod: %d, num_channels: %s, full_svc: %d",
+      bsmod, num_channels_txt[nc], *p & 1);
+  if (++p >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, ", langcod: %d", *p);
+  if (nc == 0)
+  {
+    if (++p >= eop)
+    {
+      goto too_short;
+    }
+    fprint_msg_or_err(is_msg, ", langcod2: %d", *p);
+  }
+  if (++p >= eop)
+  {
+    goto too_short;
+  }
+  if (bsmod < 2)
+  {
+    fprint_msg_or_err(is_msg, ", mainid: %d, priority: %s", *p >> 5, priority_txt[(*p >> 3) & 3]);
+    if ((*p & 7) != 7)
+    {
+      fprint_msg_or_err(is_msg, ", reserved(7): %d", *p & 7);
+    }
+  }
+  else
+  {
+    fprint_msg_or_err(is_msg, ", asvcflags: %#08x", *p);
+  }
+  if (++p >= eop)
+  {
+    goto too_short;
+  }
+  {
+    unsigned int textlen = *p >> 1;
+    const int utf16 = !(*p & 1);
+    fprint_msg_or_err(is_msg, ", text(%c): ", utf16 ? 'U' : 'S');
+    if (p + textlen >= eop)
+    {
+      goto too_short;
+    }
+    if (textlen == 0)
+    {
+      fprint_msg_or_err(is_msg, "<none>");
+    }
+    else if (!utf16)
+    {
+      fprint_msg_or_err(is_msg, "\"");
+      while (textlen-- != 0)
+      {
+        fprint_msg_or_err(is_msg, "%c", *++p);
+      }
+      fprint_msg_or_err(is_msg, "\"");
+    }
+    else
+    {
+      fprint_msg_or_err(is_msg, "??");
+      p += textlen;
+    }
+  }
+  // From here on doesn't seem to be optional in the standard but streams don't have it
+  if (++p >= eop)
+  {
+    fprint_msg_or_err(is_msg, ", language: <missing>\n");
+    return;
+  }
+  {
+    const int language_flag = *p >> 7;
+    const int language_flag_2 = (*p >> 6) & 1;
+
+    if ((*p & 0x1f) != 0x1f)
+    {
+      fprint_msg_or_err(is_msg, ", reserved(0x1f): %#x", *p & 0x1f);
+    }
+
+    if (language_flag)
+    {
+      if (++p + 2 >= eop)
+      {
+        goto too_short;
+      }
+      fprint_msg_or_err(is_msg, ", language: %c%c%c", p[0], p[1], p[2]);
+      p += 2;
+    }
+    if (language_flag_2)
+    {
+      if (++p + 2 >= eop)
+      {
+        goto too_short;
+      }
+      fprint_msg_or_err(is_msg, ", language_2: %c%c%c", p[0], p[1], p[2]);
+      p += 2;
+    }
+  }
+
+  if (++p < eop)
+  {
+    print_data(is_msg, "additional_info: ", p, eop - p,100);
+  }
+  fprint_msg_or_err(is_msg, "\n");
+  return;
+
+too_short:
+  fprint_msg_or_err(is_msg, "; ### block short ###\n");
+}
+
 /*
  * Print out information about program descriptors
  * (either from the PMT program info, or the PMT/stream ES info)
@@ -2613,7 +2761,10 @@ extern int print_descriptors(int    is_msg,
         print_data(is_msg,"DVB AC-3",data,this_length,100);
         break;
       case 0x81:
-        print_data(is_msg,"ATSC AC-3",data,this_length,100);
+//        print_data(is_msg,"ATSC AC-3",data,this_length,100);
+        fprint_msg_or_err(is_msg, "ATSC AC-3: ");
+        print_ac3_audio_descriptor(is_msg, data, this_length);
+        break;
 
       default:
         {
