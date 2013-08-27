@@ -178,6 +178,13 @@ typedef enum tswrite_pcr_mode_e {
   TSWRITE_PCR_MODE_PCR2
 } tswrite_pcr_mode;
 
+typedef enum tswrite_pkt_hdr_type_e
+{
+  PKT_HDR_TYPE_NONE = 0,
+  PKT_HDR_TYPE_RTP
+} tswrite_pkt_hdr_type_t;
+
+
 // ------------------------------------------------------------
 // Context for use in decoding command line - see `tswrite_process_args()`
 struct TS_context
@@ -192,6 +199,7 @@ struct TS_context
   tswrite_pcr_mode pcr_mode;      // use PCRs for timing information?
   int prime_size;    // initial priming size for buffered output
   int prime_speedup; // percentage of normal speed to prime with
+  tswrite_pkt_hdr_type_t pkt_hdr_type;
   double pcr_scale;       // multiplier for PCRs -- see buffered_TS_output
 };  
 typedef struct TS_context *TS_context_p;

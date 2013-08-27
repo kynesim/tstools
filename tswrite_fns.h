@@ -177,7 +177,9 @@ extern int tswrite_start_buffering(TS_writer_p  tswriter,
                                    tswrite_pcr_mode pcr_mode,
                                    int          prime_size,
                                    int          prime_speedup,
-                                   double       pcr_scale);
+                                   double       pcr_scale,
+                                   const tswrite_pkt_hdr_type_t hdr_type);
+
 /*
  * Set up internal buffering for TS output. This is necessary for UDP output,
  * and optional otherwise.
