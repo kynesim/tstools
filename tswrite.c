@@ -3113,7 +3113,7 @@ extern void tswrite_help_tuning(void)
     "  -maxnowait <n>    Specify the maximum number of packets that can be\n"
     "                    sent to the target host with no gap. Sending too\n"
     "                    many packets with no gap can overrun the target's\n"
-    "                    buffers. The default is 3.\n"
+    "                    buffers. [default: off]\n"
     "  -maxnowait off    Do not enforce any limit on how many packets may be\n"
     "                    sent without any intermediate delay.\n"
     "\n"
@@ -3324,7 +3324,7 @@ extern int tswrite_process_args(char           *prefix,
 
   context->circ_buf_size = DEFAULT_CIRCULAR_BUFFER_SIZE;
   context->TS_in_item    = DEFAULT_TS_PACKETS_IN_ITEM;
-  context->maxnowait     = 3;
+  context->maxnowait     = -1;
   context->waitfor       = 1000;
   context->byterate      = DEFAULT_BYTE_RATE;
   context->bitrate       = context->byterate * 8;
