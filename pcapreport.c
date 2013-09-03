@@ -101,6 +101,7 @@ typedef struct pcapreport_vlan_info_s
 
 typedef struct pcapreport_rtp_info_s
 {
+  uint16_t last_seq;
   uint32_t n;
   uint32_t ssrc;
   int multiple_ssrc;
@@ -396,6 +397,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                         const uint32_t len)
 {
   int rv;
+  unsigned int rtp_seq_delta = 0;
 
   // Deal with RTP contents - currently held with stream but could be moved to section
   // especially if we do more timestamp analysis
@@ -409,8 +411,19 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                  ri->ssrc, rtp_header->ssrc);
       ri->multiple_ssrc = TRUE;
     }
+
+    rtp_seq_delta = ri->n == 0 ? 0 :
+      (rtp_header->sequence_number - (ri->last_seq + 1)) & 0xffffU;
+
+    if (rtp_seq_delta != 0)
+    {
+      fprint_msg("!%d! @%u: RTP seq delta (%u->%u) != 1\n", st->stream_no, ctx->pkt_counter,
+          ri->last_seq, rtp_header->sequence_number);
+    }
+
     ++ri->n;
     ri->ssrc = rtp_header->ssrc;
+    ri->last_seq = rtp_header->sequence_number;
   }
 
 
@@ -1767,6 +1780,8 @@ dump_out:
       }
     }
   }
+
+  pcap_close(&ctx->pcreader);
 
   if (ctx->analyse)
   {
