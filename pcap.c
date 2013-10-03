@@ -82,7 +82,7 @@ static int read_block_header(const struct _pcap_io_ctx *const ctx, uint32_t *con
 }
 
 
-static int read_chunk(FILE *const f, const size_t len, void **const pBuf)
+static int read_chunk(FILE *const f, const size_t len, uint8_t **const pBuf)
 {
   int rv;
   void *buf = malloc(len);
@@ -111,7 +111,7 @@ static int read_chunk(FILE *const f, const size_t len, void **const pBuf)
   return 1;
 }
 
-static int read_options(FILE *const f, const size_t len, void **const pBuf)
+static int read_options(FILE *const f, const size_t len, uint8_t **const pBuf)
 {
   // If all we have is the final total length data - skip it
   if (len <= 4)
