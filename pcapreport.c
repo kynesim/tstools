@@ -203,7 +203,8 @@ typedef struct pcapreport_ctx_struct
   int extract;
   int stream_count;
   int csv_gen;
-  int good_ts_only;
+  int good_ts_only;  // Only keep good pkts
+  int keep_bad;        // Keep all packets (inc bad)
   PCAP_reader_p pcreader;
   pcap_hdr_t pcap_hdr;
 
@@ -541,8 +542,9 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                 pcr_time_offset - pts_diff(tsect->time_first, tsect->pcr_start);
 
               // Change section if skew too big
-              if (skew > st->skew_discontinuity_threshold ||
-                  skew < -st->skew_discontinuity_threshold)
+              if (st->skew_discontinuity_threshold > 0 &&
+                  (skew > st->skew_discontinuity_threshold ||
+                   skew < -st->skew_discontinuity_threshold))
               {
                 section_create(ctx, st, pcap_pkt_hdr);
                 tsect = st->section_last;
@@ -662,9 +664,10 @@ static int write_out_packet(pcapreport_ctx_t * const ctx,
 
   if (st->output_name)
   {
-    if (!st->output_file)
+    if (st->output_file == NULL)
     {
-      fprint_msg("pcapreport: Dumping all packets for %s:%d to %s\n",
+      fprint_msg("pcapreport: Dumping %s packets for %s:%d to %s\n",
+                 ctx->good_ts_only ? "good ts" : ctx->keep_bad ? "all" : "ts",
                  ipv4_addr_to_string(st->output_dest_addr),
                  st->output_dest_port,
                  st->output_name);
@@ -696,7 +699,7 @@ static int write_out_packet(pcapreport_ctx_t * const ctx,
 
 static int
 stream_ts_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
-                            const byte *data, 
+                            const byte * const data,
                             const uint32_t len)
 {
   const byte * ptr;
@@ -844,11 +847,16 @@ vlan_name(const char * prefix, const pcapreport_stream_t * const st, const size_
   return buf;
 }
 
+// Close the stream
+// Closes any extraction file(s) & frees associated memory
+// Replaces contents of passed stream pointer with next in hash chain
 void
 stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
 {
   pcapreport_stream_t * const st = *pst;
-  *pst = NULL;
+
+  // Set pointer to next in chain
+  *pst = st->hash_next;
 
   {
     // Free off all our section data
@@ -902,9 +910,7 @@ stream_create(pcapreport_ctx_t * const ctx, const pcaprec_hdr_t * const pcap_pkt
   }
 
   st->skew_discontinuity_threshold = ctx->opt_skew_discontinuity_threshold;
-
-  // If the dest:port is fully specified then avoid guesswork
-  st->force = ctx->filter_dest_addr != 0 && ctx->filter_dest_port != 0;
+  st->force = ctx->keep_bad;
 
   if (ctx->extract)
   {
@@ -915,8 +921,6 @@ stream_create(pcapreport_ctx_t * const ctx, const pcaprec_hdr_t * const pcap_pkt
     st->output_name = malloc(len + 64);
     memcpy(st->output_name, base_name, len + 1);
 
-    // If we have been given a unique filter then assume they actually want
-    // that name!
     if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
     {
       snprintf(st->output_name + len, 64, "%s_%u.%u.%u.%u_%u.ts",
@@ -925,6 +929,12 @@ stream_create(pcapreport_ctx_t * const ctx, const pcaprec_hdr_t * const pcap_pkt
         (dest_addr >> 8) & 0xff, dest_addr & 0xff,
         dest_port);
     }
+    else if (ctx->output_name_base == NULL)
+    {
+      strcpy(st->output_name + len, ".ts");
+    }
+    // If we have been given a unique filter and a name then assume they
+    // actually want that name!
   }
 
   if (ctx->csv_gen)
@@ -1133,6 +1143,14 @@ stream_find(pcapreport_ctx_t * const ctx,
 }
 
 static int
+stream_sort_fn(const void *va, const void * vb)
+{
+  const pcapreport_stream_t * const * const pa = va;
+  const pcapreport_stream_t * const * const pb = vb;
+  return (*pa)->stream_no - (*pb)->stream_no;
+}
+
+static int
 ip_reassemble(pcapreport_reassembly_t * const reas, const ipv4_header_t * const ip, byte * const in_data,
   byte ** const out_pdata, uint32_t * const out_plen)
 {
@@ -1246,6 +1264,8 @@ static void print_usage()
     "                     By default there is a bit of slack in determining if a\n"
     "                     packet is good and some dodgy packets are let through\n"
     "                     This switch ensures that all packets pass simple testing\n"
+    "  -keep-bad          Extract all packets including bad ones.  Is implied if\n"
+    "                     an ip & port filter is set.  Overriden by --good-ts-only.\n"
     "  -tfmt 32|90|ms|hms Set time format in report [default = 90kHz units]\n"
     "  -dump-data, -D     Dump any data in the input file to stdout.\n"
     "  -extra-dump, -e    Dump only data which isn't being sent to the -o file.\n"
@@ -1254,6 +1274,7 @@ static void print_usage()
     "  -verbose, -v       Output metadata about every packet.\n"
     "  -skew-discontinuity-threshold <number>\n"
     "  -skew <number>     Gives the skew discontinuity threshold in 90kHz units.\n"
+    "                     A value of 0 disables this. [default = 6*90000]\n"
     "\n"
     "  -err stdout        Write error messages to standard output (the default)\n"
     "  -err stderr        Write error messages to standard error (Unix traditional)\n"
@@ -1482,6 +1503,10 @@ int main(int argc, char **argv)
       {
         ctx->good_ts_only = TRUE;
       }
+      else if (strcmp("keep-bad", arg) == 0)
+      {
+        ctx->keep_bad = TRUE;
+      }
       else if (strcmp("tfmt", arg) == 0)
       {
         int tfmt;
@@ -1523,15 +1548,36 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  // If the dest:port is fully specified then avoid guesswork
+  if (ctx->filter_dest_addr != 0 && ctx->filter_dest_port != 0)
+    ctx->keep_bad = TRUE;
+
+  // Good only overrides keep bad
+  if (ctx->good_ts_only)
+    ctx->keep_bad  = FALSE;
+
   if (ctx->base_name == NULL)
   {
     // If we have no default name then use the input name as a base after
-    // stripping off any .pcap
-    const char * input_name = ctx->input_name == NULL ? "pcap" : ctx->input_name;
-    char * buf = strdup(ctx->input_name);
-    size_t len = strlen(input_name);
-    if (len > 5 && strcmp(".pcap", buf + len - 5) == 0)
-      buf[len - 5] = 0;
+    // stripping off any likely pcap extension
+    static const char * const strip_exts[] = {
+      ".cap", ".pcap", ".pcapng"
+    };
+
+    const char * const input_name = ctx->input_name == NULL ? "pcap" : ctx->input_name;
+    char * const buf = strdup(ctx->input_name);
+    const size_t len = strlen(input_name);
+    int i;
+
+    for (i = 0; i != sizeof(strip_exts)/sizeof(strip_exts[0]); ++i)
+    {
+      const size_t extlen = strlen(strip_exts[i]);
+      if (len > extlen && strcmp(strip_exts[i], buf + len - extlen) == 0)
+      {
+        buf[len - extlen] = 0;
+        break;
+      }
+    }
     ctx->base_name = buf;
   }
 
@@ -1783,6 +1829,7 @@ dump_out:
 
   pcap_close(&ctx->pcreader);
 
+  // Analyse data if requested
   if (ctx->analyse)
   {
     // Spit out pcap part of the report
@@ -1794,27 +1841,43 @@ dump_out:
       t->tm_hour, t->tm_min, t->tm_sec, ctx->time_usec);
     fprint_msg("Pcap pkts: %u\n", ctx->pkt_counter);
     fprint_msg("\n");
-  }
 
-  {
-    unsigned int i;
+    // Spit out the per stream info
+    if (ctx->stream_count != 0)
     {
+      unsigned int i;
+      unsigned int j = 0;
+      pcapreport_stream_t ** const streams = malloc(sizeof(pcapreport_stream_t *) * ctx->stream_count);
+
+      // Add to array for sorting
       for (i = 0; i != 256; ++i)
       {
-        // Kill all on this hash chain - singly linked so slightly dull
-        while (ctx->stream_hash[i] != NULL)
+        pcapreport_stream_t * st = ctx->stream_hash[i];
+        while (st != NULL)
         {
-          pcapreport_stream_t ** pst = ctx->stream_hash + i;
-          // Spin to last el in hash
-          while ((*pst)->hash_next != NULL)
-            pst = &(*pst)->hash_next;
-          // Spit out any remaining info
-          if (ctx->analyse)
-            stream_analysis(ctx, *pst);
-          // Kill it
-          stream_close(ctx, pst);
+          streams[j++] = st;
+          st = st->hash_next;
         }
       }
+
+      // Sort into stream_no order
+      qsort(streams, ctx->stream_count, sizeof(pcapreport_stream_t *), stream_sort_fn);
+
+      // Display
+      for (i = 0; i != ctx->stream_count; ++i)
+        stream_analysis(ctx, streams[i]);
+
+      free(streams);
+    }
+  }
+
+  // Kill it
+  {
+    unsigned int i;
+    for (i = 0; i != 256; ++i)
+    {
+      while (ctx->stream_hash[i] != NULL)
+        stream_close(ctx, ctx->stream_hash + i);
     }
   }
 
