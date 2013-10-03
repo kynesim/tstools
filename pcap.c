@@ -52,8 +52,8 @@ static inline uint64_t uint_64_be_ctx(const struct _pcap_io_ctx *const ctx, cons
 static inline uint64_t uint_64_ctx(const struct _pcap_io_ctx *const ctx, const void *v)
 {
   return ctx->is_be ?
-         ((uint64_t)uint_32_be(v) << 32) | (uint64_t)uint_32_be((const char*)v + 4) :
-         ((uint64_t)uint_32_le((const char*)v + 4) << 32) | (uint64_t)uint_32_le(v);
+         ((uint64_t)uint_32_be(v) << 32) | (uint64_t)uint_32_be((const uint8_t *)v + 4) :
+         ((uint64_t)uint_32_le((const uint8_t *)v + 4) << 32) | (uint64_t)uint_32_le(v);
 }
 
 
