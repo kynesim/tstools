@@ -235,6 +235,8 @@ typedef struct circular_buffer *circular_buffer_p;
 // = 2.5Mbytes. 2048 * 188 * 7 = 2.7M
 #define DEFAULT_CIRCULAR_BUFFER_SIZE  2048              // used to be 100
 
+#define PRIME_SPEED_NORMAL 100
+
 // ============================================================
 // BUFFERED OUTPUT
 // ============================================================
@@ -262,6 +264,10 @@ typedef struct pcr_pace_env_s
   int pkt1;  // 1st pkt dealt with? (!discontinuity)
   uint64_t pcr1;
   uint64_t pcr_base;
+
+  int prime_req;
+  int prime_speed;
+  uint64_t prime_last_pcr;
 
   uint32_t prev_gap_bytes;
   uint64_t prev_pcr_gap;
@@ -641,6 +647,21 @@ static void print_circular_buffer(char              *prefix,
 // ============================================================
 // Low level buffered TS output support
 // ============================================================
+
+
+
+static void
+reset_pcr_time(pcr_pace_env * const ppe, const uint64_t next_pcr_base)
+{
+  memset(ppe, 0, sizeof(*ppe));
+  ppe->pcr_base = next_pcr_base;
+  ppe->prime_speed = PRIME_SPEED_NORMAL;
+  ppe->prime_last_pcr = INT64_MIN;
+}
+
+
+
+
 /*
  * Build a buffered output context
  *
@@ -683,6 +704,7 @@ static int build_buffered_TS_output(buffered_TS_output_p  *writer,
     print_err("### Unable to allocate buffered output\n");
     return 1;
   }
+  reset_pcr_time(&new->pcr_pace, 0);
 
   err = map_circular_buffer(&circular,circ_buf_size,TS_in_packet,
                             maxnowait,waitfor,hdr_type);
@@ -703,6 +725,10 @@ static int build_buffered_TS_output(buffered_TS_output_p  *writer,
   new->prime_speedup = prime_speedup;
 
   new->pcr_scale = pcr_scale;
+
+  new->pcr_pace.prime_speed = prime_speedup;
+  new->pcr_pace.prime_req = (prime_speedup != PRIME_SPEED_NORMAL);
+  fprint_msg("prime speed set to %d\n", prime_speedup);
 
   // And make sure we're absolutely safe against finding "false" PCR
   // values when we output the first few items...
@@ -961,6 +987,7 @@ set_circ_times(const circular_buffer_p circ,
     const uint32_t index_start, const uint32_t len_bytes,
     const int32_t pcr1_byte_offset, const uint64_t pcr1,
     const uint64_t pcr_gap, const uint32_t gap_bytes,
+    const int64_t prime_last_pcr, const int prime_speed,
     uint64_t * const pNew_pcr_base)
 {
   int32_t offset = pcr1_byte_offset;
@@ -972,6 +999,8 @@ set_circ_times(const circular_buffer_p circ,
   {
     struct circular_buffer_item * const item = circ->item + i;
     int64_t pcr = (int64_t)pcr1 + (int64_t)offset * (int64_t)pcr_gap / (int64_t)gap_bytes;
+    int64_t adj_pcr = (pcr >= prime_last_pcr) ? pcr :
+      prime_last_pcr - ((prime_last_pcr - pcr) * (int64_t)100) / (int64_t)prime_speed;
 
     if (circ->hdr_type == PKT_HDR_TYPE_RTP)
     {
@@ -985,7 +1014,7 @@ set_circ_times(const circular_buffer_p circ,
       set_32_be(rtp_buf + 8, circ->hdr.rtp.ssrc);
     }
 
-    item->time = (uint32_t)(pcr / 27);  // "time" in us
+    item->time = (uint32_t)(adj_pcr / 27);  // "time" in us
     offset += item->length;
     idx = i;
 
@@ -1001,16 +1030,6 @@ set_circ_times(const circular_buffer_p circ,
 
 //  fprint_msg("s: %d->%d\n", index_start, idx);
   return idx;
-}
-
-
-static void
-reset_pcr_time(pcr_pace_env * const ppe, const uint64_t next_pcr_base)
-{
-//  fprint_msg("%s\n", __func__);
-
-  memset(ppe, 0, sizeof(*ppe));
-  ppe->pcr_base = next_pcr_base;
 }
 
 static int
@@ -1033,7 +1052,7 @@ finalize_pcr_time(buffered_TS_output_p writer, pcr_pace_env * const ppe)
     if (ppe->next_bytes != 0)
     {
       idx = set_circ_times(circ, ppe->next_index, ppe->next_bytes - 1, ppe->next_offset, ppe->pcr1 + ppe->pcr_base,
-          ppe->prev_pcr_gap, ppe->prev_gap_bytes, &ppe->next_pcr_base);
+          ppe->prev_pcr_gap, ppe->prev_gap_bytes, ppe->prime_last_pcr, ppe->prime_speed, &ppe->next_pcr_base);
 //      fprint_msg("%s: idx %d->%d\n", __func__, ppe->next_index, idx);
     }
 
@@ -1088,6 +1107,12 @@ retry:
       ppe->next_bytes += item->length;
       ppe->pcr_base -= pcr2;
       // next_index set by discontinuity spotter
+      if (ppe->prime_req)
+      {
+        // ** Really should account for bytes before 1st pcr
+        ppe->prime_last_pcr = 27000000 * 5;
+        ppe->prime_req = FALSE;
+      }
       ppe->pcr1_set = TRUE;
     }
     else
@@ -1103,7 +1128,9 @@ retry:
         goto retry;
       }
 
-      idx = set_circ_times(circ, ppe->next_index, ppe->next_bytes, ppe->next_offset, ppe->pcr_base + pcr1, pcr_gap, ppe->gap_bytes, &ppe->next_pcr_base);
+      idx = set_circ_times(circ,
+          ppe->next_index, ppe->next_bytes, ppe->next_offset, ppe->pcr_base + pcr1,
+          pcr_gap, ppe->gap_bytes, ppe->prime_last_pcr, ppe->prime_speed, &ppe->next_pcr_base);
 //      fprint_msg("%s: idx %d->%d (%d)\n", __func__, ppe->next_index, idx, writer->which);
       ppe->next_offset = item->length;
       ppe->next_bytes = 0;

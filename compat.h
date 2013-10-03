@@ -55,6 +55,8 @@ typedef unsigned __int64        uint64_t;
 
 typedef uint8_t                 byte;
 
+#define INT64_MIN        (-9223372036854775807i64 - 1)
+
 // On BSD, lseek takes a 64-bit off_t value
 // On Linux, if the system supports long files, it does the same
 // On Windows, one has the choice of _lseek or _lseeki64
