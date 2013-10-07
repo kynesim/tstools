@@ -86,6 +86,7 @@ struct pcapreport_section_struct {
   uint64_t time_final;
   uint64_t pcr_start;   // 90kHz
   uint64_t pcr_last;
+  int64_t skew_last;
   uint64_t ts_byte_start;
   uint64_t ts_byte_final;
   int32_t rtp_skew_min;
@@ -386,6 +387,13 @@ pts_diff(const uint64_t a, const uint64_t b)
   return ((int64_t)(a - b) << 31) >> 31;
 }
 
+static int64_t
+pts_diff_abs(const uint64_t a, const uint64_t b)
+{
+  const int64_t t = pts_diff(a, b);
+  return t < 0 ? -t : t;
+}
+
 
 static int digest_times(pcapreport_ctx_t * const ctx, 
                         pcapreport_stream_t * const st,
@@ -541,13 +549,20 @@ static int digest_times(pcapreport_ctx_t * const ctx,
               skew = tsect->pcr_count == 0 ? 0LL :
                 pcr_time_offset - pts_diff(tsect->time_first, tsect->pcr_start);
 
-              // Change section if skew too big
-              if (st->skew_discontinuity_threshold > 0 &&
-                  (skew > st->skew_discontinuity_threshold ||
-                   skew < -st->skew_discontinuity_threshold))
+              // Change section if discontinuity too big
+              if (st->skew_discontinuity_threshold > 0 && tsect->pcr_count != 0)
               {
-                section_create(ctx, st, pcap_pkt_hdr);
-                tsect = st->section_last;
+                const int64_t pcr_delta = pts_diff_abs(pcr, tsect->pcr_last);
+                const int64_t time_delta = pts_diff_abs(t_pcr, tsect->time_last);
+                const int64_t skew_delta = skew - tsect->skew_last;
+
+                if (pcr_delta > st->skew_discontinuity_threshold ||
+                    time_delta > st->skew_discontinuity_threshold ||
+                    skew_delta > st->skew_discontinuity_threshold)
+                {
+                  section_create(ctx, st, pcap_pkt_hdr);
+                  tsect = st->section_last;
+                }
               }
 
               if (tsect->pcr_count == 0)
@@ -628,6 +643,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
               // Remember where we are for posterity
               tsect->pcr_last = pcr;
               tsect->time_last = t_pcr;
+              tsect->skew_last = skew;
 
               st->last_time_offset = pcr_time_offset;
               ++tsect->pcr_count;
