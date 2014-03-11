@@ -163,16 +163,16 @@ static int extract_packets(int input, FILE * output,
     {
       p = p->prev;
       if (p != NULL)
-	fprint_msg("p timestamp = 0x%08x @ 0x%08x\n",
-                   p->timestamp, (unsigned int)p);
+	fprint_msg("p timestamp = 0x%08x @ %p\n",
+                   p->timestamp, p);
     }
 
     if (p == NULL)
     {
       // Insert as the head of queue
-      fprint_msg("### Insert 0x%08x at head: 0x%08x\n",
-                 (unsigned int)packet_buffer,
-                 (unsigned int)reorder_buffer_head);
+      fprint_msg("### Insert %p at head: %p\n",
+                 packet_buffer,
+                 reorder_buffer_head);
       packet_buffer->next = reorder_buffer_head;
       reorder_buffer_head = packet_buffer;
       packet_buffer->prev = NULL;
@@ -205,18 +205,18 @@ static int extract_packets(int input, FILE * output,
 	packet_buffer->next->prev = packet_buffer;
       }
     }
-    fprint_msg("### packet at 0x%08x, prev=0x%08x, next=0x%08x\n",
-               (unsigned int)packet_buffer,
-               (unsigned int)(packet_buffer->prev),
-               (unsigned int)(packet_buffer->next));
+    fprint_msg("### packet at %p, prev=%p, next=%p\n",
+               packet_buffer,
+               (packet_buffer->prev),
+               (packet_buffer->next));
     reorder_buffer_entries++;
 
     if (reorder_buffer_entries > (int)reorder_buffer_size)
     {
       // Write out the head of the reorder buffer
-      fprint_msg("### queue head @ 0x%08x, next=0x%08x\n",
-                 (unsigned int)reorder_buffer_head,
-                 (unsigned int)(reorder_buffer_head->next));
+      fprint_msg("### queue head @ %p, next=%p\n",
+                 reorder_buffer_head,
+                 (reorder_buffer_head->next));
       packet_buffer = reorder_buffer_head;
       reorder_buffer_head = reorder_buffer_head->next;
       reorder_buffer_head->prev = NULL;
