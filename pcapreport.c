@@ -126,7 +126,7 @@ typedef struct rtp_header_s
 struct pcapreport_stream_struct {
   pcapreport_stream_t * hash_next;
 
-  char *output_name;
+  const char *output_name;
   FILE *output_file;
   uint32_t output_dest_addr;
   uint32_t output_dest_port;
@@ -206,6 +206,7 @@ typedef struct pcapreport_ctx_struct
   int csv_gen;
   int good_ts_only;  // Only keep good pkts
   int keep_bad;        // Keep all packets (inc bad)
+  int file_split_section;
   PCAP_reader_p pcreader;
   pcap_hdr_t pcap_hdr;
 
@@ -317,11 +318,141 @@ pkt_time(const pcaprec_hdr_t * const pcap_pkt_hdr)
     ((int64_t)pcap_pkt_hdr->ts_sec * 90000);
 }
 
+
+static char *
+vlan_name(const char * prefix, const pcapreport_stream_t * const st, const size_t blen, char * const buf)
+{
+  if (st->vlan_count == 0)
+  {
+    buf[0] = '\0';
+  }
+  else
+  {
+    int i;
+    size_t n = strlen(prefix);
+    char * p = buf;
+    char * const eob = buf + blen;
+
+    memcpy(p, prefix, n);
+    p += n;
+
+    for (i = 0; i < st->vlan_count && eob - p > 2; ++i)
+    {
+      const pcapreport_vlan_info_t * const vi = st->vlans + i;
+      if (i != 0)
+        *p++ = '.';
+      p += snprintf(p, eob - p, "%d", vi->vid);
+    }
+  }
+  return buf;
+}
+
+
+static char *
+section_name(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * const st, char * const pbuf, const size_t pbuf_len)
+{
+  if (!ctx->file_split_section)
+  {
+    *pbuf = '\0';
+    return pbuf;
+  }
+
+  snprintf(pbuf, pbuf_len, "_S%d", st->section_last == NULL ? 0 : st->section_last->section_no);
+  return pbuf;
+}
+
+static void
+stream_gen_names2(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
+{
+  const uint32_t dest_addr = st->output_dest_addr;
+  const uint32_t dest_port = st->output_dest_port;
+  char pbuf[32], pbuf2[32];
+  char identifier[64];
+  const char * const base_name = ctx->output_name_base != NULL ? ctx->output_name_base : ctx->base_name;
+  const size_t base_len = strlen(base_name);
+  int fixed_extract_name = FALSE;
+
+  if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
+  {
+    snprintf(identifier, 64, "%s_%u.%u.%u.%u_%u%s",
+      vlan_name("_V", st, sizeof(pbuf), pbuf),
+      dest_addr >> 24, (dest_addr >> 16) & 0xff,
+      (dest_addr >> 8) & 0xff, dest_addr & 0xff,
+      dest_port,
+      section_name(ctx, st, pbuf2, sizeof(pbuf2)));
+  }
+  else
+  {
+    identifier[0] = '\0';
+    // If we have been given a unique filter and a name then assume they
+    // actually want that name!
+    fixed_extract_name = (ctx->output_name_base != NULL);
+  }
+
+  if (ctx->extract)
+  {
+    char * name = malloc(base_len + 64);
+    memcpy(name, base_name, base_len + 1);
+
+    if (!fixed_extract_name)
+      snprintf(name + base_len, 64, "%s.ts", identifier);
+    st->output_name = name;
+  }
+
+  if (ctx->csv_gen)
+  {
+    char * name = malloc(base_len + 64);
+    memcpy(name, ctx->base_name, base_len);
+    snprintf(name + base_len, 64, "%s.csv", identifier);
+    st->csv_name = name;
+  }
+}
+
+static void
+stream_gen_names(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
+{
+  // Only bother if there is some reason
+  if (ctx->extract || ctx->csv_gen)
+    stream_gen_names2(ctx, st);
+}
+
+static void
+stream_close_files(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
+{
+  if (st->output_file != NULL)
+  {
+    if (st->seen_dodgy != 0)
+    {
+      fprint_msg(">%d> WARNING: %d dodgy packet%s written to: %s\n",
+                 st->stream_no,
+                 st->seen_dodgy, st->seen_dodgy == 1 ? "" : "s", st->output_name);
+    }
+    if (st->seen_bad != 0)
+    {
+      fprint_msg(">%d> WARNING: %d bad packet%s excluded from: %s\n",
+                 st->stream_no,
+                 st->seen_bad, st->seen_bad == 1 ? "" : "s", st->output_name);
+    }
+    fclose(st->output_file);
+    st->output_file = NULL;
+  }
+  if (st->csv_file != NULL)
+  {
+    fclose(st->csv_file);
+    st->csv_file = NULL;
+  }
+}
+
+
+
 static pcapreport_section_t *
-section_create(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st, const pcaprec_hdr_t * const pcap_pkt_hdr)
+section_create(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st, const pcaprec_hdr_t * const pcap_pkt_hdr)
 {
   pcapreport_section_t * const tsect = calloc(1, sizeof(*tsect));
   pcapreport_section_t * const last = st->section_last;
+
+  if (ctx->file_split_section)
+    stream_close_files(ctx, st);
 
   if (tsect == NULL)
     return NULL;
@@ -351,6 +482,9 @@ section_create(pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st, con
   tsect->pkt_start = ctx->pkt_counter;
   tsect->ts_byte_start =
   tsect->ts_byte_final = st->ts_bytes;
+
+  if (ctx->file_split_section || last == NULL)
+    stream_gen_names(ctx, st);
 
   return tsect;
 }
@@ -835,34 +969,6 @@ stream_merge_vlan_info(pcapreport_stream_t * const st, const ethernet_packet_t *
   }
 }
 
-static char *
-vlan_name(const char * prefix, const pcapreport_stream_t * const st, const size_t blen, char * const buf)
-{
-  if (st->vlan_count == 0)
-  {
-    buf[0] = '\0';
-  }
-  else
-  {
-    int i;
-    size_t n = strlen(prefix);
-    char * p = buf;
-    char * const eob = buf + blen;
-
-    memcpy(p, prefix, n);
-    p += n;
-
-    for (i = 0; i < st->vlan_count && eob - p > 2; ++i)
-    {
-      const pcapreport_vlan_info_t * const vi = st->vlans + i;
-      if (i != 0)
-        *p++ = '.';
-      p += snprintf(p, eob - p, "%d", vi->vid);
-    }
-  }
-  return buf;
-}
-
 // Close the stream
 // Closes any extraction file(s) & frees associated memory
 // Replaces contents of passed stream pointer with next in hash chain
@@ -884,30 +990,15 @@ stream_close(pcapreport_ctx_t * const ctx, pcapreport_stream_t ** pst)
       p = np;
     }
   }
-  if (st->output_file != NULL)
-  {
-    if (st->seen_dodgy != 0)
-    {
-      fprint_msg(">%d> WARNING: %d dodgy packet%s written to: %s\n",
-                 st->stream_no,
-                 st->seen_dodgy, st->seen_dodgy == 1 ? "" : "s", st->output_name);
-    }
-    if (st->seen_bad != 0)
-    {
-      fprint_msg(">%d> WARNING: %d bad packet%s excluded from: %s\n",
-                 st->stream_no,
-                 st->seen_bad, st->seen_bad == 1 ? "" : "s", st->output_name);
-    }
-    fclose(st->output_file);
-  }
-  if (st->csv_file != NULL)
-    fclose(st->csv_file);
+  stream_close_files(ctx, st);
+
   if (st->csv_name != NULL)
     free((void *)st->csv_name);
   if (st->output_name != NULL)
-    free(st->output_name);
+    free((void *)st->output_name);
   free(st);
 }
+
 
 static pcapreport_stream_t *
 stream_create(pcapreport_ctx_t * const ctx, const pcaprec_hdr_t * const pcap_pkt_hdr,
@@ -928,53 +1019,8 @@ stream_create(pcapreport_ctx_t * const ctx, const pcaprec_hdr_t * const pcap_pkt
   st->skew_discontinuity_threshold = ctx->opt_skew_discontinuity_threshold;
   st->force = ctx->keep_bad;
 
-  if (ctx->extract)
-  {
-    const char * const base_name = ctx->output_name_base != NULL ? ctx->output_name_base : ctx->base_name;
-    size_t len = strlen(base_name);
-    char pbuf[32];
-
-    st->output_name = malloc(len + 64);
-    memcpy(st->output_name, base_name, len + 1);
-
-    if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
-    {
-      snprintf(st->output_name + len, 64, "%s_%u.%u.%u.%u_%u.ts",
-        vlan_name("_V", st, sizeof(pbuf), pbuf),
-        dest_addr >> 24, (dest_addr >> 16) & 0xff,
-        (dest_addr >> 8) & 0xff, dest_addr & 0xff,
-        dest_port);
-    }
-    else if (ctx->output_name_base == NULL)
-    {
-      strcpy(st->output_name + len, ".ts");
-    }
-    // If we have been given a unique filter and a name then assume they
-    // actually want that name!
-  }
-
-  if (ctx->csv_gen)
-  {
-    const size_t len = strlen(ctx->base_name);
-    char * const name = malloc(len + 64);
-    char pbuf[32];
-
-    memcpy(name, ctx->base_name, len + 1);
-
-    if (ctx->filter_dest_addr == 0 || ctx->filter_dest_port == 0)
-    {
-      snprintf(name + len, 64, "%s_%u.%u.%u.%u_%u.csv",
-        vlan_name("_V", st, sizeof(pbuf), pbuf),
-        dest_addr >> 24, (dest_addr >> 16) & 0xff,
-        (dest_addr >> 8) & 0xff, dest_addr & 0xff,
-        dest_port);
-    }
-    else
-      strcpy(name + len, ".csv");
-    st->csv_name = name;
-  }
-
   // Even if we don't need sections it won't hurt to have one
+  // Also generates output names
   if (section_create(ctx, st, pcap_pkt_hdr) == NULL)
   {
     stream_close(ctx, &st);
@@ -1523,6 +1569,10 @@ int main(int argc, char **argv)
       {
         ctx->keep_bad = TRUE;
       }
+      else if (strcmp("split-section", arg) == 0)
+      {
+        ctx->file_split_section = TRUE;
+      }
       else if (strcmp("tfmt", arg) == 0)
       {
         int tfmt;
@@ -1803,7 +1853,7 @@ int main(int argc, char **argv)
               {
                 ++sent_to_output;
   
-                if (ctx->time_report || ctx->analyse || ctx->csv_gen)
+                if (ctx->time_report || ctx->analyse || ctx->csv_gen || (ctx->extract && ctx->file_split_section))
                 {
                   rv = digest_times(ctx, 
                                    st,
