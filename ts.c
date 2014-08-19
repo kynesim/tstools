@@ -66,6 +66,7 @@ static int report_bad_reserved_bits = FALSE;
 //  library module...)
 static int continuity_counter[0x1fff+1] = {0};
 
+
 /*
  * Return the next value of continuity_counter for the given pid
  */
@@ -1590,8 +1591,8 @@ static int fill_TS_packet_buffer(TS_reader_p  tsreader)
     {
       tsreader->pcrbuf->TS_buffer_prev_pcr = tsreader->pcrbuf->TS_buffer_end_pcr;
       tsreader->pcrbuf->TS_buffer_end_pcr = pcr;
-      tsreader->pcrbuf->TS_buffer_time_per_TS = (tsreader->pcrbuf->TS_buffer_end_pcr -
-                                                 tsreader->pcrbuf->TS_buffer_prev_pcr) /
+      tsreader->pcrbuf->TS_buffer_time_per_TS =
+        pcr_unsigned_diff(tsreader->pcrbuf->TS_buffer_end_pcr, tsreader->pcrbuf->TS_buffer_prev_pcr) /
                                                 tsreader->pcrbuf->TS_buffer_len;
       return 0;
     }
@@ -1766,9 +1767,9 @@ extern int read_next_TS_packet_from_buffer(TS_reader_p  tsreader,
   }
   else
   {
-    *pcr = tsreader->pcrbuf->TS_buffer_prev_pcr +
+    *pcr = pcr_unsigned_wrap(tsreader->pcrbuf->TS_buffer_prev_pcr +
            tsreader->pcrbuf->TS_buffer_time_per_TS *
-           tsreader->pcrbuf->TS_buffer_next;
+           tsreader->pcrbuf->TS_buffer_next);
   }
   return 0;
 }
@@ -2019,10 +2020,10 @@ extern void report_adaptation_timing(timing_p    times,
       {
         fprint_msg(" Mean byterate %7" LLU_FORMAT_STUMP,
                    ((packet_count - times->first_pcr_packet) * TS_PACKET_SIZE) *
-                   TWENTY_SEVEN_MHZ / (pcr - times->first_pcr));
+                   TWENTY_SEVEN_MHZ / pcr_unsigned_diff(pcr, times->first_pcr));
         fprint_msg(" byterate %7" LLU_FORMAT_STUMP,
                    ((packet_count - times->last_pcr_packet) * TS_PACKET_SIZE) *
-                   TWENTY_SEVEN_MHZ / (pcr - times->last_pcr));
+                   TWENTY_SEVEN_MHZ / pcr_unsigned_diff(pcr, times->last_pcr));
       }
     }
     times->last_pcr_packet = packet_count;
@@ -2303,6 +2304,17 @@ static const char * const descriptor_names[] =
     "J2K video descriptor",  // 50
     "MVC operation point descriptor",  // 51
     "MPEG2 stereoscopic video format",  // 52
+    "Stereoscopic_program_info_descriptor", // 53
+    "Stereoscopic_video_info_descriptor", // 54
+    "Transport_profile_descriptor", // 55
+    "HEVC video descriptor", // 56
+    "Reserved (57)", // 57
+    "Reserved (58)", // 58
+    "Reserved (59)", // 59
+    "Reserved (60)", // 60
+    "Reserved (61)", // 61
+    "Reserved (62)", // 62
+    "Extension descriptor", // 63
 };
 
 

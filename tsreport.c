@@ -147,14 +147,6 @@ static int pid_index(struct stream_data *data,
   return -1;
 }
 
-// (x - y) with allowance for PCR wrap - unsigned version
-static uint64_t
-pcr_unsigned_diff(uint64_t x, uint64_t y)
-{
-  return x > y ? x - y :
-    300ULL * (1ULL << 33) - (y - x);
-}
-
 unsigned int
 avg_rate_inc(avg_rate_t * ar, unsigned int n)
 {
@@ -403,7 +395,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           // given the previous two PCRs and a linear rate?
           uint64_t guess_pcr = estimate_pcr(posn,predict.prev_pcr_posn,
                                            predict.prev_pcr,predict.pcr_rate);
-          int64_t delta = adapt_pcr - guess_pcr;
+          int64_t delta = pcr_signed_diff(adapt_pcr, guess_pcr);
           if (delta < predict.min_pcr_error)
             predict.min_pcr_error = delta;
           if (delta > predict.max_pcr_error)
@@ -420,7 +412,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
         if (predict.had_a_pcr)
         {
-          if (predict.prev_pcr > adapt_pcr)
+          if (pcr_signed_diff(predict.prev_pcr, adapt_pcr) > 0)
           {
             fprint_err("!!! PCR %s at TS packet "
                        OFFSET_T_FORMAT " is not more than previous PCR %s\n",
@@ -430,7 +422,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
           }
           else
           {
-            uint64_t delta_pcr = adapt_pcr - predict.prev_pcr;
+            uint64_t delta_pcr = pcr_unsigned_diff(adapt_pcr, predict.prev_pcr);
             int delta_bytes = (int)(posn - predict.prev_pcr_posn);
             predict.pcr_rate = ((double)delta_bytes * 27.0 / (double)delta_pcr) * 1000000.0;
             predict.know_pcr_rate = TRUE;
@@ -634,11 +626,11 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       if (!got_pts)
         continue;
 
-      pcr_time_now_div300 = acc_pcr/300;
+      pcr_time_now_div300 = acc_pcr/300ULL;
 
       // Do a few simple checks
       // For the sake of simplicity we ignore 33bit wrap...
-      if (stats[index].pts < stats[index].dts)
+      if (pts_signed_diff(stats[index].pts, stats[index].dts) < 0)
       {
         if (stats[index].err_pts_lt_dts++ == 0)
           fprint_msg("### PID(%d): PTS (%s) < DTS (%s)\n",
@@ -648,7 +640,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
       }
       if (stats[index].had_a_dts)
       {
-        int64_t dts_dts_diff = stats[index].dts - last_dts;
+        int64_t dts_dts_diff = pts_signed_diff(stats[index].dts, last_dts);
         if (dts_dts_diff < stats[index].dts_dts_min)
           stats[index].dts_dts_min = (long)dts_dts_diff;
         if (dts_dts_diff > stats[index].dts_dts_max)
@@ -663,7 +655,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                        fmtx_timestamp(last_dts, tfmt_abs));
         }
       }
-      if (stats[index].dts < pcr_time_now_div300)
+      if (pts_signed_diff(stats[index].dts, pcr_time_now_div300) < 0)
       {
         if (stats[index].err_dts_lt_pcr++ == 0)
           fprint_msg("### PID(%d): DTS (%s) < PCR (%s)\n",
@@ -736,7 +728,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
                    IS_VIDEO_STREAM_TYPE(stats[index].stream_type)?"video":"");
       }
 
-      difference = stats[index].pts - pcr_time_now_div300;
+      difference = pts_signed_diff(stats[index].pts, pcr_time_now_div300);
       if (verbose)
       {
         fprint_msg(" PTS " LLU_FORMAT,stats[index].pts);
@@ -760,7 +752,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
 
       if (got_dts)
       {
-        difference = stats[index].dts - pcr_time_now_div300;
+        difference = pts_signed_diff(stats[index].dts, pcr_time_now_div300);
         if (verbose)
         {
           fprint_msg(" DTS " LLU_FORMAT,stats[index].dts);
@@ -802,7 +794,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
   if (predict.had_a_pcr && predict.prev_pcr_posn > first_pcr_posn)
   {
     // Multiply by 8 at the end to give us a bit more headroom in file size
-    int rate = (int)((predict.prev_pcr_posn - first_pcr_posn) * 27000000LL / (predict.prev_pcr - first_pcr)) * 8;
+    int rate = (int)((predict.prev_pcr_posn - first_pcr_posn) * 27000000LL / pcr_unsigned_diff(predict.prev_pcr, first_pcr)) * 8;
     fprint_msg("Overall stream rate=%d bits/sec\n", rate);
   }
 
@@ -875,7 +867,7 @@ static int report_buffering_stats(TS_reader_p  tsreader,
     {
       // Calculate rate over the range of PCRs seen in this stream
       uint64_t avg = ss->pcr == ss->first_pcr ? 0LL :
-         ((ss->ts_bytes - 188LL) * 8LL * 27000000LL) / (ss->pcr - ss->first_pcr);
+         ((ss->ts_bytes - 188LL) * 8LL * 27000000LL) / pcr_unsigned_diff(ss->pcr, ss->first_pcr);
       fprint_msg("  Stream: %llu bytes; rate: avg %llu bits/s, max %llu bits/s\n", ss->ts_bytes, avg, ss->rate.max_rate);
     }
     if (ss->discontinuity_flag_count != 0)

@@ -66,6 +66,8 @@ extern const char *h222_stream_type_str(unsigned s)
     case 0x19: return "Metadata in 13818-6 Synchronized Download Protocol";
     case 0x1A: return "13818-11 MPEG-2 IPMP stream";
     case 0x1B: return "H.264/14496-10 video (MPEG-4/AVC)";
+    case 0x24: return "HEVC video stream";
+    case 0x25: return "HEVC temporal video subset (profile Annex A H.265)";
     case 0x42: return "AVS Video";
     case 0x7F: return "IPMP stream";
     case 0x81: return "User private (commonly Dolby/AC-3 in ATSC)";
