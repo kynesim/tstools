@@ -183,7 +183,8 @@ PROGS = \
   $(BINDIR)/ts_packet_insert \
   $(BINDIR)/m2ts2ts \
   $(BINDIR)/pcapreport \
-  $(BINDIR)/tsfilter
+  $(BINDIR)/tsfilter \
+  $(BINDIR)/rtp2264
 #\
 #  $(BINDIR)/test_ps
 
@@ -287,6 +288,8 @@ $(BINDIR)/tsfilter:	$(OBJDIR)/tsfilter.o $(STATIC_LIB)
 $(BINDIR)/tsdvbsub:	$(OBJDIR)/tsdvbsub.o $(STATIC_LIB)
 		$(CC) $< -o $(BINDIR)/tsdvbsub $(LIBOPTS) $(LDFLAGS)
 
+$(BINDIR)/rtp2264:		$(OBJDIR)/rtp2264.o $(STATIC_LIB)
+		$(CC) $< -o $(BINDIR)/rtp2264 $(LIBOPTS) $(LDFLAGS)
 
 
 

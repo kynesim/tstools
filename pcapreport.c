@@ -87,6 +87,8 @@ struct pcapreport_section_struct {
   uint64_t pcr_start;   // 90kHz
   uint64_t pcr_last;
   int64_t skew_last;
+  int64_t skew_min;
+  int64_t skew_max;
   uint64_t ts_byte_start;
   uint64_t ts_byte_final;
   int32_t rtp_skew_min;
@@ -111,7 +113,8 @@ typedef struct pcapreport_rtp_info_s
 // RTP info (if any) in a packet
 typedef struct rtp_header_s
 {
-  int is_rtp;
+  int is_rtp_ts;
+  int is_rtp_raw;
   int marker;
   uint8_t payload_type;
   uint16_t sequence_number;
@@ -225,6 +228,8 @@ typedef struct pcapreport_ctx_struct
   uint64_t time_start; // 90kHz
   uint32_t time_usec;
   time_t time_sec;
+
+  uint8_t rtp_raw_wanted[256];
 
   pcapreport_stream_t * stream_hash[256];
   pcapreport_reassembly_t reassembly_env;
@@ -362,7 +367,8 @@ section_name(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * con
 }
 
 static void
-stream_gen_names2(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
+stream_gen_names2(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
+    const rtp_header_t * const rtp_header)
 {
   const uint32_t dest_addr = st->output_dest_addr;
   const uint32_t dest_port = st->output_dest_port;
@@ -395,7 +401,8 @@ stream_gen_names2(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * cons
     memcpy(name, base_name, base_len + 1);
 
     if (!fixed_extract_name)
-      snprintf(name + base_len, 64, "%s.ts", identifier);
+      snprintf(name + base_len, 64, "%s.%s", identifier,
+          (rtp_header != NULL && rtp_header->is_rtp_raw) ? "rtp" : "ts");
     st->output_name = name;
   }
 
@@ -409,11 +416,12 @@ stream_gen_names2(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * cons
 }
 
 static void
-stream_gen_names(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st)
+stream_gen_names(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
+    const rtp_header_t * const rtp_header)
 {
   // Only bother if there is some reason
   if (ctx->extract || ctx->csv_gen)
-    stream_gen_names2(ctx, st);
+    stream_gen_names2(ctx, st, rtp_header);
 }
 
 static void
@@ -475,6 +483,8 @@ section_create(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const s
   // Init "obvious" non-zero stuff
   tsect->rtp_skew_max = -0x7fffffff;
   tsect->rtp_skew_min = 0x7fffffff;
+  tsect->skew_max = -0x7fffffff;
+  tsect->skew_min = 0x7fffffff;
 
   tsect->time_final =
   tsect->time_start = pkt_time(pcap_pkt_hdr);
@@ -484,7 +494,7 @@ section_create(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const s
   tsect->ts_byte_final = st->ts_bytes;
 
   if (ctx->file_split_section || last == NULL)
-    stream_gen_names(ctx, st);
+    stream_gen_names(ctx, st, NULL);
 
   return tsect;
 }
@@ -544,7 +554,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
 
   // Deal with RTP contents - currently held with stream but could be moved to section
   // especially if we do more timestamp analysis
-  if (rtp_header->is_rtp)
+  if (rtp_header->is_rtp_ts)
   {
     pcapreport_rtp_info_t * const ri = &st->rtp_info;
 
@@ -728,10 +738,15 @@ static int digest_times(pcapreport_ctx_t * const ctx,
               cur_jitter = jitter_add(&st->jitter, (int)skew,
                 (uint32_t)(t_pcr & 0xffffffffU), 90000 * 10);
 
+              if (tsect->skew_max < skew)
+                tsect->skew_max = skew;
+              if (tsect->skew_min > skew)
+                tsect->skew_min = skew;
+
               if (tsect->jitter_max < cur_jitter)
                 tsect->jitter_max = cur_jitter;
 
-              if (rtp_header->is_rtp)
+              if (rtp_header->is_rtp_ts)
               {
                 // We have both PCR & RTP times - look for min & max
                 int32_t rtp_skew = (int32_t)(rtp_header->timestamp - (uint32_t)(t_pcr & 0xffffffffU));
@@ -895,6 +910,71 @@ stream_ts_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const 
 // RTP payload types - RFC 3551
 // M2TS - RFC 2250
 
+static int write_rtp_raw_packet(pcapreport_ctx_t * const ctx,
+                            pcapreport_stream_t * const st,
+                            const byte *data,
+                            const uint32_t len)
+{
+  if (st->output_name)
+  {
+    int rv;
+
+    if (st->output_file == NULL)
+    {
+      fprint_msg("pcapreport: Dumping raw RTP packets for %s:%d to %s\n",
+                 ipv4_addr_to_string(st->output_dest_addr),
+                 st->output_dest_port,
+                 st->output_name);
+      st->output_file = fopen(st->output_name, "wb");
+      if (!st->output_file)
+      {
+        fprint_err("### pcapreport: Cannot open %s .\n",
+                   st->output_name);
+        return 1;
+      }
+    }
+
+    if (ctx->verbose)
+    {
+      fprint_msg("++   Dumping %d bytes to output file.\n", len);
+    }
+
+    // need header
+    {
+      byte hdr[8];
+      hdr[0] = 'R';
+      hdr[1] = 'T';
+      hdr[2] = 'P';
+      hdr[3] = ' ';
+      hdr[4] = (len >> 24) & 0xff;
+      hdr[5] = (len >> 16) & 0xff;
+      hdr[6] = (len >> 8) & 0xff;
+      hdr[7] = len & 0xff;
+      rv = fwrite(hdr, sizeof(hdr), 1, st->output_file);
+      if (rv != 1)
+      {
+        fprint_err( "### pcapreport: Couldn't write RTP hdr bytes"
+                    " to %s (error = %d).\n",
+                    st->output_name,
+                    ferror(st->output_file));
+        return 1;
+      }
+    }
+
+    rv = fwrite(data, 1, len, st->output_file);
+    if (rv != len)
+    {
+      fprint_err( "### pcapreport: Couldn't write %d bytes"
+                  " to %s (error = %d).\n",
+                  len, st->output_name,
+                  ferror(st->output_file));
+      return 1;
+    }
+  }
+  return 0;
+
+}
+
 static int
 stream_rtp_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const st,
                 const byte * const data, 
@@ -903,6 +983,8 @@ stream_rtp_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const
 {
   uint32_t offset;
   uint32_t padlen = 0;
+  unsigned int payload_type;
+  int is_raw = FALSE;
 
   // Flatten output
   memset(rh, 0, sizeof(*rh));
@@ -916,7 +998,10 @@ stream_rtp_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const
   if ((data[0] & 0xc0) != 0x80)
     return FALSE;
   // We only deal with TS in RTP so check for that alone
-  if ((data[1] & 0x7f) != 33)  // PT bits
+  payload_type = data[1] & 0x7f;
+  if (ctx->rtp_raw_wanted[payload_type] != 0)
+    is_raw = TRUE;
+  else if ((data[1] & 0x7f) != 33)  // PT bits
     return FALSE;
 
   // ??Check sequence??
@@ -942,13 +1027,14 @@ stream_rtp_check(const pcapreport_ctx_t * const ctx, pcapreport_stream_t * const
     offset += 4 + uint_16_be(data + offset + 2);
   }
 
-  // trivial check for TS in payload
-  if (offset + 188 + padlen > len || data[offset] != 0x47)
+  // trivial check for TS in payload if not raw extraction
+  if (!is_raw && (offset + 188 + padlen > len || data[offset] != 0x47))
     return FALSE;
 
-  rh->is_rtp = TRUE;
+  rh->is_rtp_raw = is_raw;
+  rh->is_rtp_ts = !is_raw;
   rh->marker = ((data[1] & 0x80) != 0);
-  rh->payload_type = data[0] & 0x7f;
+  rh->payload_type = (uint8_t)payload_type;
   rh->sequence_number = uint_16_be(data + 2);
   rh->timestamp = uint_32_be(data + 4);
   rh->ssrc = uint_32_be(data + 8);
@@ -1138,7 +1224,9 @@ stream_analysis(const pcapreport_ctx_t * const ctx, const pcapreport_stream_t * 
           fmtx_timestamp(time_len == 0 ? 0LL : drift * 60LL * 90000LL / time_len, ctx->tfmt),
           drift == 0 ? 0LL : time_len / drift,
           drift == 0 ? "" : drift < 0 ? " (fast)" : " (slow)");
-        fprint_msg("    Max jitter: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt));
+        fprint_msg("    Max jitter: %s; Skew min: %s, max: %s\n", fmtx_timestamp(tsect->jitter_max, ctx->tfmt),
+          fmtx_timestamp(tsect->skew_min, ctx->tfmt),
+          fmtx_timestamp(tsect->skew_max, ctx->tfmt));
       }
       if (st->rtp_info.n != 0)
       {
@@ -1450,6 +1538,7 @@ int main(int argc, char **argv)
 
   ctx->opt_skew_discontinuity_threshold = SKEW_DISCONTINUITY_THRESHOLD;
   ctx->tfmt = FMTX_TS_DISPLAY_90kHz_RAW;
+  ctx->rtp_raw_wanted[96] = 1;
 
   ip_reassembly_init(&ctx->reassembly_env);
 
@@ -1845,6 +1934,12 @@ int main(int argc, char **argv)
 
               if (stream_rtp_check(ctx, st, data, len, &rtp_hdr))
               {
+                if (ctx->extract && rtp_hdr.is_rtp_raw)
+                {
+                  stream_gen_names(ctx, st, &rtp_hdr);
+                  write_rtp_raw_packet(ctx, st, data, len);
+                }
+
                 data += rtp_hdr.header_len;
                 len -= rtp_hdr.header_len + rtp_hdr.pad_len;
               }
