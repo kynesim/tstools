@@ -2319,6 +2319,8 @@ static const char * const descriptor_names[] =
 
 
 // From ATSC A/52B section A3.4
+// N.B. Horizontal lines in the table represent valid stop points
+
 static void print_ac3_audio_descriptor(const int is_msg, const byte * const buf, const int len)
 {
   const byte * p = buf;
@@ -2361,20 +2363,20 @@ static void print_ac3_audio_descriptor(const int is_msg, const byte * const buf,
       bsmod, num_channels_txt[nc], *p & 1);
   if (++p >= eop)
   {
-    goto too_short;
+    goto done;
   }
   fprint_msg_or_err(is_msg, ", langcod: %d", *p);
   if (nc == 0)
   {
     if (++p >= eop)
     {
-      goto too_short;
+      goto done;
     }
     fprint_msg_or_err(is_msg, ", langcod2: %d", *p);
   }
   if (++p >= eop)
   {
-    goto too_short;
+    goto done;
   }
   if (bsmod < 2)
   {
@@ -2390,7 +2392,7 @@ static void print_ac3_audio_descriptor(const int is_msg, const byte * const buf,
   }
   if (++p >= eop)
   {
-    goto too_short;
+    goto done;
   }
   {
     unsigned int textlen = *p >> 1;
@@ -2419,11 +2421,9 @@ static void print_ac3_audio_descriptor(const int is_msg, const byte * const buf,
       p += textlen;
     }
   }
-  // From here on doesn't seem to be optional in the standard but streams don't have it
   if (++p >= eop)
   {
-    fprint_msg_or_err(is_msg, ", language: <missing>\n");
-    return;
+    goto done;
   }
   {
     const int language_flag = *p >> 7;
@@ -2454,10 +2454,14 @@ static void print_ac3_audio_descriptor(const int is_msg, const byte * const buf,
     }
   }
 
-  if (++p < eop)
+  if (++p >= eop)
   {
-    print_data(is_msg, "additional_info: ", p, eop - p,100);
+    goto done;
   }
+
+  print_data(is_msg, "additional_info: ", p, eop - p,100);
+
+done:
   fprint_msg_or_err(is_msg, "\n");
   return;
 
