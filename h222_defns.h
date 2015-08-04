@@ -92,6 +92,7 @@
 #define ADTS_AUDIO_STREAM_TYPE		0x0F  // AAC ADTS
 #define MPEG4_PART2_VIDEO_STREAM_TYPE   0x10
 #define LATM_AUDIO_STREAM_TYPE          0x11  // How much do we support this?
+#define H265_VIDEO_STREAM_TYPE          0x24
 
 #define DOLBY_DVB_STREAM_TYPE           0x06  // [1]
 #define DOLBY_ATSC_STREAM_TYPE          0x81  // [1]
@@ -106,6 +107,7 @@
 #define IS_VIDEO_STREAM_TYPE(s)  ((s)==MPEG1_VIDEO_STREAM_TYPE || \
                                   (s)==MPEG2_VIDEO_STREAM_TYPE || \
                                   (s)==AVC_VIDEO_STREAM_TYPE   || \
+                                  (s)==H265_VIDEO_STREAM_TYPE || \
                                   (s)==AVS_VIDEO_STREAM_TYPE   || \
                                   (s)==MPEG4_PART2_VIDEO_STREAM_TYPE)
 

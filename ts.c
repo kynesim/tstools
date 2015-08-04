@@ -2469,6 +2469,88 @@ too_short:
   fprint_msg_or_err(is_msg, "; ### block short ###\n");
 }
 
+static void print_HEVC_descriptor(const int is_msg, const byte * const buf, const int len)
+{
+  const uint8_t * p = buf;
+  const byte * const eop = p + len;
+  static const char * const prog_interlace[4] = {
+    "unknown scan source",
+    "interlaced source",
+    "progressive source",
+    "mixed scan source"
+  };
+
+  if (len == 9)
+  {
+    // I've seen a number of these but I can't find a standard
+    print_data(is_msg, "HEVC video descriptor ### bad length", buf, len ,100);
+    return;
+  }
+
+  fprint_msg_or_err(is_msg, "HEVC video descriptor:");
+
+  if (p >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, " profile_space=%d, tier_flag=%d, profile_idc=%d", *p >> 6, (*p >> 5) & 1, *p & 0x1f);
+  if (++p + 3 >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, ", profile_compatability=%#08x", uint_32_be(p));
+  if ((p += 4) + 5 >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, ", %s%s%s", prog_interlace[*p >> 6], *p & 0x20 ? ", non_packed" : "", *p & 0x10 ? ", frame_only" : "");
+  if ((*p & 0xf) != 0 || p[1] != 0 || p[2] != 0 || p[3] != 0 || p[4] != 0 || p[5] != 0)
+  {
+    fprint_msg_or_err(is_msg, ", ### reserved_zero_44bits=0x%x%02x%08x", *p & 0xf, p[1], uint_32_be(p + 2));
+  }
+  if ((p += 6) >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, ", level=%d.%d", *p / 30, *p % 30);
+  if (++p >= eop)
+  {
+    goto too_short;
+  }
+  fprint_msg_or_err(is_msg, "%s%s", *p & 0x40 ? ", still" : "", *p & 0x20 ? ", 24hr" : "");
+  if ((*p & 0x1f) != 0x1f)
+  {
+    fprint_msg_or_err(is_msg, ", ### reserved=%#02x", *p & 0x1f);
+  }
+  if ((*p++ & 0x80) != 0)
+  {
+    fprint_msg_or_err(is_msg, ", temporal_id");
+
+    if (p + 2 >= eop)
+    {
+      goto too_short;
+    }
+
+    if ((*p >> 3) != 0x1f)
+    {
+      fprint_msg_or_err(is_msg, " ### reserved=%#02x", *p & 0x1f);
+    }
+    fprint_msg_or_err(is_msg, " min=%d", *p & 7);
+    ++p;
+    if ((*p >> 3) != 0x1f)
+    {
+      fprint_msg_or_err(is_msg, " ### reserved=%#02x", *p & 0x1f);
+    }
+    fprint_msg_or_err(is_msg, " max=%d", *p & 7);
+    ++p;
+  }
+  fprint_msg_or_err(is_msg,"\n");
+  return;
+
+too_short:
+  fprint_msg_or_err(is_msg, "; ### block short ###\n");
+}
+
 /*
  * Print out information about program descriptors
  * (either from the PMT program info, or the PMT/stream ES info)
@@ -2700,6 +2782,10 @@ extern int print_descriptors(int    is_msg,
           }
         }
         fprint_msg_or_err(is_msg,"\n");
+        break;
+
+      case 56:
+        print_HEVC_descriptor(is_msg, data, this_length);
         break;
 
       case 0x56:  // teletext
