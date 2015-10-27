@@ -34,6 +34,17 @@ SHELL = /bin/sh
 .SUFFIXES:
 .SUFFIXES: .c .o
 
+# GNU conventional destination vars
+prefix=/usr/local
+exec_prefix=$(prefix)
+bindir=$(exec_prefix)/bin
+libdir=$(exec_prefix)/lib
+
+INSTALL=install
+INSTALL_PROGRAM=$(INSTALL) -m 0555 -s
+INSTALL_LIB=$(INSTALL) -m 0444 -s
+
+
 ifdef CROSS_COMPILE
 CC = $(CROSS_COMPILE)gcc
 else
@@ -141,8 +152,6 @@ PROG_OBJS = \
   $(OBJDIR)/m2ts2ts.o \
   $(OBJDIR)/pcapreport.o  \
   $(OBJDIR)/tsfilter.o
-#\
-#  $(OBJDIR)/test_ps.o
 
 TS2PS_OBJS = $(OBJDIR)/ts2ps.o
 
@@ -185,8 +194,6 @@ PROGS = \
   $(BINDIR)/pcapreport \
   $(BINDIR)/tsfilter \
   $(BINDIR)/rtp2264
-#\
-#  $(BINDIR)/test_ps
 
 TS2PS_PROG = $(BINDIR)/ts2ps
 
@@ -200,6 +207,7 @@ TEST_PROGS = test_nal_unit_list test_es_unit_list
 
 # ------------------------------------------------------------
 all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS) $(SHARED_LIB)
+	echo "BINDIR=$(BINDIR), bindir=$(bindir)"
 
 # ts2ps is not yet an offical program, so for the moment build
 # it separately
@@ -224,85 +232,86 @@ endif
 # Build all of the utilities with the static library, so that they can
 # be copied around, shared, etc., without having to think about it
 
-$(BINDIR)/esfilter:	$(OBJDIR)/esfilter.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esfilter $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/esfilter: $(OBJDIR)/esfilter.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/ts2es:		$(OBJDIR)/ts2es.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ts2es $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/ts2es: $(OBJDIR)/ts2es.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/es2ts:		$(OBJDIR)/es2ts.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/es2ts $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/es2ts: $(OBJDIR)/es2ts.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/esdots:		$(OBJDIR)/esdots.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esdots $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/esdots: $(OBJDIR)/esdots.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/esmerge:	$(OBJDIR)/esmerge.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esmerge $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/esmerge: $(OBJDIR)/esmerge.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/esreport:	$(OBJDIR)/esreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esreport $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/esreport: $(OBJDIR)/esreport.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/esreverse:	$(OBJDIR)/esreverse.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/esreverse $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/esreverse: $(OBJDIR)/esreverse.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/stream_type:	$(OBJDIR)/stream_type.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/stream_type $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/stream_type: $(OBJDIR)/stream_type.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/psreport:	$(OBJDIR)/psreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/psreport $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/psreport: $(OBJDIR)/psreport.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/psdots:	$(OBJDIR)/psdots.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/psdots $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/psdots: $(OBJDIR)/psdots.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/ps2ts:		$(OBJDIR)/ps2ts.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ps2ts $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/ps2ts: $(OBJDIR)/ps2ts.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/tsinfo:		$(OBJDIR)/tsinfo.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsinfo $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/tsinfo: $(OBJDIR)/tsinfo.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/tsreport:	$(OBJDIR)/tsreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsreport $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/tsreport: $(OBJDIR)/tsreport.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/tsserve:	$(OBJDIR)/tsserve.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsserve $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/tsserve: $(OBJDIR)/tsserve.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/tsplay:	$(OBJDIR)/tsplay.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsplay $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/tsplay: $(OBJDIR)/tsplay.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/test_ps:	$(OBJDIR)/test_ps.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/test_ps $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/ts_packet_insert: $(OBJDIR)/ts_packet_insert.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/ts2ps:		$(OBJDIR)/ts2ps.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ts2ps $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/m2ts2ts: $(OBJDIR)/m2ts2ts.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/ts_packet_insert:	$(OBJDIR)/ts_packet_insert.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/ts_packet_insert $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/pcapreport: $(OBJDIR)/pcapreport.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/m2ts2ts:		$(OBJDIR)/m2ts2ts.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/m2ts2ts $(LIBOPTS) $(LDFLAGS)
-$(BINDIR)/pcapreport:	$(OBJDIR)/pcapreport.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/pcapreport $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/tsfilter: $(OBJDIR)/tsfilter.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/tsfilter:	$(OBJDIR)/tsfilter.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsfilter $(LIBOPTS) $(LDFLAGS)
-$(BINDIR)/tsdvbsub:	$(OBJDIR)/tsdvbsub.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/tsdvbsub $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/tsdvbsub: $(OBJDIR)/tsdvbsub.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/rtp2264:		$(OBJDIR)/rtp2264.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/rtp2264 $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/rtp2264: $(OBJDIR)/rtp2264.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
 
+# Not installed
+$(BINDIR)/ts2ps: $(OBJDIR)/ts2ps.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/test_pes:	$(OBJDIR)/test_pes.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/test_pes $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/test_printing:	$(OBJDIR)/test_printing.o $(STATIC_LIB)
-		$(CC) $< -o $(BINDIR)/test_printing $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/test_pes: $(OBJDIR)/test_pes.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
-$(BINDIR)/test_nal_unit_list: 	$(OBJDIR)/test_nal_unit_list.o $(STATIC_LIB)
-			$(CC) $< -o $(BINDIR)/test_nal_unit_list $(LIBOPTS) $(LDFLAGS)
-$(BINDIR)/test_es_unit_list:  	$(OBJDIR)/test_es_unit_list.o $(STATIC_LIB)
-			$(CC) $< -o $(BINDIR)/test_es_unit_list $(LIBOPTS) $(LDFLAGS)
+$(BINDIR)/test_printing: $(OBJDIR)/test_printing.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
+
+$(BINDIR)/test_nal_unit_list: $(OBJDIR)/test_nal_unit_list.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
+
+$(BINDIR)/test_es_unit_list: $(OBJDIR)/test_es_unit_list.o $(STATIC_LIB)
+	$(CC) $< -o $@ $(LIBOPTS) $(LDFLAGS)
 
 # Some header files depend upon others, so including one requires
 # the others as well
@@ -387,8 +396,6 @@ $(OBJDIR)/test_pes.o: test_pes.c $(TS_H) $(PS_H) $(ES_H) misc_fns.h $(PES_H) ver
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/test_printing.o: test_printing.c $(TS_H) $(PS_H) $(ES_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
-$(OBJDIR)/test_ps.o: test_ps.c $(PS_H) misc_fns.h version.h
-	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/test_nal_unit_list.o: test_nal_unit_list.c $(NALUNIT_H) version.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 $(OBJDIR)/test_es_unit_list.o: test_es_unit_list.c $(ES_H) version.h
@@ -397,16 +404,36 @@ $(OBJDIR)/test_es_unit_list.o: test_es_unit_list.c $(ES_H) version.h
 # ------------------------------------------------------------
 # Directory creation
 
-$(OBJDIR):
-	mkdir $(OBJDIR)
-
-$(LIBDIR):
-	mkdir $(LIBDIR)
-
-$(BINDIR):
-	mkdir $(BINDIR)
+$(OBJDIR) $(LIBDIR) $(BINDIR) $(DESTDIR)$(bindir) $(DESTDIR)$(libdir):
+	mkdir -p $@
 
 # ------------------------------------------------------------
+
+.PHONY: install
+install: all $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)
+	$(INSTALL_PROGRAM) $(BINDIR)/esfilter $(DESTDIR)$(bindir)/esfilter
+	$(INSTALL_PROGRAM) $(BINDIR)/ts2es $(DESTDIR)$(bindir)/ts2es
+	$(INSTALL_PROGRAM) $(BINDIR)/es2ts $(DESTDIR)$(bindir)/es2ts
+	$(INSTALL_PROGRAM) $(BINDIR)/esdots $(DESTDIR)$(bindir)/esdots
+	$(INSTALL_PROGRAM) $(BINDIR)/esmerge $(DESTDIR)$(bindir)/esmerge
+	$(INSTALL_PROGRAM) $(BINDIR)/esreport $(DESTDIR)$(bindir)/esreport
+	$(INSTALL_PROGRAM) $(BINDIR)/esreverse $(DESTDIR)$(bindir)/esreverse
+	$(INSTALL_PROGRAM) $(BINDIR)/stream_type $(DESTDIR)$(bindir)/stream_type
+	$(INSTALL_PROGRAM) $(BINDIR)/psreport $(DESTDIR)$(bindir)/psreport
+	$(INSTALL_PROGRAM) $(BINDIR)/psdots $(DESTDIR)$(bindir)/psdots
+	$(INSTALL_PROGRAM) $(BINDIR)/ps2ts $(DESTDIR)$(bindir)/ps2ts
+	$(INSTALL_PROGRAM) $(BINDIR)/tsinfo $(DESTDIR)$(bindir)/tsinfo
+	$(INSTALL_PROGRAM) $(BINDIR)/tsreport $(DESTDIR)$(bindir)/tsreport
+	$(INSTALL_PROGRAM) $(BINDIR)/tsserve $(DESTDIR)$(bindir)/tsserve
+	$(INSTALL_PROGRAM) $(BINDIR)/tsplay $(DESTDIR)$(bindir)/tsplay
+	$(INSTALL_PROGRAM) $(BINDIR)/ts_packet_insert $(DESTDIR)$(bindir)/ts_packet_insert
+	$(INSTALL_PROGRAM) $(BINDIR)/m2ts2ts $(DESTDIR)$(bindir)/m2ts2ts
+	$(INSTALL_PROGRAM) $(BINDIR)/pcapreport $(DESTDIR)$(bindir)/pcapreport
+	$(INSTALL_PROGRAM) $(BINDIR)/tsfilter $(DESTDIR)$(bindir)/tsfilter
+	$(INSTALL_PROGRAM) $(BINDIR)/tsdvbsub $(DESTDIR)$(bindir)/tsdvbsub
+	$(INSTALL_PROGRAM) $(BINDIR)/rtp2264 $(DESTDIR)$(bindir)/rtp2264
+	$(INSTALL_LIB) $(SHARED_LIB) $(DESTDIR)$(libdir)
+
 .PHONY: objclean
 objclean:
 	-rm -f $(OBJS)
