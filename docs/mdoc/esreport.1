@@ -1,0 +1,128 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt ESREPORT 1
+.Os
+.Sh NAME
+.Nm esreport
+.Nd Report on the contents of an ES
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm esmerge
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl frames | findfields | afd | es
+.Op Fl framesize
+.Op Fl frametype
+.Op Fl x
+.Op Fl max Ar max-units | Fl m Ar max_units
+.Op Fl pes | ts
+.Op Fl pesreport
+.Op Fl h264 | avc | h262 | avs
+.Ar in_file | Fl stdin
+.Sh DESCRIPTION
+Report on the content of an elementary stream containing H.264
+(MPEG-4/AVC), H.262 (MPEG-2) or AVS video data.
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is the Elementary Stream file (but see -stdin below)
+.El
+.Ss What to report
+The default is to report on H.262 items, AVS frames or H.264 NAL units.
+Other choices are:
+.Bl -tag
+.It Fl frames
+Report by frames. The default for AVS.
+.It Fl findfields
+Report on any fields in the data. Ignored for AVS.
+.It Fl afd
+Report (just) on AFD changes in H.262. Ignored for the other types of file.
+.It Fl es
+Report on ES units.
+.El
+.Pp
+Reporting on frames may be modified by:
+.Bl -tag
+.It Fl framesize
+Report on the sizes of frames (mean, etc.).
+.It Fl frametype
+Report on the numbers of different type of frame.
+.El
+.Pp
+(in fact, both of these imply -frame).
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+For H.262 data, output information about the data
+in each MPEG-2 item. For ES units, output information
+about the data in each ES unit. Ignored for H.264 data.
+.It Fl q , Fl quiet
+Only output summary information (i.e., the number
+of entities in the file, statistics, etc.)
+.It Fl x
+Show details of each NAL unit as it is read.
+.It Fl stdin
+Take input from <stdin>, instead of a named file
+.It Fl max Ar max_units , Fl m Ar max_units
+Maximum number of NAL units/MPEG-2 items/AVS frames/ES units
+to read. If -frames, then the program will stop after
+that many frames. If reading 'frames', MPEG-2 and AVS will
+also count sequence headers and sequence end.
+.It Fl pes , ts
+The input file is TS or PS, to be read via the PES to
+ES reading mechanisms
+.It Fl pesreport
+Report on PES headers. Implies
+.Fl pes No and Fl q .
+.El
+.Ss Stream type:
+If input is from a file, then the program will look at the start of
+the file to determine if the stream is H.264, H.262 or AVS data. This
+process may occasionally come to the wrong conclusion, in which case
+the user can override the choice using the following switches.
+.Pp
+If input is from standard input (via -stdin), then it is not possible
+for the program to make its own decision on the input stream type.
+Instead, it defaults to H.262, and relies on the user indicating if
+this is wrong.
+.Bl -tag
+.It Fl h264 , avc
+Force the program to treat the input as MPEG-4/AVC.
+.It Fl h262
+Force the program to treat the input as MPEG-2.
+.It Fl avs
+Force the program to treat the input as AVS.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS

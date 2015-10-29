@@ -1,0 +1,194 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt ps2ts 1
+.Os
+.Sh NAME
+.Nm ps2ts
+.Nd Extract a program stream from a Transport Stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm ps2ts
+.Fl pid Ar pid | Fl video | audio
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl max Ar max_pkts |  Fl m Ar max_pkts
+.Op Fl dvd | notdvd | nodvd
+.Op Fl vstream Ar vstream_no
+.Op Fl astream Ar astream_no
+.Op Fl ac3stream Ar ac3stream_no
+.Op Fl host Ar host Ns Op : Ns port
+.Op Fl vpid Ar vpid_no
+.Op Fl apid Ar apid_no
+.Op Fl noaudio
+.Op Fl pmt Ar pmt_pid_no
+.Op Fl prepeat Ar pat_freq
+.Op Fl pad Ar pad_pkts
+.Op Fl h264 | avc | h262 | mp42 | vtype Ar video_type
+.Op Fl dolby Cm dvd | atsc
+.Ar in_file | Fl stdin
+.Ar out_file | Fl stdout
+.Sh DESCRIPTION
+Convert an H.222 program stream to H.222 transport stream.
+.Pp
+This program does not make use of any Program Stream Map packets
+in the data (mainly because I have yet to see data with any). This
+means that the program has to determine the stream type of the data
+based on the first few ES units.
+.Pp
+This program does not output more than one video and one audio
+stream. If the program stream data contains more than one of each,
+the first will be used, and the others ignored (with a message
+indicating this).
+.Pp
+It is assumed that the video stream will contain DTS values in its
+PES packets at reasonable intervals, which can be used as PCR values
+in the transport stream, and thus the video stream's PID can be used
+as the PCR PID in the transport stream.
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is a file containing the program stream data
+(but see -stdin below)
+.It Ar out_file
+ is a transport stream file
+(but see -stdout and -host below)
+.El
+.Ss input switches
+.Bl -tag
+.It Fl stdin
+take input from <stdin>, instead of a named file
+.It Fl dvd
+The PS data is from a DVD. This is the default.
+This switch has no effect on MPEG-1 PS data.
+.It Fl notdvd , nodvd
+The PS data is not from a DVD.
+The DVD specification stores AC-3 (Dolby), DTS and
+other audio in a specialised manner in private_stream_1.
+.It Fl vstream Ar vstream_no
+Take video from video stream
+.Ar vstream_no
+(0..7). The default is the first video stream found.
+.It Fl astream Ar astream_no
+Take audio from audio stream
+.Ar astream_no
+(0..31). The default is the first audio stream found
+(this includes private_stream_1 on non-DVD streams).
+.It Fl ac3stream Ar astream_no
+Take audio from AC3 substream
+.Ar ac3stream_no
+(0..7), from private_stream_1. This implies -dvd.
+(If audio is being taken from a substream, the user
+is assumed to have determined which one is wanted,
+e.g., using psreport)
+.El
+.Ss Output Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl host Ar host Ns Op : Ns Arport
+Writes output (over TCP/IP) to the named <host>,
+instead of to a named file. If
+.Ar <port>
+is not specified, it defaults to 88.
+.It Fl vpid Ar vpid_no
+.Ar vpid_no is the video PID to use for the data.
+Use '-vpid 0x<pid>' to specify a hex value.
+Defaults to 0x68.
+.It Fl apid Ar apid_no
+.Ar apid_no
+is the audio PID to use for the data.
+Use '-apid 0x<pid>' to specify a hex value.
+Defaults to 0x67.
+.It Fl noaudio
+Don't output the audio data
+.It Fl pmt Ar pmt_pid_no
+.Ar pmt_pid_no is the PMT PID to use.
+Use '-pmt 0x<pid>' to specify a hex value.
+Defaults to 0x66
+.It Fl prepeat Ar pat_freq
+Output the program data (PAT/PMT) after every
+.Ar pat_freq
+PS packs. Defaults to 100.
+.It Fl pad Ar pad_pkts
+Pad the start with
+.Ar pad_pkts
+filler TS packets, to allow
+a TS reader to synchronize with the datastream.
+Defaults to 8.
+.El
+.Ss General switches
+.Bl -tag
+.It Fl v , Fl verbose
+Print a 'v' for each video packet and an 'a' for
+each audio packet, as it is read
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl max Ar max_pkts , Fl m Ar max_pkts
+Maximum number of PS packets to read.
+.El
+.Ss Stream type
+When the TS data is being output, it is flagged to indicate whether
+it conforms to H.262, H.264, etc. It is important to get this right, as
+it will affect interpretation of the TS data.
+.Pp
+If input is from a file, then the program will look at the start of
+the file to determine if the stream is H.264 or H.262 data. This
+process may occasionally come to the wrong conclusion, in which case
+the user can override the choice using the following switches.
+.Pp
+If input is from standard input (via -stdin), then it is not possible
+for the program to make its own decision on the input stream type.
+Instead, it defaults to H.262, and relies on the user indicating if
+this is wrong.
+.Bl -tag
+.It Fl h264 , avc
+Force the program to treat the input as MPEG-4/AVC.
+.It Fl h262
+Force the program to treat the input as MPEG-2.
+.It Fl mp42
+Force the program to treat the input as MPEG-4/Part 2.
+.It Fl vtype Ar video_type
+Force the program to treat the input as video of
+stream type <type> (e.g., 0x42 means AVS video). It is
+up to the user to specify a valid <type>.
+.El
+If the audio stream being output is Dolby (AC-3), then the stream type
+used to output it differs for DVB (European) and ATSC (USA) data. It
+may be specified as follows:
+.Bl -tag
+.It Fl dolby Cm dvb
+Use stream type 0x06 (the default)
+.It Fl dolby Cm atsc
+Use stream type 0x81
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+
+

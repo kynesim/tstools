@@ -1,0 +1,90 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TS2ES 1
+.Os
+.Sh NAME
+.Nm ts2es
+.Nd Extract a program stream from a Transport Stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm ts2es
+.Fl pid Ar pid | Fl video | audio
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl max Ar max_pkts |  Fl m Ar max_pkts
+.Op Fl pes | ps
+.Ar in_file | Fl stdin
+.Ar out_file | Fl stdout
+.Sh DESCRIPTION
+Extract a single (elementary) program stream from a Transport Stream
+(or Program Stream).
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is an H.222 Transport Stream file (but see -stdin and -pes)
+.It Ar out_file
+is a single elementary stream file (but see -stdout)
+.El
+.Ss Which stream to extract:
+.Bl -tag
+.It Fl pid Ar pid
+Output data for the stream with the given
+.Ar pid .
+Use
+.Fl pid No 0x Ns Ar pid No to specify a hex value
+.It Fl video
+Output data for the (first) video stream
+named in the (first) PMT. This is the default.
+.It Fl audio
+Output data for the (first) audio stream
+named in the (first) PMT
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output extra information about packets
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl max Ar max_pkts , Fl m Ar max_pkts
+Maximum number of TS packets to read.
+.It Fl pes , ps
+Use the PES interface to read ES units from
+the input file. This allows PS data to be read
+(there is no point in using this for TS data).
+Does not support
+.Fl pid , stdin No or Fl stdout.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

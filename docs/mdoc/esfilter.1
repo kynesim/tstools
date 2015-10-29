@@ -1,0 +1,149 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt ESFILTER 1
+.Os
+.Sh NAME
+.Nm esfilter
+.Nd Output a filtered or truncated version of an elementary stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm esfilter
+.Fl copy | filter | strip
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl host Ar dest_ip Ns Op : Ns Ar port
+.Op Fl max Ar max_frames |  Fl m Ar max_frames
+.Op Fl freq Ar keep_frequency
+.Op Fl allref
+.Op Fl tsout
+.Op Fl pes | ts
+.Op Fl h264 | avc | h262
+.Ar in_file | Fl stdin
+.Ar out_file | Fl stdout
+.Sh DESCRIPTION
+Output a filtered or truncated version of an elementary stream.
+The input is either H.264 (MPEG-4/AVC) or H.262 (MPEG-2).
+The output is either an elementary stream, or an H.222 transport
+stream
+.Pp
+If output is to an H.222 Transport Stream, then fixed values for
+the PMT PID (0x66) and video PID (0x68) are used.
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is the input elementary stream (but see
+.Fl stdin
+below).
+.It Ar out_file
+is the output stream, either an equivalent elementary
+stream, or an H.222 Transport Stream (but see
+.Fl stdout
+and
+.Fl host
+below).
+.El
+.Ss Actions
+.Bl -tag
+.It Fl copy
+Copy the input data to the output file
+(mostly useful as a way of truncating data with
+.Fl max Ns )
+.It Fl filter
+Filter data from input to output, aiming to keep every
+.Ar keep_frequency Ns
+th frame (where
+.Ar keep_frequency
+is specified by
+.Fl freq Ns
+).
+.It Fl strip
+For H.264, output just the IDR and I pictures, for H.262,
+output just the I pictures, but see
+.Fl allref
+below.
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output extra information about packets
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl host Ar dest_ip Ns Op : Ns Ar port
+Writes output (over TCP/IP) to the named
+.Ar host ,
+instead of to a named file. If
+.Ar port
+is not specified, it defaults to 88. Implies
+.Fl tsout .
+.It Fl max Ar max_frames , Fl m Ar max_frames
+Maximum number of frames to read (for
+.Fl filter
+and
+.Fl strip Ns ),
+or ES units/NAL units (for
+.Fl copy Ns ).
+.It Fl freq Ar keep_frequency
+Specify the frequency of frames to try to keep
+with -filter. Defaults to 8.
+.It Fl allref
+With
+.Fl strip ,
+keep all reference pictures (H.264)
+or all I and P pictures (H.262)
+.It Fl tsout
+Output data as Transport Stream PES packets
+(the default is as Elementary Stream)
+.It Fl pes , ts
+The input file is TS or PS, to be read via the
+PES->ES reading mechanisms. Not allowed with
+.Fl stdin .
+.El
+.Ss Stream type:
+If input is from a file, then the program will look at the start of
+the file to determine if the stream is H.264 or H.262 data. This
+process may occasionally come to the wrong conclusion, in which case
+the user can override the choice using the following switches.
+.Pp
+If input is from standard input (via -stdin), then it is not possible
+for the program to make its own decision on the input stream type.
+Instead, it defaults to H.262, and relies on the user indicating if
+this is wrong.
+.Bl -tag
+.It Fl h264 , avc
+Force the program to treat the input as MPEG-4/AVC.
+.It Fl h262
+Force the program to treat the input as MPEG-2.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS

@@ -1,0 +1,75 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TS_PACKET_INSERT 1
+.Os
+.Sh NAME
+.Nm ts_packet_insert
+.Nd Insert TS packets into a Transport Stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm ts_packet_insert
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl p Ar positions
+.Op Fl pid Ar pid_no
+.Op Fl s string
+.Op Fl o Ar out_file
+.Ar in_file
+.Sh DESCRIPTION
+Insert TS packets into a Transport Stream at positions
+specified by the user.
+.Ss Input
+.Bl -tag
+.It Ar in_file
+An H.222 Transport Stream file.
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl p Ar positions
+This a a colon (':') delimited string of numbers
+between 0 and 1, representing how far through to put
+each TS packet.  E.g., -p 0.1:0.4:0.7:0.9 will insert
+4 packets at 10%, 40%, 70% and 90% through the file.
+.It Fl pid Ar pid_no
+The inserted packets will have the PID specfied.
+.Bq default = 0x68
+.It Fl s Ar string
+The inserted packets will contain
+.Ar string
+as their payload.
+.Bq default = 'Inserted packet'
+.It Fl o Ar out_file
+The new TS file will be written out with the given name
+.Bq default = out.ts
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.Sh EXAMPLES
+ts_packet_insert -p 0.3:0.6 -o out.ts -pid 89 -s "AD=start" in.ts
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

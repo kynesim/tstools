@@ -1,0 +1,71 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TSINFO 1
+.Os
+.Sh NAME
+.Nm tsinfo
+.Nd get info about the contents of a transport stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm tsinfo
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl stdin
+.Op Fl verbose | Fl v
+.Op Fl max Ar max_scan | Fl m Ar max_scan
+.Op Fl repeat Ar PMT_count
+.Op Ar file
+.Sh DESCRIPTION
+Report on the program streams in a Transport Stream.  This command just dumps
+the initial PAT/PMT pairing.  If you want more info on the program streams
+within the transport stream then use
+.Xr tsreport 1 .
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output extra information about packets
+.It Fl m Ar max_scan , Fl max Ar max_scan
+.Ar max_qscan
+is the Number of TS packets to scan. Defaults to 10000.
+.It Fl repeat Ar PMT_count
+Look for
+.Ar PMT_count
+PMT packets, and report on each
+.It Ar file
+The transport stream file to get info on. If
+.Fl stdin
+is specified then no
+.Ar file
+is expected
+.El
+.\" The following commands should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr tsreport 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

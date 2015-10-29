@@ -1,0 +1,138 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TSREPORT 1
+.Os
+.Sh NAME
+.Nm tsreport
+.Nd get info about the streams within a transport stream.
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm tsinfo
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl timing | Fl t
+.Op Fl max Ar max_read | Fl m Ar max_read
+.Op Fl data
+.Ar file | Fl stdin
+.Nm tsinfo
+.Fl buffering | Fl b
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | Fl q
+.Op Fl max Ar max_read | Fl m Ar max_read
+.Op Fl o Ar csv_file Op Fl 32
+.Op Fl cnt
+.Op Fl prog Ar prog_no
+.Op Fl tfmt Ar time_format
+.Op Fl tafmt Ar time_format
+.Ar file | Fl stdin
+.Nm tsinfo
+.Fl justpid Ar pid
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl max Ar max_read | Fl m Ar max_read
+.Ar file | Fl stdin
+.Sh DESCRIPTION
+Report on the streams in a Transport Stream.  In general the most
+useful inforation is returned by the
+.Fl b
+option.
+.Ss Common options
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output extra information about packets
+.It Fl q , Fl quiet
+Output less information
+.It Fl m Ar max_scan , Fl max Ar max_scan
+.Ar max_scan
+is the Number of TS packets to scan. Defaults to the entire file.
+.It Fl stdin
+Input from standard input, instead of a file
+.It Ar file
+The transport stream file to get info on. If
+.Fl stdin
+is specified then no
+.Ar file
+is expected
+.El
+.Ss Fl b , Fl buffering
+Report on the differences between PCR and PTS, and
+between PCR and DTS. This is relevant to the size of
+buffers needed in the decoder.  Also reports bitrates;
+the max bitrate is calculated over 0.5sec
+.Bl -tag
+.It Fl o Ar csv_file Op Fl 32
+Output timing in to a CSV file called
+.Ar csv_file .
+If
+.Fl 32
+is used as well then the timing ifo is restricted to the bottom 32 bits
+.It Fl cnt Ar pid
+Check values of continuity_counter for pid
+.Ar pid .
+Writes all the values of the counter to a file called
+.Pa continuity_counter.txt .
+.It Fl prog Ar prog_no
+Report on program prog_no
+.Bq "default = 1"
+(hopefully default will be 'all' in the future)
+.It Fl tfmt Ar time_format
+Specify format of time differences.
+.It Fl tafmt Ar time_format
+Specify format of absolute times.
+.Pp
+.Ar time_format
+is one of
+.Bl -tag
+.It Cm 90
+.Bq Default
+show as 90KHz timestamps (suffix 't' on the values: e.g., 4362599t).
+.It Cm 27
+Show as 27MHz timestamps (similar, e.g., 25151:000t).
+.It Cm 32
+Show as 90KHz timestamps, but only the low 32 bits.
+.It Cm ms
+Show as milliseconds.
+.It Cm hms
+Show as hours/minutes/seconds (H:MM:SS.ssss, the H
+can be more than one digit if necessary)
+.El
+.El
+.Ss Fl justpid Ar pid
+Just show data (file offset, index, adaptation field
+and payload) for TS packets with the given PID.
+PID 0 is allowed (i.e., the PAT)
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr tsinfo 1 ,
+.Xr pcapreport 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+
+

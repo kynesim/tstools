@@ -1,0 +1,75 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt M2TS2TS 1
+.Os
+.Sh NAME
+.Nm m2ts2ts
+.Nd convert .m2ts to .ts
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm m2ts2ts
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl buffer Ar buf_pkts | Fl b Ar buf_pkts
+.Ar in_file | Fl stdin
+.Ar out_file | Fl stdout
+.Sh DESCRIPTION
+Converts BDAV MPEG-2 Transport Stream file (M2TS) to an 'ordinary' TS file
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is a BDAV MPEG-2 Transport Stream file (M2TS)(but see
+.Fl stdin
+below).
+.It Ar out_file
+is an H.222 Transport Stream file (but see
+.Fl stdout
+below).
+.El
+.Ss General switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output extra information
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl stdin
+Input from standard input instead of a file
+.It Fl stdout
+Output to standard output instead of a file. Forces
+.Fl quiet No and Fl "err stderr" .
+.It Fl b Ar buf_pkts , Fl buffer Ar buf_pkts
+Number of TS packets to buffer for reordering
+.Bq default = 4
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

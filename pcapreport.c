@@ -1425,6 +1425,8 @@ static void print_usage()
     "  -skew-discontinuity-threshold <number>\n"
     "  -skew <number>     Gives the skew discontinuity threshold in 90kHz units.\n"
     "                     A value of 0 disables this. [default = 6*90000]\n"
+    "  -split-section     Split extracted streams into multiple files on section\n"
+    "                     (discontinutity) boundries\n"
     "\n"
     "  -err stdout        Write error messages to standard output (the default)\n"
     "  -err stderr        Write error messages to standard error (Unix traditional)\n"

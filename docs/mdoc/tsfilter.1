@@ -1,0 +1,62 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TSFILTER 1
+.Os
+.Sh NAME
+.Nm tsfilter
+.Nd Output a filtered or truncated version of a transport stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm tsfilter
+.Op Fl verbose | Fl v
+.Op Fl i Ar in_file
+.Op Fl o Ar out_file
+.Op Fl max Ar max_pkts |  Fl m Ar max_pkts
+.Op Fl \&! | Fl invert
+.Ar pid_no Oo Ar pid_no Oc No ...
+.Sh DESCRIPTION
+Filter the given
+.Ar pid_no Ns s
+out of stdin and write the result on stdout.
+.Bl -tag
+.It Fl i Ar in_file
+Take input from this file and not stdin.
+.It Fl o  Ar out_file
+Send output to this file and not stdout.
+.It Fl v , verbose
+Be verbose.
+.It Fl m Ar max_pkts, Fl max Ar max_pkts
+All packets after the nth are regarded as
+not matching any pids.
+.It Fl \&! , invert
+Invert whatever your decision was before
+applying it - the output contains only
+pids not in the list up to max packets
+and all packets in the input from then
+on.
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

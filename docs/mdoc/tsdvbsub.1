@@ -1,0 +1,82 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TSDVBSUB 1
+.Os
+.Sh NAME
+.Nm tsdvbsub
+.Nd Dump DVB subtitling from a stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm tsdvbsub
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl max Ar max_pkts |  Fl m Ar max_pkts
+.Op Fl pid Ar pid_no
+.Op Fl prog Ar prog_no
+.Ar in_file | Fl stdin
+.Sh DESCRIPTION
+Parse & dump the contents of a single DVB subtitling stream from a
+Transport Stream (or Program Stream).
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is an H.222 Transport Stream file (but see
+.Fl stdin
+and
+.Fl pes
+below).
+.El
+.Ss Stream to extract
+.Bl -tag
+.It Fl pid Ar pid_no
+Output data for the stream with the given
+.Ar pid_no .
+Use -pid 0x<pid> to specify a hex value
+.Bq default = the stream will be located from the PMT info
+.It Fl prog Ar prog_no
+Program number
+.Bq default = 1
+.El
+.Ss general switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output informational/diagnostic messages
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl m Ar max_pkts , Fl max Ar max_pkts
+Maximum number of TS packets to read
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

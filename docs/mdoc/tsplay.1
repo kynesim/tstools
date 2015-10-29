@@ -1,0 +1,115 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TSPLAY 1
+.Os
+.Sh NAME
+.Nm tsplay
+.Nd stream a file
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm tsplay
+.Fl help
+.Op Ar subject
+.Nm tsplay
+.Op Fl details
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl quiet | q
+.Op Fl verbose | v
+.Op Fl loop
+.Op Fl max Ar max_pkts | Fl m Ar max_pkts
+.Op Fl mcastif Ar mcast_if | Fl i Ar mcast_if
+.Op Fl tcp | udp
+.Ar in_file | Fl stdin
+.Ar host Ns Oo : Ns Ar port Oc |
+.Fl output Ar out_file | Fl o Ar out_file | Fl stdout
+.Sh DESCRIPTION
+Act as a server which plays the given file (containing Transport
+Stream or Program Stream data). The output is always Transport
+Stream.
+.Ss Input
+.Bl -tag
+.It Ar in_file
+Input is from the named H.222 TS file.
+.It Fl stdin
+Input is from standard input.
+.El
+.Ss Output
+.Bl -tag
+.It Ar host Ns Op : Ns Ar port
+Normally, output is to a named host. If
+.Ar port
+is not specified, it defaults to 88.
+Output defaults to UDP.
+.It Fl o Ar out_file , Fl output Ar out_file
+Output is to file
+.Ar out_file .
+.It Fl tcp
+Output to the host is via TCP.
+.It Fl udp
+Output to the host is via UDP.
+.Bq default
+.It Fl stdout
+Output is to standard output. Forces
+.Fl quiet No and Fl "err stderr" .
+.It Fl i Ar mcast_if , Fl mcastif Ar mcast_if
+If output is via UDP, and
+.Ar host
+is a multicast
+address, then
+.Ar mcast_if
+is the IP address of the network interface to use. This may not be supported
+on some versions of Windows.
+.El
+.Ss General Switches
+.Bl -tag
+.It Fl details
+Print out more detailed help information,
+including some less common options.
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output additional diagnostic messages
+.It Fl q , Fl quiet
+Suppress informational and warning messages
+.It Fl help
+Summarise the
+.Ar subject Ns s
+that can be specified
+.It Fl help Ar subject
+Show help on a particular subject
+.It Fl m Ar max_pkts , Fl max Ar max_pkts
+Maximum number of TS/PS packets to read.
+See -details for more information.
+.It Fl loop
+Play the input file repeatedly. Can be combined with
+Fl max .
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr tsinfo 1 ,
+.Xr pcapreport 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

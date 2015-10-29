@@ -1,0 +1,121 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt ES2TS 1
+.Os
+.Sh NAME
+.Nm es2ts
+.Nd Convert an ES video stream to H.222 TS
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm es2ts
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl pid Ar pid_no
+.Op Fl pmt Ar pmt_pid_no
+.Op Fl host Ar host Ns Op : Ns Ar port
+.Op Fl max Ar max_units | Fl m Ar max_units
+.Ar in_file | Fl stdin
+.Ar out_file | Op Fl stdout
+.Sh DESCRIPTION
+Convert an elementary video stream to H.222 transport stream.
+Supports input streams conforming to MPEG-2 (H.262), MPEG-4/AVC
+(H.264) and AVS. Also supports MPEG-1 input streams, insofar as MPEG-2
+is backwards compatible with MPEG-1.
+.Pp
+Note that this program works by reading and packaging the elementary
+stream packages directly - it does not parse them as H.262 or H.264
+data.
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is a file containing the Elementary Stream data (but see -stdin below)
+.It Ar out_file
+is an H.222 Transport Stream file (but see -stdout and -host below)
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output summary information about each ES packet as it is read
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl pid Ar pid_no
+.Ar pid_no
+is the video PID to use for the data.
+Use '-pid 0x<pid>' to specify a hex value.
+.Bq default = 0x68
+.It Fl pmt Ar pmt_pid_no
+.Ar pmt_pid_no
+is the PMT PID to use.
+Use '-pmt 0x<pid>' to specify a hex value.
+.Bq default = 0x66
+.It Fl max Ar max_units , Fl m Ar max_units
+Maximum number of ES data units to read
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl stdout
+Write output to <stdout>, instead of a named file
+Forces -quiet and -err stderr.
+.It Fl host Ar host Ns Op : Ns Ar port
+Writes output (over TCP/IP) to the named
+.Ar host ,
+instead of to a named file. If
+.Ar port
+is not specified, it defaults to 88.
+.El
+.Ss Stream type
+When the TS data is being output, it is flagged to indicate whether
+it conforms to H.262, H.264 or AVS. It is important to get this right,
+as it will affect interpretation of the TS data.
+.Pp
+If input is from a file, then the program will look at the start of
+the file to determine if the stream is H.264, H.262 or AVS. This
+process may occasionally come to the wrong conclusion, in which case
+the user can override the choice using the following switches.
+.Pp
+If input is from standard input (via -stdin), then it is not possible
+for the program to make its own decision on the input stream type.
+Instead, it defaults to H.262, and relies on the user indicating if
+this is wrong.
+.Bl -tag
+.It Fl h264 , avc
+Force the program to treat the input as MPEG-4/AVC.
+.It Fl h262
+Force the program to treat the input as MPEG-2.
+.It Fl avs
+Force the program to treat the input as AVS.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.Sh BUGS
+For the moment, the video input must be H.264 or AVS, and the audio input
+ADTS, AC-3 ATSC or MPEG layer 2. Also, the audio is assumed to have a
+constant number of samples per frame.
+

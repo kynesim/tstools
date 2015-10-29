@@ -1,0 +1,108 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt ESDOTS 1
+.Os
+.Sh NAME
+.Nm esdots
+.Nd Present the content of an ES as a sequence of characters
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm esdots
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl max Ar max_units |  Fl m Ar max_units
+.Op Fl pes | ts
+.Op Fl hasheos
+.Op Fl es
+.Op Fl gop
+.Op Fl fr Ar frame_rate
+.Ar in_file | Fl stdin
+.Sh DESCRIPTION
+Present the content of an H.264 (MPEG-4/AVC), H.262 (MPEG-2) or AVS
+elementary stream as a sequence of characters, representing access
+units/MPEG-2 items/AVS items.
+.Pp
+(Note that for H.264 it is access units and not frames that are
+represented, and for H.262 it is items and not pictures.)
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is an H.222 Transport Stream file (but see
+.Fl stdin Ns )
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output extra information about packets
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl max Ar max_units , Fl m Ar max_units
+Maximum number of entities to read
+.It Fl pes , ts
+The input file is TS or PS, to be read via the
+PES->ES reading mechanisms
+.It Fl hasheos
+Print a # on finding an EOS (end-of-stream) NAL unit
+rather than stopping (only applies to H.264)
+.It Fl es
+Report ES units, rather than any 'higher' unit
+(not necessarily suppported for all file types)
+.It Fl gop
+Show the duration of each GOP (for MPEG-2 steams)
+OR the distance between random access points (H.264)
+.It Fl fr
+Set the video frame rate (default = 25 fps)
+.El
+.Ss Stream type:
+If input is from a file, then the program will look at the start of
+the file to determine if the stream is H.264 or H.262 data. This
+process may occasionally come to the wrong conclusion, in which case
+the user can override the choice using the following switches.
+.Pp
+For AVS data, the program will never guess correctly, so the user must
+specify the file type, using -avs.
+.Pp
+If input is from standard input (via -stdin), then it is not possible
+for the program to make its own decision on the input stream type.
+Instead, it defaults to H.262, and relies on the user indicating if
+this is wrong.
+.Bl -tag
+.It Fl h264 , avc
+Force the program to treat the input as MPEG-4/AVC.
+.It Fl h262
+Force the program to treat the input as MPEG-2.
+.It Fl avs
+Force the program to treat the input as AVS.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS

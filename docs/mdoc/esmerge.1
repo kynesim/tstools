@@ -1,0 +1,107 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt ESMERGE 1
+.Os
+.Sh NAME
+.Nm esmerge
+.Nd Merge the contents of two ES to make a TS
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm esmerge
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Op Fl x
+.Op Fl h264 | avs
+.Op Fl vidrate Ar video_hz
+.Op Fl rate Ar audio_hz | Fl cd | dat
+.Op Fl adts | l2 | mp2adts | mp4adts | ac3
+.Op Fl patpmtfreq Ar pat_freq
+.Ar video_file audio_file out_file
+.Sh DESCRIPTION
+Merge the contents of two Elementary Stream (ES) files, one containing
+video data, and the other audio, to produce an output file containing
+Transport Stream (TS).
+.Ss Files
+.Bl -tag
+.It Ar video_file
+is the ES file containing video.
+.It Ar audio_file
+is the ES file containing audio.
+.It Ar out_file
+is the resultant TS file.
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output extra information about each audio/video frame
+.It Fl q , Fl quiet
+Only output error messages
+.It Fl x
+Output diagnostic information.
+.It Fl h264
+The video stream is H.264 (the default)
+.It Fl avs
+The video stream is AVS
+.It Fl vidrate Ar video_hz
+Video frame rate in Hz - defaults to 25Hz.
+.It Fl rate Ar audio_hz
+Audio sample rate in Hertz - defaults to 44100, i.e., 44.1KHz.
+.It Fl cd
+Equivalent to
+.Fl rate Cm 44100 No (CD rate), the default.
+.It Fl dat
+Equivalent to
+.Fl rate Cm 48000 No (DAT rate).
+.It Fl adts
+The audio stream is ADTS (the default)
+.It Fl l2
+The audio stream is MPEG layer 2 audio
+.It Fl mp2adts
+The audio stream is MPEG-2 style ADTS regardless of ID bit
+.It Fl mp4adts
+The audio stream is MPEG-4 style ADTS regardless of ID bit
+.It Fl ac3
+The audio stream is Dolby AC-3 in ATSC
+.It Fl patpmtfreq Ar pat_freq
+PAT and PMT will be inserted every
+.Ar pat_freq
+video frames.  By default,
+.Ar pat_freq No = 0 and PAT/PMT are inserted only at
+the start of the output stream.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.Sh BUGS
+For the moment, the video input must be H.264 or AVS, and the audio input
+ADTS, AC-3 ATSC or MPEG layer 2. Also, the audio is assumed to have a
+constant number of samples per frame.

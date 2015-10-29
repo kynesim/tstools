@@ -1,0 +1,73 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt PSREPORT 1
+.Os
+.Sh NAME
+.Nm psreport
+.Nd Report on the contents of a PS
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm psreport
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl max Ar max_pkts | Fl m Ar max_pkts
+.Op Fl dvd | notdvd | nodvd
+.Ar in_file | Fl stdin
+.Sh DESCRIPTION
+Report on the packets in a Program Stream.
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is an H.222 Program Stream file (but see
+.Fl stdin
+below)
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output packet data as well
+.It Fl stdin
+Take input from <stdin>, instead of a named file
+.It Fl max Ar max_pkts , Fl m Ar max_pkts
+Maximum number of PS packets to read
+.It Fl dvd
+The PS data is from a DVD. This is the default.
+This switch has no effect on MPEG-1 PS data.
+.It Fl notdvd , nodvd
+The PS data is not from a DVD.
+The DVD specification stores AC-3 (Dolby), DTS and
+other audio in a specialised manner in private_stream_1.
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

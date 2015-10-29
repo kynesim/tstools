@@ -1,0 +1,178 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt PCAPREPORT 1
+.Os
+.Sh NAME
+.Nm pcapreport
+.Nd Get info about a TS in a pcap
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm pcapinfo
+.Fl h | help Op Cm detail
+.Nm pcapinfo
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl name Ar base_name | Fl n Ar base_name
+.Op Fl extract | Fl x
+.Op Fl csvgen | Fl c
+.Op Fl output Ar udp_name | Fl o Ar udp_name
+.Op Fl max Ar max_read | Fl m Ar max_read
+.Op Fl data
+.Op Fl a
+.Op Fl d Ar dest_ip Ns Op : Ns Ar port
+.Op Fl g | Fl good-ts-only
+.Op Fl keep-bad
+.Op Fl tfmt Ar time_format
+.Op Fl dump-data | Fl D
+.Op Fl extra-dump | Fl E
+.Op Fl times | Fl t
+.Op Fl skew-discontinuity-threshold Ar threshold | Fl skew Ar threshold
+.Ar file
+
+.Sh DESCRIPTION
+Report and/or extract the Transport Streams in a .pcap.  In analyse mode (
+.Fl a
+) the timing info in the TS (PCRs) can be compared with the timing info in
+the pcap.
+.Bl -tag
+.It Fl h , help
+Produce usage summary
+.It Fl h Cm detail , Fl help Cm detail
+Produce usage + more detail on what the output actually means
+.It Fl a , analyse
+Analyse.  Produces summary info on every TS in the pcap
+.It Fl d Ar dest_ip Ns Oo : Ns Ar port Oc , Fl destip Ar dest_ip Ns Oo : Ns Ar port Oc
+Select data with the given destination IP and port.
+If the
+.Ar port
+is not specified, it defaults to 0 (see below).
+.It Fl g , Fl good-ts-only
+Only extract/analyse packets that seem entirely good.
+By default there is a bit of slack in determining if a
+packet is good and some dodgy packets are let through.
+This switch ensures that all packets pass simple testing
+.It Fl keep-bad
+Extract all packets including bad ones.  Is implied if
+an ip & port filter is set.  Overriden by
+.Fl -good-ts-only .
+.It Fl tfmt Ar time_format
+Sets the format for printed times
+.Pp
+.Ar time_format
+is one of
+.Bl -tag
+.It Cm 90
+.Bq Default
+show as 90KHz timestamps (suffix 't' on the values: e.g., 4362599t).
+.It Cm 27
+Show as 27MHz timestamps (similar, e.g., 25151:000t).
+.It Cm 32
+Show as 90KHz timestamps, but only the low 32 bits.
+.It Cm ms
+Show as milliseconds.
+.It Cm hms
+Show as hours/minutes/seconds (H:MM:SS.ssss, the H
+can be more than one digit if necessary)
+.El
+.It Fl dump-data , Fl D
+Dump any data in the input file to stdout.
+.It Fl extra-dump , Fl E
+Dump only data which isn't being sent to the
+Fl o
+file.
+.It Fl times , Fl t
+Report continuously on PCR vs PCAP timing for the destination specified in
+.Fl d .
+.It Fl skew-discontinuity-threshold Ar threshold , Fl skew  Ar threshold
+Gives the skew discontinuity threshold in 90kHz units.
+A value of 0 disables this.
+.Bq "default = 6*90000"
+.It Fl split-section
+Split extracted streams into multiple files on section
+(discontinutity) boundries
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output extra information about packets
+.It Ar file
+The pcap stream file to get info on
+.El
+.Pp
+Specifying 0.0.0.0 for destination IP will capture all hosts, specifying 0
+as a destination port will capture all ports on the destination host.
+.Pp
+Network packet numbers start at 1 (like wireshark)
+.Pp
+TS packet numbers start at 0.
+.Ss Analyse output
+.Bl -tag
+.It Times
+(packet and PCR)
+The times associated with packets and PCR are held internally in 90kHz units
+and are displayed in those units by default
+.It Stream
+A set of packets to the same IP & Port.  TS streams are detected by looking
+for 0x47s at appropriate places in the packets
+.It Section
+A part of a stream which appears to have a continuous TS embedded in it.  If
+the PCR jumps then a new section should be started (though this will not
+generate a separate .ts file if the extraction option is in effect unless
+.Fl split-section
+is specified, nor will it generate a new .csv file.)
+.Pp
+As it stands pcapreport will only report on a single PCR pid within a TS. If
+multiple pids with PCRs are detected then this will be reported but the other
+PCRs will be ignored
+.It Skew
+This is the difference between the time in the pcap for a UDP packet and any
+PCR found in the TS contained within that packet.  The accuracy of this figure
+obviously depends on how good the clock was in the capture process.  Skew is
+arbitrarily set to zero at the start of a section.  A skew of >6s is assumed
+to be a discontinuity and will start a new section.
+.Pp
+Positive skew means that we received too low a PCR for this timestamp.
+.It Drift
+This is skew over time and (assuming that the playout process is good)
+represents the difference in speed between the transmitters clock and the
+receivers clock.  The algorithm for determining this isn't very sophisticated
+so if you have a large maximum jitter or a short sample this should be taken
+with a pinch of salt.  Beware also that PC clocks (like the one in the m/c
+doing the tcpdump) are not always amongst the most stable or accurate; however
+they should be good enough to detect gross errors
+.It Jitter
+This is measured as the difference between the maximum and minimum skews over
+a 10sec (max 1024 samples) period.  This should be long enough to capture a
+good baseline but short enough that drift has a negligible effect
+.It Max Jitter
+The maximum value of jitter (see above) found in a section
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr tsinfo 1 ,
+.Xr tsreport 1
+.Xr rtp2264 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.Sh BUGS
+pcapreport can only deal with IPv4.  IPv6 is beyond its current capabilities.

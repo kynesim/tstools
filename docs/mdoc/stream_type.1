@@ -1,0 +1,97 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt STREAM_TYPE 1
+.Os
+.Sh NAME
+.Nm stream-type
+.Nd Guess the type of a stream file
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm stream-type
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl quiet | q
+.Ar in_file
+.Sh DESCRIPTION
+Attempt to determine if an input stream is Transport Stream,
+Program Stream, or Elementary Stream, and if the latter, if it
+is H.262 or H.264 (i.e., MPEG-2 or MPEG-4/AVC respectively).
+The mechanisms used are fairly crude, assuming that:
+.Bl -dash
+.It
+data is byte aligned
+.It
+for TS, the first byte in the file will be the start of a NAL unit,
+and PAT/PMT packets will be findable
+.It
+for PS, the first packet starts immediately at the start of the
+file, and is a pack header
+.It
+if the first 1000 packets could be H.262 *or* H.264, then the data
+is assumed to be H.264 (the program doesn't try to determine
+sensible sequences of H.262/H.264 packets, so this is a reasonable
+way of guessing)
+.El
+It is quite possible that data which is not relevant will be
+misidentified
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is the file to analyse
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output more detailed information about how it is making its decision
+.It Fl q , Fl quiet
+Only output error messages
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.Sh RETURN VALUES
+The program exit value is:
+.Bl -tag
+.It 10
+if it detects Transport Stream,
+.It 11
+if it detects Program Stream,
+.It 12
+if it detects Elementary Stream containing H.262 (MPEG-2),
+.It 14
+if it detects Elementary Stream containing H.264 (MPEG-4/AVC),
+.It 5
+if it looks like it might be PES,
+.It 9
+if it really cannot decide, or
+.It 0
+if some error occurred
+.El
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+
+

@@ -39,10 +39,14 @@ prefix=/usr/local
 exec_prefix=$(prefix)
 bindir=$(exec_prefix)/bin
 libdir=$(exec_prefix)/lib
+mandir=/usr/local/man
+man1dir=$(mandir)/man1
+manext=.1
 
 INSTALL=install
 INSTALL_PROGRAM=$(INSTALL) -m 0555 -s
 INSTALL_LIB=$(INSTALL) -m 0444 -s
+INSTALL_DATA=$(INSTALL) -m 0444
 
 
 ifdef CROSS_COMPILE
@@ -101,6 +105,7 @@ LDFLAGS = -g $(PROFILE_FLAGS) $(ARCH_FLAGS) -lm
 OBJDIR = obj
 LIBDIR = lib
 BINDIR = bin
+MANDIR = docs/mdoc
 
 # All of our non-program object modules
 OBJS = \
@@ -167,10 +172,12 @@ STATIC_LIB = $(LIBDIR)/libtstools.a
 LIBOPTS = $(ARCH_FLAGS) $(STATIC_LIB)
 
 ifeq ($(shell uname -s), Darwin)
-SHARED_LIB = $(LIBDIR)/libtstools.xxx
+SHARED_LIB_NAME = libtstools.xxx
 else
-SHARED_LIB = $(LIBDIR)/libtstools.so
+SHARED_LIB_NAME = libtstools.so
 endif
+SHARED_LIB = $(LIBDIR)/$(SHARED_LIB_NAME)
+
 # All of our programs (except the testing ones)
 PROGS = \
   $(BINDIR)/esfilter \
@@ -207,7 +214,6 @@ TEST_PROGS = test_nal_unit_list test_es_unit_list
 
 # ------------------------------------------------------------
 all:	$(BINDIR) $(LIBDIR) $(OBJDIR) $(PROGS) $(SHARED_LIB)
-	echo "BINDIR=$(BINDIR), bindir=$(bindir)"
 
 # ts2ps is not yet an offical program, so for the moment build
 # it separately
@@ -404,13 +410,61 @@ $(OBJDIR)/test_es_unit_list.o: test_es_unit_list.c $(ES_H) version.h
 # ------------------------------------------------------------
 # Directory creation
 
-$(OBJDIR) $(LIBDIR) $(BINDIR) $(DESTDIR)$(bindir) $(DESTDIR)$(libdir):
+$(OBJDIR) $(LIBDIR) $(BINDIR) $(DESTDIR)$(bindir) $(DESTDIR)$(libdir) $(DESTDIR)$(man1dir):
 	mkdir -p $@
 
 # ------------------------------------------------------------
 
-.PHONY: install
-install: all $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)
+.PHONY: install-man
+install-man: $(DESTDIR)$(man1dir)
+	$(INSTALL_DATA) $(MANDIR)/esfilter.1 $(DESTDIR)$(man1dir)/esfilter$(manext)
+	$(INSTALL_DATA) $(MANDIR)/ts2es.1 $(DESTDIR)$(man1dir)/ts2es$(manext)
+	$(INSTALL_DATA) $(MANDIR)/es2ts.1 $(DESTDIR)$(man1dir)/es2ts$(manext)
+	$(INSTALL_DATA) $(MANDIR)/esdots.1 $(DESTDIR)$(man1dir)/esdots$(manext)
+	$(INSTALL_DATA) $(MANDIR)/esmerge.1 $(DESTDIR)$(man1dir)/esmerge$(manext)
+	$(INSTALL_DATA) $(MANDIR)/esreport.1 $(DESTDIR)$(man1dir)/esreport$(manext)
+	$(INSTALL_DATA) $(MANDIR)/esreverse.1 $(DESTDIR)$(man1dir)/esreverse$(manext)
+	$(INSTALL_DATA) $(MANDIR)/stream_type.1 $(DESTDIR)$(man1dir)/stream_type$(manext)
+	$(INSTALL_DATA) $(MANDIR)/psreport.1 $(DESTDIR)$(man1dir)/psreport$(manext)
+	$(INSTALL_DATA) $(MANDIR)/psdots.1 $(DESTDIR)$(man1dir)/psdots$(manext)
+	$(INSTALL_DATA) $(MANDIR)/ps2ts.1 $(DESTDIR)$(man1dir)/ps2ts$(manext)
+	$(INSTALL_DATA) $(MANDIR)/tsinfo.1 $(DESTDIR)$(man1dir)/tsinfo$(manext)
+	$(INSTALL_DATA) $(MANDIR)/tsreport.1 $(DESTDIR)$(man1dir)/tsreport$(manext)
+	$(INSTALL_DATA) $(MANDIR)/tsserve.1 $(DESTDIR)$(man1dir)/tsserve$(manext)
+	$(INSTALL_DATA) $(MANDIR)/tsplay.1 $(DESTDIR)$(man1dir)/tsplay$(manext)
+	$(INSTALL_DATA) $(MANDIR)/ts_packet_insert.1 $(DESTDIR)$(man1dir)/ts_packet_insert$(manext)
+	$(INSTALL_DATA) $(MANDIR)/m2ts2ts.1 $(DESTDIR)$(man1dir)/m2ts2ts$(manext)
+	$(INSTALL_DATA) $(MANDIR)/pcapreport.1 $(DESTDIR)$(man1dir)/pcapreport$(manext)
+	$(INSTALL_DATA) $(MANDIR)/tsfilter.1 $(DESTDIR)$(man1dir)/tsfilter$(manext)
+	$(INSTALL_DATA) $(MANDIR)/tsdvbsub.1 $(DESTDIR)$(man1dir)/tsdvbsub$(manext)
+	$(INSTALL_DATA) $(MANDIR)/rtp2264.1 $(DESTDIR)$(man1dir)/rtp2264$(manext)
+
+.PHONY: uninstall-man
+uninstall-man:
+	rm -f $(DESTDIR)$(man1dir)/esfilter$(manext)
+	rm -f $(DESTDIR)$(man1dir)/ts2es$(manext)
+	rm -f $(DESTDIR)$(man1dir)/es2ts$(manext)
+	rm -f $(DESTDIR)$(man1dir)/esdots$(manext)
+	rm -f $(DESTDIR)$(man1dir)/esmerge$(manext)
+	rm -f $(DESTDIR)$(man1dir)/esreport$(manext)
+	rm -f $(DESTDIR)$(man1dir)/esreverse$(manext)
+	rm -f $(DESTDIR)$(man1dir)/stream_type$(manext)
+	rm -f $(DESTDIR)$(man1dir)/psreport$(manext)
+	rm -f $(DESTDIR)$(man1dir)/psdots$(manext)
+	rm -f $(DESTDIR)$(man1dir)/ps2ts$(manext)
+	rm -f $(DESTDIR)$(man1dir)/tsinfo$(manext)
+	rm -f $(DESTDIR)$(man1dir)/tsreport$(manext)
+	rm -f $(DESTDIR)$(man1dir)/tsserve$(manext)
+	rm -f $(DESTDIR)$(man1dir)/tsplay$(manext)
+	rm -f $(DESTDIR)$(man1dir)/ts_packet_insert$(manext)
+	rm -f $(DESTDIR)$(man1dir)/m2ts2ts$(manext)
+	rm -f $(DESTDIR)$(man1dir)/pcapreport$(manext)
+	rm -f $(DESTDIR)$(man1dir)/tsfilter$(manext)
+	rm -f $(DESTDIR)$(man1dir)/tsdvbsub$(manext)
+	rm -f $(DESTDIR)$(man1dir)/rtp2264$(manext)
+
+.PHONY: install-prog
+install-prog: all $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)
 	$(INSTALL_PROGRAM) $(BINDIR)/esfilter $(DESTDIR)$(bindir)/esfilter
 	$(INSTALL_PROGRAM) $(BINDIR)/ts2es $(DESTDIR)$(bindir)/ts2es
 	$(INSTALL_PROGRAM) $(BINDIR)/es2ts $(DESTDIR)$(bindir)/es2ts
@@ -432,7 +486,38 @@ install: all $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)
 	$(INSTALL_PROGRAM) $(BINDIR)/tsfilter $(DESTDIR)$(bindir)/tsfilter
 	$(INSTALL_PROGRAM) $(BINDIR)/tsdvbsub $(DESTDIR)$(bindir)/tsdvbsub
 	$(INSTALL_PROGRAM) $(BINDIR)/rtp2264 $(DESTDIR)$(bindir)/rtp2264
-	$(INSTALL_LIB) $(SHARED_LIB) $(DESTDIR)$(libdir)
+	$(INSTALL_LIB) $(SHARED_LIB) $(DESTDIR)$(libdir)/$(SHARED_LIB_NAME)
+
+.PHONY: uninstall-prog
+uninstall-prog:
+	rm -f $(DESTDIR)$(bindir)/esfilter
+	rm -f $(DESTDIR)$(bindir)/ts2es
+	rm -f $(DESTDIR)$(bindir)/es2ts
+	rm -f $(DESTDIR)$(bindir)/esdots
+	rm -f $(DESTDIR)$(bindir)/esmerge
+	rm -f $(DESTDIR)$(bindir)/esreport
+	rm -f $(DESTDIR)$(bindir)/esreverse
+	rm -f $(DESTDIR)$(bindir)/stream_type
+	rm -f $(DESTDIR)$(bindir)/psreport
+	rm -f $(DESTDIR)$(bindir)/psdots
+	rm -f $(DESTDIR)$(bindir)/ps2ts
+	rm -f $(DESTDIR)$(bindir)/tsinfo
+	rm -f $(DESTDIR)$(bindir)/tsreport
+	rm -f $(DESTDIR)$(bindir)/tsserve
+	rm -f $(DESTDIR)$(bindir)/tsplay
+	rm -f $(DESTDIR)$(bindir)/ts_packet_insert
+	rm -f $(DESTDIR)$(bindir)/m2ts2ts
+	rm -f $(DESTDIR)$(bindir)/pcapreport
+	rm -f $(DESTDIR)$(bindir)/tsfilter
+	rm -f $(DESTDIR)$(bindir)/tsdvbsub
+	rm -f $(DESTDIR)$(bindir)/rtp2264
+	rm -f $(DESTDIR)$(libdir)/$(SHARED_LIB_NAME)
+
+.PHONY: install
+install: install-man install-prog
+
+.PHONY: uninstall
+uninstall: uninstall-man uninstall-prog
 
 .PHONY: objclean
 objclean:
@@ -457,9 +542,7 @@ clean: objclean
 
 .PHONY: distclean
 distclean: clean
-	-rmdir $(OBJDIR)
-	-rmdir $(LIBDIR)
-	-rmdir $(BINDIR)
+	-rm -rf $(OBJDIR) $(LIBDIR) $(BINDIR)
 
 TESTDATAFILE = /data/video/CVBt_hp_trail.264
 

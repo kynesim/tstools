@@ -1,0 +1,63 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt PSDOTS 1
+.Os
+.Sh NAME
+.Nm psdots
+.Nd Present the content of an PS as a sequence of characters
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm psdots
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl verbose | Fl v
+.Op Fl max Ar max_pkts |  Fl m Ar max_pkts
+.Ar in_file | Fl stdin
+.Sh DESCRIPTION
+Present the content of a Program Stream file as a sequence of
+  characters, representing the packets.
+.Ss Files
+.Bl -tag
+.It Ar in_file
+is an H.222 Program Stream file (but see
+.Fl stdin Ns )
+.El
+.Ss Switches
+.Bl -tag
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl stdin
+Input from standard input, instead of a file
+.It Fl v , Fl verbose
+Output a description of the characters used
+.It Fl max Ar max_pkts , Fl m Ar max_pkts
+Maximum number of PS packets to read
+.El
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr esdots 1 ,
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+

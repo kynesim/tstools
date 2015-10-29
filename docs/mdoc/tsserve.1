@@ -1,0 +1,124 @@
+.\" The following commands are required for all man pages.
+.Dd October 28, 2015
+.Dt TSSERVE 1
+.Os
+.Sh NAME
+.Nm tsserve
+.Nd get info about the streams within a transport stream
+.\" This next command is for sections 2 and 3 only.
+.\" .Sh LIBRARY
+.Sh SYNOPSIS
+.Nm tsserve
+.Op Fl details
+.Op Fl "err stdout"
+.Op Fl "err stderr"
+.Op Fl quiet | q
+.Op Fl verbose | v
+.Op Fl port Ar port_no
+.Op Fl noaudio
+.Op Fl pad Ar filler_pkts
+.Op Fl noseqhdr
+.Op Fl prepeat Ar pat_freq
+.Op Fl h264 | avc | h262
+.Op Fl dolby Cm dvb | atsc
+.Op Fl 0
+.Ar file0
+.Op Fl 1 Ar file1
+.Op Fl 2 Ar file2
+.Ns ...
+.Sh DESCRIPTION
+Act as a server which plays the given file (containing Transport
+Stream or Program Stream data). The output is always Transport
+Stream.
+.Ss Input:
+.Bl -tag
+.It Ar infile
+An H.222.0 TS or PS file to serve to the client.
+This will be treated as file 0 (see below).
+.It Fl 0 Ar file0 No .. Fl 9 Ar file9
+Specify files 0 through 9, selectable with command
+characters 0 through 9. The lowest numbered file
+will be the default for display.
+.El
+.Ss General Switches:
+.Bl -tag
+.It Fl details
+Print out more detailed help information,
+including some less common options.
+.It Fl "err stdout"
+Write error messages to standard output (the default)
+.It Fl "err stderr"
+Write error messages to standard error (Unix traditional)
+.It Fl v , Fl verbose
+Output additional diagnostic messages
+.It Fl q , Fl quiet
+Suppress informational and warning messages
+.It Fl port Ar port_no
+Listen for a client on port
+.Ar port_no
+.Bq default = 88
+.It Fl noaudio
+Ignore any audio data
+.It Fl pad Ar filler_pkts
+Pad the start of the output with
+.Ar filler_pkts
+filler TS packets, to allow the client to synchronize with
+the datastream.
+.Bq default = 8
+.It Fl noseqhdr
+Do not output sequence headers for fast forward/reverse
+data. Only relevant to H.262 data.
+.El
+.Ss Program Stream Switches:
+.Bl -tag
+.It Fl prepeat Ar pat_freq
+Output the program data (PAT/PMT) after every
+.Ar pat_freq
+PS packs.
+.Bq default = 100
+.It Fl h264 , avc
+Force the program to treat the input as MPEG-4/AVC.
+.It Fl h262
+Force the program to treat the input as MPEG-2.
+.El
+Both of these affect the stream type of the output data.
+.Pp
+If the audio stream being output is Dolby (AC-3), then the stream type
+used to output it differs for DVB (European) and ATSC (USA) data. It
+may be specified as follows:
+.Bl -tag
+.It Fl dolby Cm dvb
+Use stream type 0x06.
+.Bq default
+.It Fl dolby Cm atsc
+Use stream type 0x81
+.El
+.Pp
+For information on using the program in other modes, see
+.Fl details.
+.\" The following cnds should be uncommented and
+.\" used where appropriate.
+.\" .Sh IMPLEMENTATION NOTES
+.\" This next command is for sections 2, 3 and 9 function
+.\" return values only.
+.\" .Sh RETURN VALUES
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.\" .Sh ENVIRONMENT
+.\" .Sh FILES
+.\" .Sh EXAMPLES
+.\" This next command is for sections 1, 6, 7, 8 and 9 only
+.\"     (command return values (to shell) and
+.\"     fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" .Sh COMPATIBILITY
+.\" This next command is for sections 2, 3 and 9 error
+.\"     and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.Xr tsinfo 1 ,
+.Xr pcapreport 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh BUGS
+
