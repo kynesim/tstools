@@ -62,7 +62,7 @@ void ensurePidList(int nr)
 int main(int argn, char *args[])
 {
     int ii = 1;
-    int verbose = FALSE;
+//    int verbose = FALSE;  // Currently unused
     int invert = 0;
     unsigned int max_pkts = (unsigned int)-1;
     const char *input_file = NULL, *output_file = NULL;
@@ -88,7 +88,7 @@ int main(int argn, char *args[])
             }
             else if (!strcmp("-verbose", args[ii]) || !strcmp("-v", args[ii]))
             {
-                verbose = TRUE;
+//                verbose = TRUE;
             }
             else if (!strcmp("-m", args[ii]) || !strcmp("-max", args[ii]))
             {

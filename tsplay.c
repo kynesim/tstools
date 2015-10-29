@@ -351,7 +351,6 @@ int main(int argc, char **argv)
   enum  TS_writer_type  how = TS_W_UNDEFINED;  // how to output our TS data
   char                 *output_name = NULL;    // the output filename/host
   int                   port = 88;             // the port to connect to
-  int    use_network = FALSE;
   char *multicast_if = NULL;                   // IP address of multicast i/f
 
   tsplay_output_pace_mode pace_mode = TSPLAY_OUTPUT_PACE_PCR2_TS;
@@ -459,7 +458,6 @@ int main(int argc, char **argv)
       {
         CHECKARG("tsplay",ii);
         had_output_name = TRUE;
-        use_network = FALSE;
         how = TS_W_FILE;
         output_name = argv[ii+1];
         ii++;
@@ -473,7 +471,6 @@ int main(int argc, char **argv)
       else if (!strcmp("-stdout",argv[ii]))
       {
         had_output_name = TRUE;  // more or less
-        use_network = FALSE;
         how = TS_W_STDOUT;
         output_name = NULL;
         redirect_output_stderr();
@@ -506,7 +503,6 @@ int main(int argc, char **argv)
           print_err("### tsplay: -tcp does not make sense with file output\n");
           return 1;
         }
-        use_network = TRUE;
         how = TS_W_TCP;
       }
       else if (!strcmp("-udp",argv[ii]))
@@ -516,7 +512,6 @@ int main(int argc, char **argv)
           print_err("### tsplay: -udp does not make sense with file output\n");
           return 1;
         }
-        use_network = TRUE;
         how = TS_W_UDP;
       }
       else if (!strcmp("-max",argv[ii]) || !strcmp("-m",argv[ii]))
@@ -693,7 +688,6 @@ int main(int argc, char **argv)
         err = host_value("tsplay",NULL,argv[ii],&output_name,&port);
         if (err) return 1;
         had_output_name = TRUE;
-        use_network = TRUE;
         if (how == TS_W_UNDEFINED)
           how = TS_W_UDP;
       }

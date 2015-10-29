@@ -141,9 +141,11 @@ static int peek_frame_header(const uint32_t header)
 //  byte 		protected, private;
 //  byte		mode, modex, copyright, original, emphasis;
   unsigned int	bitrate_enc, sampling_enc;
-  unsigned int	bitrate, sampling;
-  byte		rate;
-  unsigned int	framesize, framelen;
+  unsigned int bitrate;
+//  unsigned int sampling;
+  byte rate;
+//  unsigned int framesize
+  unsigned int framelen;
 
   // Version:
   //   00 - MPEG Version 2.5
@@ -197,7 +199,7 @@ static int peek_frame_header(const uint32_t header)
     print_err("### Illegal sampleing_enc (3) in MPEG layer 2 audio header\n");
     return -1;
   }
-  sampling = sampling_table[version-1][sampling_enc];
+//  sampling = sampling_table[version-1][sampling_enc];
 
   // Make an AAC rate number from the rate number
   rate = (version * 3) + (sampling_enc & 2) + (sampling_enc == 0);
@@ -224,18 +226,18 @@ static int peek_frame_header(const uint32_t header)
   // (for the moment, we only *use* the frame length)
   if (layer == 1)
   {
-    framesize = 384; // samples
+//    framesize = 384; // samples
     framelen  = (12000 * bitrate / aud_frame_rate_n[rate] + padding) * 4;
   }
   else if (version == 1)
   {
-    framesize = 1152; // samples
+//    framesize = 1152; // samples
     framelen  = (144000 * bitrate / aud_frame_rate_n[rate] + padding);
   }
   else
   {
-	  framesize = 576; // samples
-	  framelen  = (72000 * bitrate / aud_frame_rate_n[rate] + padding);
+//    framesize = 576; // samples
+    framelen  = (72000 * bitrate / aud_frame_rate_n[rate] + padding);
   }
   return framelen;
 }

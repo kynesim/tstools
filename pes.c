@@ -3538,7 +3538,7 @@ extern int find_ESCR_in_PES(byte      data[],
                             uint64_t *escr)
 {
   byte  stream_id;
-  int   packet_length;
+//  int   packet_length;
   byte *bytes;
 
   *got_escr = FALSE;  // pessimistic
@@ -3553,7 +3553,7 @@ extern int find_ESCR_in_PES(byte      data[],
   }
 
   stream_id = data[3];
-  packet_length = (data[4] << 8) | data[5];
+//  packet_length = (data[4] << 8) | data[5];
 
   // if (packet_length == 0)  // Elementary video data of unspecified length
   //   return 0;
