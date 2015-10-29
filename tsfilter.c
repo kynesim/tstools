@@ -62,7 +62,7 @@ void ensurePidList(int nr)
 int main(int argn, char *args[])
 {
     int ii = 1;
-//    int verbose = FALSE;  // Currently unused
+//    int verbose = FALSE;  // Currently unused - squash warning
     int invert = 0;
     unsigned int max_pkts = (unsigned int)-1;
     const char *input_file = NULL, *output_file = NULL;
