@@ -1,0 +1,37 @@
+Source: tstools
+Section: utils
+Priority: optional
+Maintainer: John Cox <jc@kynesim.co.uk>
+Build-Depends: debhelper (>= 9.0.0)
+Standards-Version: 3.9.5
+Homepage: https://github.com/kynesim/tstools.git
+Vcs-Git: https://github.com/kynesim/tstools.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/tstools.git;a=summary
+
+Package: tstools
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: set of tools for reporting on and manipulating MPEG data
+ TStools is a set of cross-platform command line tools for working with MPEG
+ data.
+ .
+ The emphasis is on relatively simple tools which concentrate on MPEG (H.264
+ and H.262) data packaged according to H.222 (i.e., TS or PS), with a particular
+ interest in checking for conformance.
+ .
+ Transport Stream (TS) is typically used for distribution of cable and
+ satellite data. Program Stream (PS) is typically used to store data on DVDs.
+ .
+ The tools are focussed on:
+  * Quick reporting of useful data (tsinfo, stream_type)
+  * Giving a quick overview of the entities in the stream (esdots, psdots)
+  * Reporting on TS packets (tsreport) or ES units/frames/fields (esreport)
+  * Simple manipulation of stream data (es2ts, esfilter, esreverse, esmerge,
+    ts2es)
+  * Streaming of data, possibly with introduced errors (tsplay)
+
+#Package: tstools-doc
+#Architecture: all
+#Depends: ${shlibs:Depends}, ${misc:Depends}
+#Description: documentation for tstools
+# The documentation for tstools

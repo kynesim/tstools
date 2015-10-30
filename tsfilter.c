@@ -46,7 +46,7 @@
 
 /** List of PIDs to filter in */
 int *pidList = NULL;
-int pidListAlloc = 0, pidListUsed = 0;
+unsigned int pidListAlloc = 0, pidListUsed = 0;
 
 static void print_usage(void);
 

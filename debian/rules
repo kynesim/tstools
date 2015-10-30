@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# There must be a better way of doing this...
+override_dh_auto_install:
+	dh_auto_install -- prefix=/usr mandir=/usr/share/man
+
+%:
+	dh $@ 

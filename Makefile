@@ -48,6 +48,8 @@ INSTALL_PROGRAM=$(INSTALL) -m 0555 -s
 INSTALL_LIB=$(INSTALL) -m 0444 -s
 INSTALL_DATA=$(INSTALL) -m 0444
 
+TSTOOLS_VERSION=1.13
+TSTOOLS_LIB_VERSION=1
 
 ifdef CROSS_COMPILE
 CC = $(CROSS_COMPILE)gcc
@@ -98,8 +100,8 @@ else
 	ARCH_FLAGS = -fPIC
 endif
 
-CFLAGS = $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS) $(ARCH_FLAGS)
-LDFLAGS = -g $(PROFILE_FLAGS) $(ARCH_FLAGS) -lm
+CFLAGS += $(WARNING_FLAGS) $(OPTIMISE_FLAGS) $(LFS_FLAGS) -I. $(PROFILE_FLAGS) $(ARCH_FLAGS) -DTSTOOLS_VERSION=$(TSTOOLS_VERSION)
+LDFLAGS += -g $(PROFILE_FLAGS) $(ARCH_FLAGS) -lm
 
 # Target directories
 OBJDIR = obj
@@ -232,7 +234,7 @@ $(STATIC_LIB): $(OBJS)
 	ar rc $(STATIC_LIB) $(OBJS)
 
 $(SHARED_LIB): $(OBJS)
-	$(LD) -shared -o $(SHARED_LIB) $(OBJS) -lc
+	$(LD) -shared -soname $(SHARED_LIB_NAME).$(TSTOOLS_LIB_VERSION) -o $(SHARED_LIB) $(OBJS) -lc -lm
 endif
 
 # Build all of the utilities with the static library, so that they can
@@ -463,6 +465,7 @@ uninstall-man:
 	rm -f $(DESTDIR)$(man1dir)/tsdvbsub$(manext)
 	rm -f $(DESTDIR)$(man1dir)/rtp2264$(manext)
 
+# Shared lib not installed currently
 .PHONY: install-prog
 install-prog: all $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)
 	$(INSTALL_PROGRAM) $(BINDIR)/esfilter $(DESTDIR)$(bindir)/esfilter
@@ -486,7 +489,6 @@ install-prog: all $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)
 	$(INSTALL_PROGRAM) $(BINDIR)/tsfilter $(DESTDIR)$(bindir)/tsfilter
 	$(INSTALL_PROGRAM) $(BINDIR)/tsdvbsub $(DESTDIR)$(bindir)/tsdvbsub
 	$(INSTALL_PROGRAM) $(BINDIR)/rtp2264 $(DESTDIR)$(bindir)/rtp2264
-	$(INSTALL_LIB) $(SHARED_LIB) $(DESTDIR)$(libdir)/$(SHARED_LIB_NAME)
 
 .PHONY: uninstall-prog
 uninstall-prog:
@@ -511,7 +513,6 @@ uninstall-prog:
 	rm -f $(DESTDIR)$(bindir)/tsfilter
 	rm -f $(DESTDIR)$(bindir)/tsdvbsub
 	rm -f $(DESTDIR)$(bindir)/rtp2264
-	rm -f $(DESTDIR)$(libdir)/$(SHARED_LIB_NAME)
 
 .PHONY: install
 install: install-man install-prog
@@ -543,6 +544,18 @@ clean: objclean
 .PHONY: distclean
 distclean: clean
 	-rm -rf $(OBJDIR) $(LIBDIR) $(BINDIR)
+	rm -f debian/files debian/tstools.*
+	rm -rf debian/tstools
+
+.PHONY: dist
+dist: distclean
+	ln -snf `pwd` ../tstools-$(TSTOOLS_VERSION)
+	tar czhf ../tstools-$(TSTOOLS_VERSION).tar.gz ../tstools-$(TSTOOLS_VERSION)
+
+.PHONY: dist-debian
+dist-debian: dist
+	ln -snf tstools-$(TSTOOLS_VERSION).tar.gz ../tstools_$(TSTOOLS_VERSION).orig.tar.gz
+	debuild -uc -us
 
 TESTDATAFILE = /data/video/CVBt_hp_trail.264
 

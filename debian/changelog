@@ -1,0 +1,17 @@
+tstools (1.13-1) saucy; urgency=low
+
+  * Update to current *** Fake bug no for lintian *** (Closes: #905304)
+
+ -- John Cox <jc@kynesim.co.uk>  Thu, 29 Oct 2015 15:47:39 +0000
+
+tstools (1.11-1ubuntu1) oneiric; urgency=low
+
+  * Fix FTBFS on Ubuntu 11.10 (LP: #832801).
+
+ -- Stephen M. Webb <stephen@ubuntu.com>  Mon, 12 Sep 2011 15:58:15 -0400
+
+tstools (1.11-1) unstable; urgency=low
+
+  * Initial release (Closes: #505304)
+
+ -- Lorenzo Granai <lgranai@gmail.com>  Tue, 11 Nov 2008 15:47:39 +0000
