@@ -88,9 +88,9 @@ struct print_fns
 };
 
 static struct print_fns fns = { print_message_to_stdout,
-                                print_message_to_stdout,
+                                print_message_to_stderr,
                                 fprint_message_to_stdout,
-                                fprint_message_to_stdout,
+                                fprint_message_to_stderr,
                                 flush_stdout };
 
 #if DEBUG
