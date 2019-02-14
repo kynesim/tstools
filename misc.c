@@ -108,7 +108,7 @@ extern uint32_t crc32_block(uint32_t crc, byte *pData, int blk_len)
   int i, j;
 
   if (!table_made) make_crc_table();
-  
+
   for (j = 0; j < blk_len; j++)
   {
     i = ((crc >> 24) ^ *pData++) & 0xff;
@@ -255,7 +255,7 @@ extern int read_bytes(int    input,
   ssize_t  total = 0;
   ssize_t  length;
 #endif
-  
+
   // Make some allowance for short reads - for instance, if we're reading
   // from a pipe and going just a bit faster than the sender
   while (total < num_bytes)
@@ -388,7 +388,7 @@ extern int close_file(int  filedes)
 
   if (filedes == -1 || filedes == STDIN_FILENO)
     return 0;
-  
+
   err = close(filedes);
   if (err)
   {
@@ -980,9 +980,9 @@ extern int winsock_startup(void)
   WORD    wVersionRequested;
   WSADATA wsaData;
   int     err;
- 
+
   wVersionRequested = MAKEWORD(2,2);
- 
+
   err = WSAStartup(wVersionRequested,&wsaData);
   if (err != 0)
   {
@@ -990,7 +990,7 @@ extern int winsock_startup(void)
     print_err("### Unable to find a usable WinSock DLL\n");
     return 1;
   }
- 
+
   // Confirm that the WinSock DLL supports 2.2.
   // Note that if the DLL supports versions greater than 2.2 in addition to
   // 2.2, it will still return 2.2 in wVersion since that is the version we
@@ -1215,7 +1215,7 @@ extern void print_winsock_err(int err)
   case WSANO_DATA:
     print_err("(WSANO_DATA) Valid name, no data record of requested type");
     break;
-    
+
   default:
     fprint_err("winsock error %d",err);
     break;
@@ -1285,8 +1285,8 @@ extern int connect_socket(char *hostname,
 #ifdef _WIN32
   int err = winsock_startup();
   if (err) return 1;
-#endif  
-  
+#endif
+
   output = socket(AF_INET, (use_tcpip?SOCK_STREAM:SOCK_DGRAM), 0);
 #ifdef _WIN32
   if (output == INVALID_SOCKET)
@@ -1297,7 +1297,7 @@ extern int connect_socket(char *hostname,
       print_err("\n");
     return -1;
   }
-#else  // _WIN32      
+#else  // _WIN32
   if (output == -1)
   {
     fprint_err("### Unable to create socket: %s\n",strerror(errno));
@@ -1352,7 +1352,7 @@ extern int connect_socket(char *hostname,
   if (IN_CLASSD(ntohl(ipaddr.sin_addr.s_addr)))
   {
     // Needed if we're doing multicast
-    byte ttl = 16;
+    byte ttl = 60;
     result = setsockopt(output, IPPROTO_IP, IP_MULTICAST_TTL,
                         (char *)&ttl, sizeof(ttl));
 #ifdef _WIN32
@@ -1366,7 +1366,7 @@ extern int connect_socket(char *hostname,
     }
 #else // _WIN32
     if (result < 0)
-    {    
+    {
       fprint_err("### Error setting socket for IP_MULTICAST_TTL: %s\n",
                  strerror(errno));
       return -1;
@@ -1405,7 +1405,7 @@ extern int connect_socket(char *hostname,
         print_err("\n");
         return -1;
       }
-#else // _WIN32      
+#else // _WIN32
       if (result < 0)
       {
         fprint_err("### Unable to set multicast interface %s: %s\n",
@@ -1426,7 +1426,7 @@ extern int connect_socket(char *hostname,
       print_err("\n");
     return -1;
   }
-#else  // _WIN32      
+#else  // _WIN32
   if (result < 0)
   {
     fprint_err("### Unable to connect to host %s: %s\n",
@@ -1492,7 +1492,7 @@ int ipv4_string_to_addr(uint32_t *dest, const char *string)
   int val;
   int nr;
   uint32_t out = 0;
-  
+
   for (nr = 0,p = str_cpy; nr < 4 && *p; p = p2+1, ++nr)
     {
       char *px = NULL;
