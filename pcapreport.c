@@ -634,7 +634,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                            &payload, &payload_len);
       if (rv)
       {
-        fprint_msg(">%d> WARNING: TS packet %d [ packet %d @ %d.%d s ] cannot be split.\n",
+        fprint_msg(">%d> WARNING: TS packet %d [ packet %d @ %d.%06d s ] cannot be split.\n",
                    st->stream_no,
                    st->ts_counter, ctx->pkt_counter, 
                    pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
@@ -659,7 +659,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
 
             if (ctx->time_report)
             {
-              fprint_msg(">%d> Found PCR %lld at %d.%d s \n", st->stream_no,
+              fprint_msg(">%d> Found PCR %lld at %d.%06d s \n", st->stream_no,
                          pcr, pcap_pkt_hdr->ts_sec, pcap_pkt_hdr->ts_usec);
             }
 
@@ -714,7 +714,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                 if (tsect->section_no != 0)
                 {
                   fprint_msg(">%d> Skew discontinuity! Skew = %lld (> %lld) at"
-                             " ts = %d network = %d (PCR %lld Time %d.%d)\n", 
+                             " ts = %d network = %d (PCR %lld Time %d.%06d)\n",
                              st->stream_no,
                              skew, st->skew_discontinuity_threshold, 
                              st->ts_counter, ctx->pkt_counter,
@@ -762,7 +762,7 @@ static int digest_times(pcapreport_ctx_t * const ctx,
                 double skew_rate = (rel_tim == 0) ? 0.0 :
                   (double)skew / ((double)((double)rel_tim / (60*90000)));
 
-                fprint_msg(">%d> [ts %d net %d ] PCR %lld Time %d.%d [rel %d.%d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min) - jitter=%u\n",
+                fprint_msg(">%d> [ts %d net %d ] PCR %lld Time %d.%06d [rel %d.%06d]  - skew = %lld (delta = %lld, rate = %.4g PTS/min) - jitter=%u\n",
                            st->stream_no,
                            st->ts_counter, ctx->pkt_counter,
                            pcr,
@@ -1803,7 +1803,7 @@ int main(int argc, char **argv)
 
           if (ctx->verbose)
           {
-            fprint_msg("pkt: Time = %d.%d orig_len = %d \n", 
+            fprint_msg("pkt: Time = %d.%06d orig_len = %d \n",
                        rec_hdr.ts_sec, rec_hdr.ts_usec, 
                        rec_hdr.orig_len);
           }
